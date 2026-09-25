@@ -1,0 +1,348 @@
+import { BadRequestException } from '@nestjs/common';
+
+import type { RequestUser } from '../../common/types/request-user';
+import { DashboardService } from './dashboard.service';
+import { ScrollerType } from './dto/scroller-type.enum';
+import { EMPTY_CONTENT_FILTER_RULES } from '@bookorbit/types';
+
+function makeUser(overrides: Partial<RequestUser> = {}): RequestUser {
+  return {
+    id: 42,
+    username: 'reader',
+    name: 'Reader',
+    email: null,
+    active: true,
+    isSuperuser: false,
+    isDefaultPassword: false,
+    tokenVersion: 1,
+    settings: {},
+    avatarUrl: null,
+    provisioningMethod: 'local',
+    permissions: [],
+    ...overrides,
+
+    contentFilters: EMPTY_CONTENT_FILTER_RULES,
+  };
+}
+
+function makeService() {
+  const dashboardRepo = {
+    findRecentlyAddedBookIds: vi.fn(),
+    findContinueReadingBookIds: vi.fn(),
+    findContinueListeningBookIds: vi.fn(),
+    findWantToReadBookIds: vi.fn(),
+    findUpNextInSeriesBookIds: vi.fn(),
+    findRandomBookIds: vi.fn(),
+    countBooksAddedThisMonth: vi.fn().mockResolvedValue(0),
+    countContinueReadingBooks: vi.fn().mockResolvedValue(0),
+    countContinueListeningBooks: vi.fn().mockResolvedValue(0),
+    countWantToReadBooks: vi.fn().mockResolvedValue(0),
+  };
+  const bookReadService = {
+    findCardsByBookIds: vi.fn(),
+  };
+  const libraryService = {
+    findAccessibleLibraryIds: vi.fn(),
+  };
+  const smartScopeService = {
+    executeSmartScope: vi.fn(),
+    executeSmartScopeBookIds: vi.fn(),
+    findOne: vi.fn().mockResolvedValue({ mediaType: 'books' }),
+  };
+
+  const service = new DashboardService(dashboardRepo as never, bookReadService as never, libraryService as never, smartScopeService as never);
+  return { service, dashboardRepo, bookReadService, libraryService, smartScopeService };
+}
+
+function makeFindCardsResult(idsInRowOrder: number[]) {
+  const now = new Date('2026-01-01T00:00:00.000Z');
+  return {
+    rows: idsInRowOrder.map((id) => ({
+      id,
+      status: 'present',
+      primaryFileId: id * 10,
+      folderPath: `/books/${id}`,
+      addedAt: now,
+      title: `Book ${id}`,
+      seriesName: null,
+      seriesIndex: null,
+      publishedYear: null,
+      language: null,
+      rating: null,
+    })),
+    authorRows: [],
+    fileRows: idsInRowOrder.map((id) => ({ bookId: id, id: id * 10, format: 'epub', role: 'primary' })),
+    genreRows: [],
+    tagRows: [],
+    narratorRows: [],
+    progressRows: [],
+    statusRows: [],
+    total: idsInRowOrder.length,
+  };
+}
+
+describe('DashboardService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('rejects smartScope scroller calls when smartScopeId is missing or invalid', async () => {
+    const { service, smartScopeService } = makeService();
+
+    await expect(service.getScroller(ScrollerType.SMART_SCOPE, makeUser(), 20, 0)).rejects.toThrow(BadRequestException);
+    await expect(service.getScroller(ScrollerType.SMART_SCOPE, makeUser(), 20, -2)).rejects.toThrow(BadRequestException);
+
+    expect(smartScopeService.executeSmartScope).not.toHaveBeenCalled();
+  });
+
+  it('executes smartScope scroller with max limit clamp and returns smartScope items', async () => {
+    const { service, smartScopeService, libraryService } = makeService();
+    const user = makeUser({ id: 7, settings: { dashboardConfig: { libraryIds: [12] } } });
+    const items = [{ id: 11 }, { id: 12 }];
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([10, 12]);
+    smartScopeService.executeSmartScope.mockResolvedValue({ items, total: 2, page: 0, size: 50 });
+
+    const result = await service.getScroller(ScrollerType.SMART_SCOPE, user, 999, 88);
+
+    expect(smartScopeService.executeSmartScope).toHaveBeenCalledWith(88, user, 0, 50, undefined, [12]);
+    expect(result).toEqual({ books: items, total: 2 });
+  });
+
+  it('intersects standard shelves with the saved dashboard library selection', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    const user = makeUser({ id: 5, settings: { dashboardConfig: { libraryIds: [200, 999] } } });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([100, 200]);
+    dashboardRepo.findRecentlyAddedBookIds.mockResolvedValue([9]);
+    bookReadService.findCardsByBookIds.mockResolvedValue(makeFindCardsResult([9]));
+
+    await service.getScroller(ScrollerType.RECENTLY_ADDED, user, 20);
+
+    expect(dashboardRepo.findRecentlyAddedBookIds).toHaveBeenCalledWith([200], 20, EMPTY_CONTENT_FILTER_RULES);
+  });
+
+  it('returns empty list when user has no accessible libraries', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([]);
+
+    const result = await service.getScroller(ScrollerType.RECENTLY_ADDED, makeUser(), 20);
+
+    expect(result).toEqual({ books: [], total: 0 });
+    expect(dashboardRepo.findRecentlyAddedBookIds).not.toHaveBeenCalled();
+    expect(dashboardRepo.countBooksAddedThisMonth).not.toHaveBeenCalled();
+    expect(bookReadService.findCardsByBookIds).not.toHaveBeenCalled();
+  });
+
+  it('loads recently added cards with min limit clamp and preserves repository id order', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    const user = makeUser({ id: 5 });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([100, 200]);
+    dashboardRepo.findRecentlyAddedBookIds.mockResolvedValue([9, 3]);
+    bookReadService.findCardsByBookIds.mockResolvedValue({
+      ...makeFindCardsResult([3, 9]),
+      statusRows: [
+        {
+          bookId: 9,
+          status: 'reading',
+          source: 'manual',
+          startedAt: null,
+          finishedAt: null,
+          updatedAt: new Date('2026-01-03T00:00:00.000Z'),
+        },
+      ],
+    });
+
+    const result = await service.getScroller(ScrollerType.RECENTLY_ADDED, user, 0);
+
+    expect(dashboardRepo.findRecentlyAddedBookIds).toHaveBeenCalledWith([100, 200], 1, EMPTY_CONTENT_FILTER_RULES);
+    expect(bookReadService.findCardsByBookIds).toHaveBeenCalledWith([9, 3], 5);
+    expect(dashboardRepo.countBooksAddedThisMonth).toHaveBeenCalledWith([100, 200], EMPTY_CONTENT_FILTER_RULES);
+    expect(result.books.map((card) => card.id)).toEqual([9, 3]);
+    expect(result.books[0]?.readStatus?.status).toBe('reading');
+  });
+
+  it('routes continue reading requests to repository with clamped max limit', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    const user = makeUser({ id: 9 });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([301]);
+    dashboardRepo.findContinueReadingBookIds.mockResolvedValue([4]);
+    // The shelf is a window onto a larger set, which is the whole point of reporting a total: one
+    // card comes back and the count still says how many the shelf could have drawn from.
+    dashboardRepo.countContinueReadingBooks.mockResolvedValue(37);
+    bookReadService.findCardsByBookIds.mockResolvedValue(makeFindCardsResult([4]));
+
+    const result = await service.getScroller(ScrollerType.CONTINUE_READING, user, 500);
+
+    expect(dashboardRepo.findContinueReadingBookIds).toHaveBeenCalledWith([301], 9, 50, EMPTY_CONTENT_FILTER_RULES);
+    expect(dashboardRepo.countContinueReadingBooks).toHaveBeenCalledWith([301], 9, EMPTY_CONTENT_FILTER_RULES);
+    expect(result.books.map((card) => card.id)).toEqual([4]);
+    expect(result.total).toBe(37);
+  });
+
+  it('routes continue listening requests to repository with user scope and content filters', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    const user = makeUser({ id: 14 });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([302, 303]);
+    dashboardRepo.findContinueListeningBookIds.mockResolvedValue([6]);
+    bookReadService.findCardsByBookIds.mockResolvedValue(makeFindCardsResult([6]));
+
+    const result = await service.getScroller(ScrollerType.CONTINUE_LISTENING, user, 500);
+
+    expect(dashboardRepo.findContinueListeningBookIds).toHaveBeenCalledWith([302, 303], 14, 50, EMPTY_CONTENT_FILTER_RULES);
+    expect(bookReadService.findCardsByBookIds).toHaveBeenCalledWith([6], 14);
+    expect(result.books.map((card) => card.id)).toEqual([6]);
+  });
+
+  it('routes want-to-read requests to repository and preserves response order', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    const user = makeUser({ id: 21 });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([404]);
+    dashboardRepo.findWantToReadBookIds.mockResolvedValue([31, 22]);
+    bookReadService.findCardsByBookIds.mockResolvedValue(makeFindCardsResult([22, 31]));
+
+    const result = await service.getScroller(ScrollerType.WANT_TO_READ, user, 7);
+
+    expect(dashboardRepo.findWantToReadBookIds).toHaveBeenCalledWith([404], 21, 7, EMPTY_CONTENT_FILTER_RULES);
+    expect(result.books.map((card) => card.id)).toEqual([31, 22]);
+  });
+
+  it('routes up-next-in-series requests to repository and preserves response order', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    const user = makeUser({ id: 11 });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([707]);
+    dashboardRepo.findUpNextInSeriesBookIds.mockResolvedValue([19, 8]);
+    bookReadService.findCardsByBookIds.mockResolvedValue(makeFindCardsResult([8, 19]));
+
+    const result = await service.getScroller(ScrollerType.UP_NEXT_IN_SERIES, user, 25);
+
+    expect(dashboardRepo.findUpNextInSeriesBookIds).toHaveBeenCalledWith([707], 11, 25, EMPTY_CONTENT_FILTER_RULES);
+    expect(result.books.map((card) => card.id)).toEqual([19, 8]);
+    // The recursive CTE is not worth materialising twice, so this shelf never reports a total.
+    expect(result.total).toBeNull();
+  });
+
+  it('passes undefined content filters for up-next-in-series when user is superuser', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    const superuser = makeUser({ id: 17, isSuperuser: true, contentFilters: EMPTY_CONTENT_FILTER_RULES });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([1]);
+    dashboardRepo.findUpNextInSeriesBookIds.mockResolvedValue([55]);
+    bookReadService.findCardsByBookIds.mockResolvedValue(makeFindCardsResult([55]));
+
+    await service.getScroller(ScrollerType.UP_NEXT_IN_SERIES, superuser, 20);
+
+    expect(dashboardRepo.findUpNextInSeriesBookIds).toHaveBeenCalledWith([1], 17, 20, undefined);
+  });
+
+  it('clamps up-next-in-series limit to minimum of 1', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    const user = makeUser({ id: 18 });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([91]);
+    dashboardRepo.findUpNextInSeriesBookIds.mockResolvedValue([3]);
+    bookReadService.findCardsByBookIds.mockResolvedValue(makeFindCardsResult([3]));
+
+    await service.getScroller(ScrollerType.UP_NEXT_IN_SERIES, user, 0);
+
+    expect(dashboardRepo.findUpNextInSeriesBookIds).toHaveBeenCalledWith([91], 18, 1, EMPTY_CONTENT_FILTER_RULES);
+  });
+
+  it('routes random requests to repository and skips card fetch when no ids are returned', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([901]);
+    dashboardRepo.findRandomBookIds.mockResolvedValue([]);
+
+    const result = await service.getScroller(ScrollerType.RANDOM, makeUser({ id: 3 }), 20);
+
+    expect(dashboardRepo.findRandomBookIds).toHaveBeenCalledWith([901], 3, 20, EMPTY_CONTENT_FILTER_RULES);
+    // Null, not zero. Sizing the pool this shelf samples would anti-join the whole library, so it
+    // declines to answer rather than reporting an empty row as an empty library.
+    expect(result).toEqual({ books: [], total: null });
+    expect(bookReadService.findCardsByBookIds).not.toHaveBeenCalled();
+  });
+
+  it('batches shelf selection and hydrates overlapping books once', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService } = makeService();
+    const user = makeUser({ id: 8 });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([10]);
+    dashboardRepo.findRecentlyAddedBookIds.mockResolvedValue([9, 3]);
+    dashboardRepo.findWantToReadBookIds.mockResolvedValue([3, 7]);
+    bookReadService.findCardsByBookIds.mockResolvedValue(makeFindCardsResult([3, 7, 9]));
+
+    const result = await service.getScrollers(
+      {
+        items: [
+          { id: 'recent', type: 'recently-added', limit: 20 },
+          { id: 'wanted', type: 'want-to-read', limit: 20 },
+        ],
+      },
+      user,
+    );
+
+    expect(libraryService.findAccessibleLibraryIds).toHaveBeenCalledOnce();
+    expect(bookReadService.findCardsByBookIds).toHaveBeenCalledExactlyOnceWith([9, 3, 7], 8);
+    expect(result.items.map((item) => ({ id: item.id, ids: item.books.map((book) => book.id), failed: item.failed }))).toEqual([
+      { id: 'recent', ids: [9, 3], failed: false },
+      { id: 'wanted', ids: [3, 7], failed: false },
+    ]);
+  });
+
+  it('uses one intersected library scope for every shelf in a batch, including smart scopes', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService, smartScopeService } = makeService();
+    const user = makeUser({ id: 8, settings: { dashboardConfig: { libraryIds: [11] } } });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([10, 11]);
+    dashboardRepo.findRecentlyAddedBookIds.mockResolvedValue([]);
+    smartScopeService.executeSmartScopeBookIds.mockResolvedValue([]);
+
+    await service.getScrollers(
+      {
+        items: [
+          { id: 'recent', type: 'recently-added', limit: 20 },
+          { id: 'scope', type: 'smart-scope', limit: 20, smartScopeId: 7 },
+        ],
+      },
+      user,
+    );
+
+    expect(libraryService.findAccessibleLibraryIds).toHaveBeenCalledOnce();
+    expect(dashboardRepo.findRecentlyAddedBookIds).toHaveBeenCalledWith([11], 20, EMPTY_CONTENT_FILTER_RULES);
+    expect(smartScopeService.executeSmartScopeBookIds).toHaveBeenCalledWith(7, user, 20, [11]);
+    expect(bookReadService.findCardsByBookIds).not.toHaveBeenCalled();
+  });
+
+  it('keeps successful shelves when one batched selection fails', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService, smartScopeService } = makeService();
+    const user = makeUser({ id: 8 });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([10]);
+    dashboardRepo.findRecentlyAddedBookIds.mockResolvedValue([9]);
+    smartScopeService.executeSmartScopeBookIds.mockRejectedValue(new Error('scope unavailable'));
+    bookReadService.findCardsByBookIds.mockResolvedValue(makeFindCardsResult([9]));
+
+    const result = await service.getScrollers(
+      {
+        items: [
+          { id: 'recent', type: 'recently-added', limit: 20 },
+          { id: 'scope', type: 'smart-scope', limit: 20, smartScopeId: 7 },
+        ],
+      },
+      user,
+    );
+
+    expect(result.items[0]).toMatchObject({ id: 'recent', failed: false });
+    expect(result.items[0]?.books.map((book) => book.id)).toEqual([9]);
+    expect(result.items[1]).toEqual({ id: 'scope', books: [], failed: true });
+  });
+
+  it('rejects duplicate batch item ids', async () => {
+    const { service } = makeService();
+
+    await expect(
+      service.getScrollers(
+        {
+          items: [
+            { id: 'same', type: 'recently-added', limit: 20 },
+            { id: 'same', type: 'random', limit: 20 },
+          ],
+        },
+        makeUser(),
+      ),
+    ).rejects.toThrow(BadRequestException);
+  });
+});

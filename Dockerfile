@@ -1,303 +1,93 @@
-# syntax=docker/dockerfile:1
+ARG NODE_IMAGE=node:26.8.1-alpine3.23@sha256:871eb674ad6e692c91330a8959f1ce2f80ba3f445cdc54e306869d2ea265e42d
 
-# Simple Example Build Command:
-# docker build \
-# --tag crocodilestick/calibre-web-automated:dev \
-# --build-arg="BUILD_DATE=27-09-2024 12:06" \
-# --build-arg="VERSION=2.1.0-test-5" .
+FROM ${NODE_IMAGE} AS base
+RUN npm install -g pnpm@11.22.0
 
-# Good guide on how to set up a buildx builder here:
-# https://a-berahman.medium.com/simplifying-docker-multiplatform-builds-with-buildx-3d7efd670f58
+# Stage 1: Build client
+FROM base AS client-builder
+WORKDIR /app
 
-# Multi-Platform Example Build & Push Command:
-# docker buildx build \
-# --push \
-# --platform linux/amd64,linux/arm64, \
-# --build-arg="BUILD_DATE=02-08-2024 20:52" \
-# --build-arg="VERSION=2.1.0" \
-# --tag crocodilestick/calibre-web-automated:latest .
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY patches/ ./patches/
+COPY packages/types/package.json ./packages/types/
+COPY client/package.json ./client/
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --filter client... --frozen-lockfile
 
-# ==========================================================================
-# STAGE 1: Dependencies - Install system packages and Python dependencies
-# ==========================================================================
-ARG CALIBRE_RELEASE=9.1.0
-ARG KEPUBIFY_RELEASE=v4.0.4
+COPY packages/ ./packages/
+COPY client/ ./client/
+# pnpm 11 defaults verifyDepsBeforeRun to "install", so running a script
+# re-installs first. Each stage installed its own filtered subset with a frozen
+# lockfile two steps up, and no stage carries the whole workspace, so that
+# re-install is both redundant and wrong: it resolves against a partial
+# workspace. In the server stage it is fatal, because client/ is absent and the
+# @embedpdf patches then look unused.
+RUN pnpm --config.verify-deps-before-run=false --filter client run build-only
 
-FROM ghcr.io/linuxserver/baseimage-ubuntu:noble AS dependencies
+# Stage 2: Build server + create deploy bundle
+FROM base AS server-builder
+WORKDIR /app
 
-ARG CALIBRE_RELEASE
-ARG KEPUBIFY_RELEASE
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY patches/ ./patches/
+COPY packages/types/package.json ./packages/types/
+COPY server/package.json ./server/
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --filter server... --frozen-lockfile
 
-# Set the default shell for the following RUN instructions to bash instead of sh
-SHELL ["/bin/bash", "-c"]
+COPY packages/ ./packages/
+COPY server/ ./server/
+RUN pnpm --config.verify-deps-before-run=false --filter server run build
 
-# STEP 1 - Install Required Packages
-RUN \
-  # STEP 1.1 - Add deadsnakes PPA for Python 3.13 and install required apt packages
-  echo "**** add deadsnakes PPA for Python 3.13 ****" && \
-  apt-get update && \
-  apt-get install -y --no-install-recommends software-properties-common && \
-  add-apt-repository ppa:deadsnakes/ppa && \
-  apt-get update && \
-  echo "**** install build packages ****" && \
-  apt-get install -y --no-install-recommends \
-  build-essential \
-  libldap2-dev \
-  libsasl2-dev \
-  gettext \
-  python3.13-dev \
-  python3.13-venv \
-  curl && \
-  echo "**** install runtime packages ****" && \
-  apt-get install -y --no-install-recommends \
-  imagemagick \
-  ghostscript \
-  libldap2 \
-  libmagic1 \
-  libsasl2-2 \
-  libxi6 \
-  libxslt1.1 \
-  xdg-utils \
-  inotify-tools \
-  python3.13 \
-  nano \
-  sqlite3 \
-  zip && \
-  # STEP 1.2 - Install additional Calibre required packages
-  apt-get install -y --no-install-recommends \
-  libxtst6 \
-  libxrandr2 \
-  libxkbfile1 \
-  libxcomposite1 \
-  libxcursor1 \
-  libxfixes3 \
-  libxrender1 \
-  libopengl0 \
-  libnss3 \
-  libxkbcommon0 \
-  libegl1 \
-  libxdamage1 \
-  libgl1 \
-  libglx-mesa0 \
-  xz-utils \
-  binutils && \
-  # Install lsof 4.99.5 from source to fix hanging issue with 4.95 (issue #654)
-  echo "**** install lsof 4.99.5 from source ****" && \
-  LSOF_VERSION="4.99.5" && \
-  curl -L "https://github.com/lsof-org/lsof/archive/${LSOF_VERSION}.tar.gz" -o /tmp/lsof.tar.gz && \
-  cd /tmp && \
-  tar -xzf lsof.tar.gz && \
-  cd "lsof-${LSOF_VERSION}" && \
-  ./Configure -n linux && \
-  make && \
-  cp lsof /usr/bin/lsof && \
-  chmod 755 /usr/bin/lsof && \
-  cd / && \
-  rm -rf /tmp/lsof* && \
-  # Create python3 symlink to point to python3.13
-  ln -sf /usr/bin/python3.13 /usr/bin/python3 && \
-  # Install pip for Python 3.13
-  curl -sS https://bootstrap.pypa.io/get-pip.py | python3.13
+# pnpm deploy prunes to prod deps; dist/ is gitignored so copy it in after.
+RUN pnpm --config.allow-unused-patches=true --filter server deploy --prod --legacy /deploy
+RUN cp -r /app/server/dist /deploy/dist
+RUN mkdir -p /deploy/migrations && cp -r /app/server/src/db/migrations/. /deploy/migrations/
 
-# STEP 2 - Set up Python virtual environment
-RUN \
-  python3.13 -m venv /lsiopy && \
-  /lsiopy/bin/pip install -U --no-cache-dir \
-  pip \
-  wheel
+# Stage 3: Runtime image
+FROM ${NODE_IMAGE} AS runtime
+WORKDIR /app
 
-# STEP 3 - Copy requirements files and install Python packages
-# Copy only requirements files first to leverage Docker layer caching
-COPY --chown=abc:abc requirements.txt optional-requirements.txt /app/calibre-web-automated/
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+ENV KOBO_CLOUDSCRAPER_PYTHON=/opt/bookorbit-python/bin/python
+ENV KOREADER_PLUGIN_PATH=/app/koreader-plugin/bookorbit.koplugin
 
-RUN \
-  # STEP 3.1 - Installing the required python packages listed in 'requirements.txt' and 'optional-requirements.txt'
-  # HOWEVER, they are not pulled from PyPi directly, they are pulled from linuxserver's Ubuntu Wheel Index
-  # This is essentially a repository of precompiled some of the most popular packages with C/C++ source code
-  # This provides the install maximum compatibility with multiple different architectures including: x86_64, armv71 and aarch64
-  # You can read more about python wheels here: https://realpython.com/python-wheels/
-  /lsiopy/bin/pip install -U --no-cache-dir --find-links https://wheel-index.linuxserver.io/ubuntu/ -r \
-  /app/calibre-web-automated/requirements.txt -r /app/calibre-web-automated/optional-requirements.txt
+COPY server/requirements/kobo-cloudscraper.txt /tmp/kobo-cloudscraper-requirements.txt
 
-# STEP 4 - Install kepubify
-RUN \
-  echo "**** install kepubify ****" && \
-  if [[ $KEPUBIFY_RELEASE == 'newest' ]]; then \
-  KEPUBIFY_RELEASE=$(curl -sX GET "https://api.github.com/repos/pgaskin/kepubify/releases/latest" \
-  | awk '/tag_name/{print $4;exit}' FS='[""]'); \
-  fi && \
-  if [ "$(uname -m)" == "x86_64" ]; then \
-  curl -o \
-  /usr/bin/kepubify -L \
-  https://github.com/pgaskin/kepubify/releases/download/${KEPUBIFY_RELEASE}/kepubify-linux-64bit; \
-  elif [ "$(uname -m)" == "aarch64" ]; then \
-  curl -o \
-  /usr/bin/kepubify -L \
-  https://github.com/pgaskin/kepubify/releases/download/${KEPUBIFY_RELEASE}/kepubify-linux-arm64; \
-  fi && \
-  chmod +x /usr/bin/kepubify
+# pip is build-only here. Leaving it installed also leaves pip/_vendor/vendor.txt,
+# which Trivy reads as installed msgpack and setuptools and fails the image scan on.
+RUN apk upgrade --no-cache && \
+    apk add --no-cache poppler-utils su-exec ffmpeg python3 py3-pip tini tzdata && \
+    python3 -m venv /opt/bookorbit-python && \
+    /opt/bookorbit-python/bin/python -m pip install --no-cache-dir -r /tmp/kobo-cloudscraper-requirements.txt && \
+    /opt/bookorbit-python/bin/python -m pip uninstall -y pip && \
+    apk del py3-pip && \
+    rm -f /tmp/kobo-cloudscraper-requirements.txt && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
-# STEP 5 - Install Calibre
-RUN \
-  # STEP 5.1 - Make the /app/calibre directory for the installed files
-  mkdir -p /app/calibre && \
-  # STEP 5.2 - Download the desired version of Calibre, determined by the CALIBRE_RELEASE variable and the architecture of the build environment
-  if [ "$(uname -m)" == "x86_64" ]; then \
-  curl -o \
-  /calibre.txz -L \
-  "https://download.calibre-ebook.com/${CALIBRE_RELEASE}/calibre-${CALIBRE_RELEASE}-x86_64.txz"; \
-  elif [ "$(uname -m)" == "aarch64" ]; then \
-  curl -o \
-  /calibre.txz -L \
-  "https://download.calibre-ebook.com/${CALIBRE_RELEASE}/calibre-${CALIBRE_RELEASE}-arm64.txz"; \
-  fi && \
-  # STEP 5.3 - Extract the downloaded file to /app/calibre
-  tar xf \
-  /calibre.txz -C \
-  /app/calibre && \
-  # STEP 5.3.1 - Remove the ABI tag from the extracted libQt6* files to allow them to be used on older kernels
-  # Removed in V3.1.4 because it was breaking Calibre features that require Qt6. Replaced with a kernel check in the cwa-init service
-  # STEP 5.4 - Delete the extracted calibre.txz to save space in final image
-  rm /calibre.txz
+ENV NODE_ENV=production
+ENV PORT=3000
 
-# ============================================================================
-# STAGE 2: Final - Build the final runtime image
-# ============================================================================
-FROM ghcr.io/linuxserver/baseimage-ubuntu:noble AS unrar-stage
-FROM ghcr.io/linuxserver/unrar:latest AS unrar
+COPY --from=server-builder --chown=node:node /deploy ./
+COPY --from=client-builder --chown=node:node /app/client/dist ./public
+COPY --from=server-builder --chown=node:node /app/server/entrypoint.sh /app/server/file-env.sh ./
+COPY --chown=node:node LICENSE NOTICE ADDITIONAL_TERMS.md ./
+COPY --chown=node:node server/bin/kepubify/ ./bin/kepubify/
+COPY --chown=node:node koreader-plugin/bookorbit.koplugin/ ./koreader-plugin/bookorbit.koplugin/
 
-FROM ghcr.io/linuxserver/baseimage-ubuntu:noble
+RUN sed -i 's/\r$//' /app/entrypoint.sh /app/file-env.sh && chmod +x /app/entrypoint.sh /app/bin/kepubify/* && mkdir -p /books /data/covers /data/book-bucket /tmp && chown -R node:node /data /tmp
 
-ARG BUILD_DATE
-ARG VERSION
-ARG CALIBRE_RELEASE
-ARG KEPUBIFY_RELEASE
+EXPOSE 3000
 
-LABEL build_version="Version:- ${VERSION}"
-LABEL build_date="${BUILD_DATE}"
-LABEL maintainer="CrocodileStick"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD host="$(printf '%s' "${HOST:-}" | tr -d '[:space:]')"; \
+      case "$host" in \
+        ''|0.0.0.0) host=127.0.0.1 ;; \
+        ::) host='[::1]' ;; \
+        *:*) host="[$host]" ;; \
+      esac; \
+      wget -q -T 4 -O /dev/null "http://${host}:${PORT:-3000}/api/v1/health"
 
-# Set the default shell for the following RUN instructions to bash instead of sh
-SHELL ["/bin/bash", "-c"]
-
-# Copy installed dependencies from the dependencies stage
-COPY --from=dependencies /lsiopy /lsiopy
-COPY --from=dependencies /usr/bin/kepubify /usr/bin/kepubify
-COPY --from=dependencies /app/calibre /app/calibre
-COPY --from=dependencies /usr/bin/lsof /usr/bin/lsof
-COPY --from=dependencies /usr/bin/python3.13 /usr/bin/python3.13
-COPY --from=dependencies /usr/lib/python3.13 /usr/lib/python3.13
-
-# Install only runtime packages (no build tools)
-RUN \
-  echo "**** add deadsnakes PPA for Python 3.13 runtime ****" && \
-  apt-get update && \
-  apt-get install -y --no-install-recommends software-properties-common && \
-  add-apt-repository ppa:deadsnakes/ppa && \
-  apt-get update && \
-  echo "**** install runtime packages ****" && \
-  apt-get install -y --no-install-recommends \
-  imagemagick \
-  ghostscript \
-  libldap2 \
-  libmagic1 \
-  libsasl2-2 \
-  libxi6 \
-  libxslt1.1 \
-  xdg-utils \
-  inotify-tools \
-  python3.13 \
-  nano \
-  sqlite3 \
-  zip \
-  gettext \
-  libasound2t64 \
-  libxtst6 \
-  libxrandr2 \
-  libxkbfile1 \
-  libxcomposite1 \
-  libxcursor1 \
-  libxfixes3 \
-  libxrender1 \
-  libopengl0 \
-  libnss3 \
-  libxkbcommon0 \
-  libegl1 \
-  libxdamage1 \
-  libgl1 \
-  libglx-mesa0 \
-  xz-utils \
-  curl && \
-  # Create python3 symlink to point to python3.13
-  ln -sf /usr/bin/python3.13 /usr/bin/python3 && \
-  # Cleanup
-  apt-get -y purge software-properties-common && \
-  apt-get -y autoremove && \
-  rm -rf \
-  /tmp/* \
-  /var/lib/apt/lists/* \
-  /var/tmp/* \
-  /root/.cache
-
-# STEP 6 - Copy application files
-# Copy the rest of the application code (changes most frequently)
-COPY --chown=abc:abc . /app/calibre-web-automated/
-
-# STEP 7 - Configure application
-RUN \
-  # STEP 7.1 - Move contents of /app/calibre-web-automated/root to / and delete the /app/calibre-web-automated/root directory
-  cp -R /app/calibre-web-automated/root/* / && \
-  rm -R /app/calibre-web-automated/root/ && \
-  # STEP 7.2 - Run CWA install script to make required dirs, set script permissions and add aliases for CLI commands  ect.
-  chmod +x /app/calibre-web-automated/scripts/setup-cwa.sh && \
-  /app/calibre-web-automated/scripts/setup-cwa.sh && \
-  # STEP 7.3 - Create koplugin.zip from KOReader plugin folder
-  echo "~~~~ Creating koplugin.zip from KOReader plugin folder... ~~~~" && \
-  if [ -d "/app/calibre-web-automated/koreader/plugins/cwasync.koplugin" ]; then \
-  cd /app/calibre-web-automated/koreader/plugins && \
-  # Calculate digest of all files in the plugin for debugging purposes
-  echo "Calculating digest of plugin files..." && \
-  PLUGIN_DIGEST=$(find cwasync.koplugin -type f -name "*.lua" -o -name "*.json" | sort | xargs sha256sum | sha256sum | cut -d' ' -f1) && \
-  echo "Plugin digest: $PLUGIN_DIGEST" && \
-  # Create a file named after the digest inside the plugin folder
-  echo "Plugin files digest: $PLUGIN_DIGEST" > cwasync.koplugin/${PLUGIN_DIGEST}.digest && \
-  echo "Build date: $(date)" >> cwasync.koplugin/${PLUGIN_DIGEST}.digest && \
-  echo "Files included:" >> cwasync.koplugin/${PLUGIN_DIGEST}.digest && \
-  find cwasync.koplugin -type f -name "*.lua" -o -name "*.json" | sort >> cwasync.koplugin/${PLUGIN_DIGEST}.digest && \
-  zip -r koplugin.zip cwasync.koplugin/ && \
-  echo "Created koplugin.zip from cwasync.koplugin folder with digest file: ${PLUGIN_DIGEST}.digest"; \
-  else \
-  echo "Warning: cwasync.koplugin folder not found, skipping zip creation"; \
-  fi && \
-  # STEP 7.4 - Move koplugin.zip to static directory
-  if [ -f "/app/calibre-web-automated/koreader/plugins/koplugin.zip" ]; then \
-  mkdir -p /app/calibre-web-automated/cps/static && \
-  cp /app/calibre-web-automated/koreader/plugins/koplugin.zip /app/calibre-web-automated/cps/static/ && \
-  echo "Moved koplugin.zip to static directory"; \
-  else \
-  echo "Warning: koplugin.zip not found, skipping move to static directory"; \
-  fi && \
-  # STEP 7.5 - ADD files referencing the versions of the installed main packages
-  echo "$VERSION" >| /app/CWA_RELEASE && \
-  echo "$KEPUBIFY_RELEASE" >| /app/KEPUBIFY_RELEASE && \
-  echo "$CALIBRE_RELEASE" > /CALIBRE_RELEASE
-
-# Add unrar from unrar stage
-COPY --from=unrar /usr/bin/unrar-ubuntu /usr/bin/unrar
-
-# Set calibre environment variable
-ENV CALIBRE_CONFIG_DIR=/config/.config/calibre
-
-# Ports and volumes
-WORKDIR /config
-# The default port CWA listens on. Can be overridden with the CWA_PORT_OVERRIDE environment variable.
-EXPOSE 8083
-VOLUME /config
-VOLUME /cwa-book-ingest
-VOLUME /calibre-library
-
-# Health check for container orchestration
-# Uses shell form to support environment variable substitution for CWA_PORT_OVERRIDE
-# -L follows redirects so the 302 to /login on the root path is treated as healthy
-HEALTHCHECK --interval=30s --timeout=3s --start-period=120s --retries=3 \
-  CMD curl -fsL http://localhost:${CWA_PORT_OVERRIDE:-8083}/ || curl -fsL -k https://localhost:${CWA_PORT_OVERRIDE:-8083}/ || exit 1
+ENTRYPOINT ["/sbin/tini", "-s", "--"]
+CMD ["sh", "/app/entrypoint.sh"]

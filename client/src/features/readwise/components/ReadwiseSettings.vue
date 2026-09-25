@@ -1,0 +1,159 @@
+<script setup lang="ts">
+import { Button } from '@/components/ui/button'
+import { onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { Link, Save, CheckCircle2, AlertCircle, Info, Loader2 } from '@lucide/vue'
+import { toast } from 'vue-sonner'
+import type { ReadwiseSyncDisabledReason, ReadwiseTokenValidationResult } from '@bookorbit/types'
+import SettingsPageHeader from '@/features/settings/SettingsPageHeader.vue'
+import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
+import { SECRET_INPUT_ATTRS } from '@/lib/secret-input'
+import { useReadwiseSettings } from '../composables/useReadwiseSettings'
+
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
+  embedded: false,
+})
+const { t } = useI18n()
+
+const { settings, saving, validating, error, fetchSettings, saveSettings, validateToken } = useReadwiseSettings()
+
+const tokenInput = ref('')
+const tokenVisible = ref(false)
+const tokenInputId = 'readwise-access-token'
+const validationResult = ref<ReadwiseTokenValidationResult | null>(null)
+
+const form = reactive({
+  enabled: false,
+})
+
+const disabledReasonMessages: Record<ReadwiseSyncDisabledReason, string> = {
+  permission_denied: "Your account doesn't have Readwise sync permission.",
+  missing_token: 'Add your Readwise access token to start syncing.',
+  user_disabled: 'Sync is turned off.',
+  invalid_token: 'Your Readwise token was rejected. Paste a new one and re-enable.',
+}
+
+onMounted(async () => {
+  await fetchSettings()
+  form.enabled = settings.value?.enabled ?? false
+})
+
+async function handleValidateToken() {
+  const token = tokenInput.value.trim()
+  if (!token && !settings.value?.tokenConfigured) {
+    toast.error('Enter your Readwise access token first')
+    return
+  }
+  const result = await validateToken(token || undefined)
+  validationResult.value = result
+}
+
+async function handleSave() {
+  const ok = await saveSettings({
+    ...(tokenInput.value.trim() ? { apiToken: tokenInput.value.trim() } : {}),
+    enabled: form.enabled,
+  })
+  if (ok) {
+    tokenInput.value = ''
+    toast.success('Readwise settings saved')
+  } else {
+    toast.error(error.value ?? 'Failed to save settings')
+  }
+}
+
+function toggleTokenVisible() {
+  tokenVisible.value = !tokenVisible.value
+}
+</script>
+
+<template>
+  <div class="space-y-6">
+    <SettingsPageHeader
+      v-if="!props.embedded"
+      :title="t('settings.integrations.tabs.readwise')"
+      :subtitle="t('settings.integrations.providerSubtitles.readwise')"
+    />
+
+    <div class="border border-border rounded-lg bg-card px-4 py-4 md:px-5 md:py-5 shadow-xs space-y-5">
+      <div class="flex items-center gap-3">
+        <Link class="size-5 text-primary shrink-0" />
+        <div>
+          <p class="font-medium text-sm">Connection</p>
+          <p class="text-xs text-muted-foreground mt-0.5">Connect your Readwise account to sync your highlights.</p>
+        </div>
+        <div v-if="settings?.tokenConfigured" class="ml-auto flex items-center gap-1.5 text-xs text-primary">
+          <CheckCircle2 class="size-3.5" />
+          Connected
+        </div>
+      </div>
+
+      <div v-if="error" class="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-2">
+        <AlertCircle class="size-3.5 shrink-0 text-destructive mt-0.5" />
+        <p class="text-xs text-destructive leading-relaxed">{{ error }}</p>
+      </div>
+
+      <div v-if="settings?.disabledReason" class="flex items-start gap-2 rounded-md border border-border/70 bg-muted/40 px-2.5 py-2">
+        <Info class="size-3.5 shrink-0 text-muted-foreground mt-0.5" />
+        <p class="text-xs text-muted-foreground leading-relaxed">
+          {{ disabledReasonMessages[settings.disabledReason] }}
+        </p>
+      </div>
+
+      <div class="space-y-2">
+        <label :for="tokenInputId" class="text-xs font-medium text-muted-foreground uppercase tracking-wider"> Access Token </label>
+        <div class="flex gap-2">
+          <input
+            :id="tokenInputId"
+            v-model="tokenInput"
+            v-bind="SECRET_INPUT_ATTRS"
+            type="text"
+            placeholder="Paste your Readwise access token"
+            class="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            :class="{ 'input-secret': !tokenVisible }"
+          />
+          <Button variant="outline" size="sm" type="button" @click="toggleTokenVisible">
+            {{ tokenVisible ? 'Hide' : 'Show' }}
+          </Button>
+        </div>
+        <p class="text-xs text-muted-foreground">
+          Find your token at
+          <a href="https://readwise.io/access_token" target="_blank" rel="noopener" class="text-primary underline underline-offset-2"
+            >readwise.io/access_token</a
+          >.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <Button variant="outline" size="sm" type="button" :disabled="validating" @click="handleValidateToken">
+          <Loader2 v-if="validating" class="size-3 animate-spin" />
+          Test
+        </Button>
+        <span
+          v-if="validationResult !== null"
+          class="flex items-center gap-1 text-xs"
+          :class="validationResult.valid ? 'text-primary' : 'text-destructive'"
+        >
+          <CheckCircle2 v-if="validationResult.valid" class="size-3.5" />
+          <AlertCircle v-else class="size-3.5" />
+          {{ validationResult.valid ? 'Valid token' : 'Invalid token' }}
+        </span>
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-border">
+        <div>
+          <p class="text-sm">Enable sync</p>
+          <p class="text-xs text-muted-foreground mt-0.5">Automatically send your highlights to Readwise.</p>
+        </div>
+        <ToggleSwitch v-model="form.enabled" />
+      </div>
+
+      <div class="flex items-center justify-end pt-2 border-t border-border">
+        <Button size="sm" type="button" :disabled="saving" @click="handleSave">
+          <Loader2 v-if="saving" class="size-3.5 animate-spin" />
+          <Save v-else class="size-3.5" />
+          Save
+        </Button>
+      </div>
+    </div>
+  </div>
+</template>

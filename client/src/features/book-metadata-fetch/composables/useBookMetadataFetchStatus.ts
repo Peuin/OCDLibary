@@ -1,0 +1,57 @@
+import { ref } from 'vue'
+import { Socket } from 'socket.io-client'
+import type { BookMetadataFetchStatusEvent } from '@bookorbit/types'
+import { createAuthenticatedSocket } from '@/lib/socket'
+
+const status = ref<BookMetadataFetchStatusEvent>({
+  queued: 0,
+  processing: 0,
+  failed: 0,
+  latestFailureAt: null,
+  paused: false,
+  sessionTotal: 0,
+  sessionDone: 0,
+  currentItemName: null,
+})
+const socketConnected = ref(true)
+let socket: Socket | null = null
+
+function getSocket(): Socket {
+  if (!socket) {
+    socket = createAuthenticatedSocket('/book-metadata-fetch', {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+    })
+
+    socket.on('book-metadata-fetch:status', (data: BookMetadataFetchStatusEvent) => {
+      status.value = data
+    })
+
+    socket.on('connect', () => {
+      socketConnected.value = true
+    })
+
+    socket.on('disconnect', () => {
+      socketConnected.value = false
+    })
+  }
+  return socket
+}
+
+export function useBookMetadataFetchStatus() {
+  function subscribe() {
+    getSocket()
+  }
+
+  return { status, socketConnected, subscribe }
+}
+
+export function disconnectBookMetadataFetchSocket() {
+  if (socket) {
+    socket.disconnect()
+    socket = null
+  }
+  status.value = { queued: 0, processing: 0, failed: 0, latestFailureAt: null, paused: false, sessionTotal: 0, sessionDone: 0, currentItemName: null }
+  socketConnected.value = true
+}

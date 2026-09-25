@@ -1,0 +1,366 @@
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+  Res,
+  Put,
+} from '@nestjs/common';
+import { createReadStream } from 'fs';
+import { access } from 'fs/promises';
+import { Readable } from 'stream';
+import type { FastifyReply } from 'fastify';
+import { Permission } from '@bookorbit/types';
+import type { BookDockMetadata } from '@bookorbit/types';
+
+import { AuditAction, AuditResource } from '@bookorbit/types';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Auditable } from '../../common/decorators/auditable.decorator';
+import { ForbidPermission } from '../../common/decorators/forbid-permission.decorator';
+import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { imageContentTypeFromPath } from '../../common/image-content-type';
+import type { MultipartRequest } from '../../common/types/multipart-request';
+import type { RequestUser } from '../../common/types/request-user';
+import { BookDockService } from './book-dock.service';
+import { BookDockIngestService } from './book-dock-ingest.service';
+import { BookDockFinalizeService } from './book-dock-finalize.service';
+import { BookDockWatcherService } from './book-dock-watcher.service';
+import { ListBookDockFilesDto } from './dto/list-book-dock-files.dto';
+import { UpdateBookDockSettingsDto } from './dto/update-book-dock-settings.dto';
+import {
+  UpdateBookDockFileDto,
+  FinalizeBookDockDto,
+  BulkDiscardDto,
+  BulkEditBookDockDto,
+  BulkApplyFetchedDto,
+  BulkRetryFetchDto,
+  BulkSetTargetDto,
+  PreviewNamesDto,
+  SelectionSummaryDto,
+} from './dto/index';
+import { AppSettingsService } from '../app-settings/app-settings.service';
+
+@Controller('book-dock')
+@RequirePermission(Permission.BookDockAccess)
+export class BookDockController {
+  constructor(
+    private readonly service: BookDockService,
+    private readonly ingestService: BookDockIngestService,
+    private readonly finalizeService: BookDockFinalizeService,
+    private readonly watcherService: BookDockWatcherService,
+    private readonly appSettings: AppSettingsService,
+  ) {}
+
+  @Get('files')
+  listFiles(@CurrentUser() user: RequestUser, @Query() query: ListBookDockFilesDto) {
+    return this.service.listFiles({
+      status: query.status,
+      needsReview: query.needsReview,
+      readyToFile: query.readyToFile,
+      page: query.page ?? 1,
+      limit: query.limit ?? 20,
+      sort: query.sort ?? 'createdAt',
+      order: query.order ?? 'desc',
+      search: query.search,
+      userId: user.id,
+      canManageAll: this.canManageAll(user),
+    });
+  }
+
+  @Get('summary')
+  getSummary(@CurrentUser() user: RequestUser) {
+    return this.service.getSummary(user.id, this.canManageAll(user));
+  }
+
+  @Post('pause')
+  @RequirePermission(Permission.ManageBookDock)
+  @HttpCode(HttpStatus.OK)
+  pause() {
+    return this.service.pauseProcessing();
+  }
+
+  @Post('resume')
+  @RequirePermission(Permission.ManageBookDock)
+  @HttpCode(HttpStatus.OK)
+  resume() {
+    return this.service.resumeProcessing();
+  }
+
+  @Get('settings')
+  @RequirePermission(Permission.ManageBookDock)
+  getSettings() {
+    return this.appSettings.getBookDockSettings();
+  }
+
+  @Put('settings')
+  @RequirePermission(Permission.ManageBookDock)
+  @Auditable({
+    action: AuditAction.AppSettingsUpdate,
+    resource: AuditResource.AppSettings,
+    description: 'Updated Book Dock settings',
+  })
+  updateSettings(@Body() dto: UpdateBookDockSettingsDto) {
+    return this.appSettings.updateBookDockSettings(dto);
+  }
+
+  @Get('statistics')
+  getStatistics(@CurrentUser() user: RequestUser) {
+    return this.service.getStatistics(user.id, this.canManageAll(user));
+  }
+
+  @Get('files/:id')
+  getFile(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.service.getFile(id, user.id, this.canManageAll(user));
+  }
+
+  @Get('files/:id/cover')
+  async getCover(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Res() reply: FastifyReply) {
+    const coverPath = await this.service.getCoverPath(id, user.id, this.canManageAll(user));
+
+    const exists = await access(coverPath)
+      .then(() => true)
+      .catch(() => false);
+    if (!exists) throw new NotFoundException('Cover file not found on disk');
+
+    const stream = createReadStream(coverPath);
+    const contentType = imageContentTypeFromPath(coverPath);
+    reply.header('Content-Type', contentType);
+    reply.header('Cache-Control', 'private, max-age=3600');
+    return reply.send(stream);
+  }
+
+  @Post('upload')
+  @HttpCode(HttpStatus.CREATED)
+  async upload(@CurrentUser() user: RequestUser, @Req() req: MultipartRequest) {
+    const limitMb = await this.appSettings.getMaxUploadSizeMb();
+    const data = await req.file({ limits: { fileSize: limitMb * 1024 * 1024 } });
+    if (!data) throw new BadRequestException('No file provided');
+
+    const fileId = await this.ingestService.ingestUpload(data.filename, data.file as unknown as Readable, user.id);
+    return this.service.getFile(fileId, user.id, this.canManageAll(user));
+  }
+
+  @Patch('files/:id')
+  updateFile(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBookDockFileDto) {
+    return this.service.updateFile(id, dto, user.id, this.canManageAll(user));
+  }
+
+  @Delete('files/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  discardFile(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.service.discardFile(id, user.id, this.canManageAll(user));
+  }
+
+  @Post('files/discard')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  bulkDiscard(@CurrentUser() user: RequestUser, @Body() dto: BulkDiscardDto) {
+    return this.service.bulkDiscard(
+      dto.fileIds ?? [],
+      dto.selectAll,
+      dto.excludedIds,
+      dto.status,
+      dto.search,
+      user.id,
+      this.canManageAll(user),
+      dto.needsReview,
+      dto.readyToFile,
+    );
+  }
+
+  @Post('files/apply-fetched')
+  applyFetched(@CurrentUser() user: RequestUser, @Body() dto: BulkApplyFetchedDto) {
+    return this.service.bulkApplyFetched(
+      dto.fileIds ?? [],
+      dto.selectAll,
+      dto.excludedIds,
+      dto.status,
+      dto.search,
+      user.id,
+      this.canManageAll(user),
+      dto.needsReview,
+      dto.readyToFile,
+    );
+  }
+
+  @Post('files/retry-fetch')
+  retryFetch(@CurrentUser() user: RequestUser, @Body() dto: BulkRetryFetchDto) {
+    return this.service.bulkRetryFetch(
+      dto.fileIds,
+      dto.selectAll,
+      dto.excludedIds,
+      dto.status,
+      dto.search,
+      user.id,
+      this.canManageAll(user),
+      dto.needsReview,
+      dto.readyToFile,
+    );
+  }
+
+  @Post('files/:id/refetch-metadata')
+  @HttpCode(HttpStatus.ACCEPTED)
+  refetchMetadata(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.service.refetchMetadata(id, user.id, this.canManageAll(user));
+  }
+
+  @Post('files/set-target')
+  setTarget(@CurrentUser() user: RequestUser, @Body() dto: BulkSetTargetDto) {
+    return this.service.bulkSetTarget(
+      dto.fileIds ?? [],
+      dto.selectAll,
+      dto.excludedIds,
+      dto.targetLibraryId ?? null,
+      dto.targetFolderId ?? null,
+      dto.status,
+      dto.search,
+      user.id,
+      this.canManageAll(user),
+      dto.needsReview,
+      dto.readyToFile,
+    );
+  }
+
+  @Post('files/selection-summary')
+  selectionSummary(@CurrentUser() user: RequestUser, @Body() dto: SelectionSummaryDto) {
+    return this.service.selectionSummary(
+      dto.fileIds ?? [],
+      dto.selectAll,
+      dto.excludedIds,
+      dto.status,
+      dto.search,
+      user.id,
+      this.canManageAll(user),
+      dto.needsReview,
+      dto.readyToFile,
+    );
+  }
+
+  @Post('files/bulk-edit')
+  @ForbidPermission(Permission.DemoRestricted, 'Demo-restricted account cannot perform bulk edits')
+  bulkEdit(@CurrentUser() user: RequestUser, @Body() dto: BulkEditBookDockDto) {
+    return this.service.bulkEdit(
+      dto.fileIds,
+      dto.selectAll,
+      dto.excludedIds,
+      dto.fields as Partial<BookDockMetadata & Record<string, unknown>>,
+      dto.enabledFields,
+      dto.mergeArrays,
+      dto.status,
+      dto.search,
+      user.id,
+      this.canManageAll(user),
+      dto.needsReview,
+      dto.readyToFile,
+    );
+  }
+
+  @Post('files/preview-names')
+  previewNames(@CurrentUser() user: RequestUser, @Body() dto: PreviewNamesDto) {
+    return this.finalizeService.previewNames(
+      dto.fileIds,
+      dto.selectAll,
+      dto.excludedIds,
+      dto.defaultLibraryId,
+      user.id,
+      this.canManageAll(user),
+      dto.status,
+      dto.search,
+      dto.needsReview,
+      dto.readyToFile,
+    );
+  }
+
+  @Post('finalize/preview')
+  @RequirePermission(Permission.BookDockAccess, Permission.LibraryUpload)
+  @HttpCode(HttpStatus.OK)
+  previewFinalize(@CurrentUser() user: RequestUser, @Body() dto: FinalizeBookDockDto) {
+    return this.finalizeService.previewFinalize(
+      user.id,
+      user.isSuperuser,
+      this.canManageAll(user),
+      dto.fileIds,
+      dto.selectAll,
+      dto.excludedIds,
+      dto.defaultLibraryId,
+      dto.defaultFolderId,
+      dto.overrides,
+      dto.status,
+      dto.search,
+      dto.needsReview,
+      dto.readyToFile,
+    );
+  }
+
+  @Post('finalize/discard-duplicates')
+  @RequirePermission(Permission.BookDockAccess, Permission.LibraryUpload)
+  @HttpCode(HttpStatus.OK)
+  discardFinalizeDuplicates(@CurrentUser() user: RequestUser, @Body() dto: FinalizeBookDockDto) {
+    return this.finalizeService.discardDuplicateCandidates(
+      user.id,
+      user.isSuperuser,
+      this.canManageAll(user),
+      dto.fileIds,
+      dto.selectAll,
+      dto.excludedIds,
+      dto.defaultLibraryId,
+      dto.defaultFolderId,
+      dto.overrides,
+      dto.status,
+      dto.search,
+      dto.needsReview,
+      dto.readyToFile,
+    );
+  }
+
+  @Post('finalize')
+  @RequirePermission(Permission.BookDockAccess, Permission.LibraryUpload)
+  @Auditable({
+    action: AuditAction.BookDockFinalize,
+    resource: AuditResource.BookDockFile,
+    description: (req) => {
+      const body = req.body as { fileIds?: number[]; selectAll?: boolean };
+      if (body?.selectAll) return 'Finalized all Book Dock files into library';
+      const count = body?.fileIds?.length ?? 0;
+      return `Finalized ${count} Book Dock file${count !== 1 ? 's' : ''} into library`;
+    },
+  })
+  finalize(@CurrentUser() user: RequestUser, @Body() dto: FinalizeBookDockDto) {
+    const isSuperuser = user.isSuperuser;
+    return this.finalizeService.finalize(
+      user.id,
+      isSuperuser,
+      this.canManageAll(user),
+      dto.fileIds,
+      dto.selectAll,
+      dto.excludedIds,
+      dto.defaultLibraryId,
+      dto.defaultFolderId,
+      dto.overrides,
+      dto.status,
+      dto.search,
+      dto.needsReview,
+      dto.readyToFile,
+    );
+  }
+
+  @Post('rescan')
+  @RequirePermission(Permission.ManageBookDock)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  rescan() {
+    return this.watcherService.rescan();
+  }
+
+  private canManageAll(user: RequestUser): boolean {
+    return user.isSuperuser || user.permissions.includes(Permission.ManageBookDock);
+  }
+}

@@ -1,0 +1,514 @@
+import { Inject, Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
+import { watch, type FSWatcher } from 'chokidar';
+import { eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { dirname, sep } from 'path';
+import { SelfWriteRegistry } from '../../common/services/self-write-registry.service';
+import { normalizeWatchEvent, waitForWatcherReady, type WatchEventType } from '../../common/utils/fs-watch.utils';
+import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
+
+import { DB } from '../../db';
+import * as schema from '../../db/schema';
+import { libraries, libraryFolders } from '../../db/schema';
+import { ScanGateway } from './scan.gateway';
+import { ScannerService } from './scanner.service';
+import { FileEventProcessorService, type FileEventResult } from './file-event-processor.service';
+
+type Db = NodePgDatabase<typeof schema>;
+type EventType = WatchEventType;
+
+export const WATCHER_DEBOUNCE_MS = 500;
+const DEBOUNCE_MS = WATCHER_DEBOUNCE_MS;
+const SCAN_DEBOUNCE_MS = 3_000;
+const DIR_CREATE_SUPPRESS_MS = 6_000;
+const CROSS_LIBRARY_RESCAN_DEBOUNCE_MS = 1_500;
+const RECONCILE_MS = 30 * 60 * 1_000;
+
+@Injectable()
+export class FileWatcherService implements OnApplicationBootstrap, OnModuleDestroy {
+  private readonly logger = new Logger(FileWatcherService.name);
+  private readonly subscriptions = new Map<number, FSWatcher[]>();
+  private readonly watchedLibraryPaths = new Map<number, string[]>();
+  private readonly pendingTimers = new Map<string, { timer: ReturnType<typeof setTimeout>; type: EventType; libraryId: number }>();
+  private readonly pendingFolderScanTimers = new Map<string, { timer: ReturnType<typeof setTimeout>; libraryId: number }>();
+  private readonly pendingCrossLibraryReconcileLibraryIds = new Set<number>();
+  private pendingCrossLibraryReconcileTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly suppressedDirScans = new Map<number, Set<string>>();
+  private readonly suppressedDirScanTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Watchers kept alive but detached from event delivery while their library moves its own files. */
+  private readonly pausedWatchers = new Map<number, FSWatcher[]>();
+  private reconcileTimer: ReturnType<typeof setInterval> | null = null;
+
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly processor: FileEventProcessorService,
+    private readonly gateway: ScanGateway,
+    private readonly scannerService: ScannerService,
+    private readonly selfWriteRegistry: SelfWriteRegistry,
+  ) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    const event = 'scanner.watcher.bootstrap';
+    const startedAt = Date.now();
+    this.logger.log(`[${event}] [start] - watcher bootstrap started`);
+    try {
+      const watchedLibraries = await this.db.select().from(libraries).where(eq(libraries.watch, true));
+      let failedWatcherCount = 0;
+      for (const lib of watchedLibraries) {
+        const folders = await this.db.select().from(libraryFolders).where(eq(libraryFolders.libraryId, lib.id));
+        try {
+          await this.startWatcher(
+            lib.id,
+            folders.map((f) => f.path),
+          );
+        } catch (err) {
+          failedWatcherCount += 1;
+          const errorClass = err instanceof Error ? err.name : 'Error';
+          const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+          this.logger.warn(
+            `[${event}] [skip] libraryId=${lib.id} pathCount=${folders.length} errorClass=${errorClass} error="${errorMessage}" - watcher disabled for library during startup`,
+          );
+        }
+      }
+
+      this.reconcileTimer = setInterval(() => {
+        this.reconcile().catch((err) => {
+          const errorClass = err instanceof Error ? err.name : 'Error';
+          const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+          this.logger.error(`[scanner.watcher.reconcile] [fail] errorClass=${errorClass} error="${errorMessage}" - reconcile failed`);
+        });
+      }, RECONCILE_MS);
+      this.logger.log(
+        `[${event}] [end] durationMs=${Date.now() - startedAt} watchedLibraryCount=${watchedLibraries.length} failedWatcherCount=${failedWatcherCount} - watcher bootstrap completed`,
+      );
+    } catch (err) {
+      const errorClass = err instanceof Error ? err.name : 'Error';
+      const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+      this.logger.warn(
+        `[${event}] [fail] durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${errorMessage}" - watcher bootstrap failed`,
+      );
+      throw err;
+    }
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    const event = 'scanner.watcher.destroy';
+    const startedAt = Date.now();
+    this.logger.log(`[${event}] [start] activeWatchers=${this.subscriptions.size} - watcher destroy started`);
+    try {
+      if (this.reconcileTimer) clearInterval(this.reconcileTimer);
+      for (const entry of this.pendingTimers.values()) clearTimeout(entry.timer);
+      this.pendingTimers.clear();
+      for (const entry of this.pendingFolderScanTimers.values()) clearTimeout(entry.timer);
+      this.pendingFolderScanTimers.clear();
+      if (this.pendingCrossLibraryReconcileTimer) clearTimeout(this.pendingCrossLibraryReconcileTimer);
+      this.pendingCrossLibraryReconcileTimer = null;
+      this.pendingCrossLibraryReconcileLibraryIds.clear();
+      for (const timer of this.suppressedDirScanTimers.values()) clearTimeout(timer);
+      this.suppressedDirScanTimers.clear();
+      this.suppressedDirScans.clear();
+      for (const subs of this.subscriptions.values()) {
+        for (const sub of subs) await sub.close();
+      }
+      // A run that was still in flight can leave a paused watcher behind; it owns handles too.
+      for (const subs of this.pausedWatchers.values()) {
+        for (const sub of subs) await sub.close();
+      }
+      this.pausedWatchers.clear();
+      this.subscriptions.clear();
+      this.watchedLibraryPaths.clear();
+      this.logger.log(`[${event}] [end] durationMs=${Date.now() - startedAt} - watcher destroy completed`);
+    } catch (err) {
+      const errorClass = err instanceof Error ? err.name : 'Error';
+      const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+      this.logger.warn(
+        `[${event}] [fail] durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${errorMessage}" - watcher destroy failed`,
+      );
+      throw err;
+    }
+  }
+
+  private async reconcile(): Promise<void> {
+    const event = 'scanner.watcher.reconcile';
+    const startedAt = Date.now();
+    const libraryIds = [...this.subscriptions.keys()];
+    if (libraryIds.length === 0) return;
+    const libraryIdsLabel = `[${libraryIds.join(',')}]`;
+
+    this.logger.log(`[${event}] [start] libraryCount=${libraryIds.length} libraryIds=${libraryIdsLabel} - reconcile started`);
+    try {
+      const results = await this.processor.reconcileMissingBooks(libraryIds);
+      for (const result of results) {
+        if (result.type === 'book-missing') {
+          this.scannerService.bufferBookMissingEvent(result.libraryId, result.bookIds);
+          this.scannerService.bufferBooksUnavailableNotification(result.libraryId, result.bookIds);
+        } else if (result.type === 'book-restored') {
+          this.gateway.emitBookRestored({ libraryId: result.libraryId, bookIds: result.bookIds });
+          this.scannerService.bufferBooksRestoredNotification(result.libraryId, result.bookIds);
+        } else if (result.type === 'book-moved') {
+          this.gateway.emitBookMoved({ libraryId: result.libraryId, bookIds: result.bookIds });
+        } else if (result.type === 'book-transferred') {
+          this.gateway.emitBookTransferred({ fromLibraryId: result.fromLibraryId, toLibraryId: result.toLibraryId, bookIds: result.bookIds });
+        }
+      }
+      this.logger.log(
+        `[${event}] [end] libraryCount=${libraryIds.length} libraryIds=${libraryIdsLabel} durationMs=${Date.now() - startedAt} resultCount=${results.length} - reconcile completed`,
+      );
+    } catch (err) {
+      const errorClass = err instanceof Error ? err.name : 'Error';
+      const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+      this.logger.warn(
+        `[${event}] [fail] libraryCount=${libraryIds.length} libraryIds=${libraryIdsLabel} durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${errorMessage}" - reconcile failed`,
+      );
+      throw err;
+    }
+  }
+
+  async startWatcher(libraryId: number, paths: string[]): Promise<void> {
+    const event = 'scanner.watcher.start';
+    const startedAt = Date.now();
+    this.logger.log(`[${event}] [start] libraryId=${libraryId} pathCount=${paths.length} - watcher start requested`);
+    const subs: FSWatcher[] = [];
+    let currentPath: string | null = null;
+    try {
+      await this.stopWatcher(libraryId);
+      if (paths.length === 0) {
+        this.watchedLibraryPaths.delete(libraryId);
+        this.logger.log(`[${event}] [end] libraryId=${libraryId} durationMs=${Date.now() - startedAt} pathCount=0 - watcher start completed`);
+        return;
+      }
+
+      for (const path of paths) {
+        currentPath = path;
+        const sub = watch(path, { ignoreInitial: true });
+        sub.on('all', (eventName, eventPath) => {
+          const normalizedType = normalizeWatchEvent(eventName);
+          if (!normalizedType) return;
+          this.schedule(normalizedType, eventPath, libraryId);
+        });
+        sub.on('error', (err) => {
+          const error = err instanceof Error ? err : new Error(String(err));
+          this.logger.warn(
+            `[${event}] [fail] libraryId=${libraryId} path="${sanitizeLogValue(path)}" errorClass=${error.name} error="${sanitizeLogValue(error.message)}" - watcher callback error`,
+          );
+        });
+        try {
+          await waitForWatcherReady(sub);
+        } catch (err) {
+          if (err instanceof Error) {
+            this.logger.warn(
+              `[${event}] [fail] libraryId=${libraryId} path="${sanitizeLogValue(path)}" errorClass=${err.name ?? 'Error'} error="${sanitizeLogValue(err.message)}" - watcher callback error`,
+            );
+          }
+          await sub.close();
+          throw err;
+        }
+        subs.push(sub);
+      }
+
+      this.subscriptions.set(libraryId, subs);
+      this.watchedLibraryPaths.set(libraryId, [...paths]);
+      currentPath = null;
+      this.logger.log(
+        `[${event}] [end] libraryId=${libraryId} durationMs=${Date.now() - startedAt} pathCount=${paths.length} - watcher start completed`,
+      );
+    } catch (err) {
+      for (const sub of subs) {
+        try {
+          await sub.close();
+        } catch {
+          // best-effort cleanup after a partial watcher startup
+        }
+      }
+      const errorClass = err instanceof Error ? err.name : 'Error';
+      const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+      const pathPart = currentPath ? ` path="${sanitizeLogValue(currentPath)}"` : '';
+      this.logger.warn(
+        `[${event}] [fail] libraryId=${libraryId}${pathPart} pathCount=${paths.length} durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${errorMessage}" - watcher start failed`,
+      );
+      throw err;
+    }
+  }
+
+  /**
+   * Stops watching a library and releases its operating system handles.
+   *
+   * `close()` unwinds one handle per watched directory and blocks for seconds on a large library,
+   * so callers that only need the watcher to stop reacting to their own writes should use
+   * {@link pauseWatcher} instead.
+   */
+  async stopWatcher(libraryId: number): Promise<void> {
+    const event = 'scanner.watcher.stop';
+    const startedAt = Date.now();
+    this.logger.log(`[${event}] [start] libraryId=${libraryId} - watcher stop requested`);
+    try {
+      this.watchedLibraryPaths.delete(libraryId);
+      const paused = this.pausedWatchers.get(libraryId) ?? [];
+      this.pausedWatchers.delete(libraryId);
+      const existing = [...(this.subscriptions.get(libraryId) ?? []), ...paused];
+      if (existing.length === 0) {
+        this.logger.log(`[${event}] [end] libraryId=${libraryId} durationMs=${Date.now() - startedAt} hadWatcher=false - watcher stop completed`);
+        return;
+      }
+      for (const sub of existing) await sub.close();
+      this.subscriptions.delete(libraryId);
+      this.clearPendingTimersForLibrary(libraryId);
+      this.pendingCrossLibraryReconcileLibraryIds.delete(libraryId);
+      if (this.pendingCrossLibraryReconcileLibraryIds.size === 0 && this.pendingCrossLibraryReconcileTimer) {
+        clearTimeout(this.pendingCrossLibraryReconcileTimer);
+        this.pendingCrossLibraryReconcileTimer = null;
+      }
+      this.clearLibraryFolderScanSuppressions(libraryId);
+      this.logger.log(`[${event}] [end] libraryId=${libraryId} durationMs=${Date.now() - startedAt} hadWatcher=true - watcher stop completed`);
+    } catch (err) {
+      const errorClass = err instanceof Error ? err.name : 'Error';
+      const errorMessage = sanitizeLogValue(err instanceof Error ? err.message : String(err));
+      this.logger.warn(
+        `[${event}] [fail] libraryId=${libraryId} durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${errorMessage}" - watcher stop failed`,
+      );
+      throw err;
+    }
+  }
+
+  /**
+   * Makes a library's watcher stop delivering events without tearing it down, for callers that are
+   * about to move files themselves.
+   *
+   * Every event is gated on library membership in `subscriptions`: `schedule` returns immediately
+   * for a library that is absent, and a timer that is already pending is discarded when it fires.
+   * So removing the entry is what actually silences the watcher. Closing it as well would release
+   * one handle per watched directory, which measured 9.5s of blocking work across 944 directories
+   * on a real library, followed by a full re-walk to rebuild it.
+   *
+   * @returns whether a live watcher was paused, so the caller knows if it must resume one.
+   */
+  pauseWatcher(libraryId: number): boolean {
+    const event = 'scanner.watcher.pause';
+    const subs = this.subscriptions.get(libraryId);
+    if (!subs) return false;
+
+    this.subscriptions.delete(libraryId);
+    this.pausedWatchers.set(libraryId, subs);
+    this.clearPendingTimersForLibrary(libraryId);
+    this.clearLibraryFolderScanSuppressions(libraryId);
+
+    this.logger.log(`[${event}] [end] libraryId=${libraryId} watcherCount=${subs.length} - watcher paused`);
+    return true;
+  }
+
+  /** Re-arms a paused watcher. Anything that happened while it was paused is intentionally lost. */
+  resumeWatcher(libraryId: number): boolean {
+    const event = 'scanner.watcher.resume';
+    const paused = this.pausedWatchers.get(libraryId);
+    if (!paused) return false;
+
+    this.pausedWatchers.delete(libraryId);
+    this.subscriptions.set(libraryId, paused);
+
+    this.logger.log(`[${event}] [end] libraryId=${libraryId} watcherCount=${paused.length} - watcher resumed`);
+    return true;
+  }
+
+  private scheduleFolderScan(filePath: string, libraryId: number): void {
+    const bookFolder = dirname(filePath);
+    // A root-level file is the book candidate, so debouncing by the library root
+    // would drop sibling files moved into the root in the same burst.
+    const isRootLevelFile = (this.watchedLibraryPaths.get(libraryId) ?? []).some((libraryPath) => bookFolder === libraryPath);
+    const key = `${libraryId}:${isRootLevelFile ? filePath : bookFolder}`;
+    const existing = this.pendingFolderScanTimers.get(key);
+    if (existing) clearTimeout(existing.timer);
+    const timer = setTimeout(() => {
+      this.pendingFolderScanTimers.delete(key);
+      this.scannerService.scanBookFolderAsync(filePath, libraryId);
+    }, SCAN_DEBOUNCE_MS);
+    this.pendingFolderScanTimers.set(key, { timer, libraryId });
+  }
+
+  private clearPendingTimersForLibrary(libraryId: number): void {
+    for (const [path, entry] of this.pendingTimers.entries()) {
+      if (entry.libraryId !== libraryId) continue;
+      clearTimeout(entry.timer);
+      this.pendingTimers.delete(path);
+    }
+
+    for (const [folderPath, entry] of this.pendingFolderScanTimers.entries()) {
+      if (entry.libraryId !== libraryId) continue;
+      clearTimeout(entry.timer);
+      this.pendingFolderScanTimers.delete(folderPath);
+    }
+  }
+
+  // Reconcile watched libraries instead of running a full rescan.
+  private scheduleCrossLibraryReconcile(): void {
+    const watchedLibraryIds = [...this.subscriptions.keys()];
+    if (watchedLibraryIds.length === 0) return;
+
+    for (const libraryId of watchedLibraryIds) this.pendingCrossLibraryReconcileLibraryIds.add(libraryId);
+    if (this.pendingCrossLibraryReconcileTimer) clearTimeout(this.pendingCrossLibraryReconcileTimer);
+
+    this.pendingCrossLibraryReconcileTimer = setTimeout(() => {
+      this.pendingCrossLibraryReconcileTimer = null;
+      const libraryIds = [...this.pendingCrossLibraryReconcileLibraryIds].filter((id) => this.subscriptions.has(id));
+      this.pendingCrossLibraryReconcileLibraryIds.clear();
+      if (libraryIds.length === 0) return;
+
+      this.processor
+        .reconcileMissingBooks(libraryIds)
+        .then((results) => {
+          for (const result of results) {
+            if (result.type === 'book-restored') {
+              this.gateway.emitBookRestored({ libraryId: result.libraryId, bookIds: result.bookIds });
+              this.scannerService.bufferBooksRestoredNotification(result.libraryId, result.bookIds);
+            } else if (result.type === 'book-moved') {
+              this.gateway.emitBookMoved({ libraryId: result.libraryId, bookIds: result.bookIds });
+            } else if (result.type === 'book-transferred') {
+              this.gateway.emitBookTransferred({ fromLibraryId: result.fromLibraryId, toLibraryId: result.toLibraryId, bookIds: result.bookIds });
+            }
+          }
+        })
+        .catch((err) => {
+          this.logger.warn(
+            `[scanner.watcher.cross_library_reconcile] [fail] libraryCount=${libraryIds.length} libraryIds=[${libraryIds.join(',')}] errorClass=${err instanceof Error ? err.name : 'Error'} error="${sanitizeLogValue(err instanceof Error ? err.message : String(err))}" - cross-library reconcile failed`,
+          );
+        });
+    }, CROSS_LIBRARY_RESCAN_DEBOUNCE_MS);
+  }
+
+  private suppressFolderScansForDir(dirPath: string, libraryId: number): void {
+    const key = `${libraryId}:${dirPath}`;
+    const existingTimer = this.suppressedDirScanTimers.get(key);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    let librarySet = this.suppressedDirScans.get(libraryId);
+    if (!librarySet) {
+      librarySet = new Set<string>();
+      this.suppressedDirScans.set(libraryId, librarySet);
+    }
+    librarySet.add(dirPath);
+
+    const timer = setTimeout(() => {
+      this.suppressedDirScanTimers.delete(key);
+      const currentSet = this.suppressedDirScans.get(libraryId);
+      if (!currentSet) return;
+      currentSet.delete(dirPath);
+      if (currentSet.size === 0) {
+        this.suppressedDirScans.delete(libraryId);
+      }
+    }, DIR_CREATE_SUPPRESS_MS);
+    this.suppressedDirScanTimers.set(key, timer);
+  }
+
+  private clearLibraryFolderScanSuppressions(libraryId: number): void {
+    const prefix = `${libraryId}:`;
+    for (const [key, timer] of this.suppressedDirScanTimers.entries()) {
+      if (!key.startsWith(prefix)) continue;
+      clearTimeout(timer);
+      this.suppressedDirScanTimers.delete(key);
+    }
+    this.suppressedDirScans.delete(libraryId);
+  }
+
+  private isFolderScanSuppressed(filePath: string, libraryId: number): boolean {
+    const suppressedDirs = this.suppressedDirScans.get(libraryId);
+    if (!suppressedDirs) return false;
+    for (const dirPath of suppressedDirs) {
+      if (filePath === dirPath || filePath.startsWith(`${dirPath}${sep}`)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // The candidate walk skips every hidden entry, so an event for one can never describe a book
+  // file. Reacting to them only produces spurious work, and the write path's own
+  // .bookorbit-write-* temp file would otherwise schedule a rescan of the very book being written.
+  private isHiddenLibraryPath(path: string, libraryId: number): boolean {
+    for (const root of this.watchedLibraryPaths.get(libraryId) ?? []) {
+      if (path === root) return false;
+      if (!path.startsWith(root + sep)) continue;
+      return path
+        .slice(root.length + 1)
+        .split(sep)
+        .some((segment) => segment.startsWith('.'));
+    }
+    return false;
+  }
+
+  private schedule(type: EventType, path: string, libraryId: number): void {
+    // Guard orphaned timers - ignore events for unwatched libraries
+    if (!this.subscriptions.has(libraryId)) return;
+
+    if (this.isHiddenLibraryPath(path, libraryId)) return;
+
+    // Dir-level coalescing - if there's already a pending folder scan
+    // for this file's directory, don't schedule individual file processing
+    const fileDir = dirname(path);
+    const folderKey = `${libraryId}:${fileDir}`;
+    if (this.pendingFolderScanTimers.has(folderKey)) return;
+
+    const existing = this.pendingTimers.get(path);
+    if (existing) clearTimeout(existing.timer);
+    const timer = this.createPendingTimer(path);
+    this.pendingTimers.set(path, { timer, type, libraryId });
+  }
+
+  private createPendingTimer(path: string): ReturnType<typeof setTimeout> {
+    return setTimeout(() => {
+      const entry = this.pendingTimers.get(path);
+      if (!entry) return;
+      if (!this.subscriptions.has(entry.libraryId)) {
+        this.pendingTimers.delete(path);
+        return;
+      }
+      if (this.selfWriteRegistry.isSuppressed(path)) {
+        entry.timer = this.createPendingTimer(path);
+        return;
+      }
+
+      this.pendingTimers.delete(path);
+      this.process(entry.type, path, entry.libraryId).catch((err) =>
+        this.logger.error(
+          `[scanner.watcher.process_event] [fail] libraryId=${entry.libraryId} type=${entry.type} path="${sanitizeLogValue(path)}" errorClass=${err instanceof Error ? err.name : 'Error'} error="${sanitizeLogValue(err instanceof Error ? err.message : String(err))}" - file event processing failed`,
+        ),
+      );
+    }, DEBOUNCE_MS);
+  }
+
+  private async process(type: EventType, path: string, libraryId: number): Promise<void> {
+    let result: FileEventResult;
+    if (type === 'create') {
+      result = await this.processor.handleCreate(path, libraryId);
+      if (result.type === 'scan-required') {
+        if (result.scope === 'directory') {
+          this.suppressFolderScansForDir(path, libraryId);
+          this.scannerService.scanBookDirectoryAsync(path, libraryId);
+          return;
+        }
+        if (this.isFolderScanSuppressed(path, libraryId) && this.scannerService.isScanRunning(libraryId)) return;
+        this.scheduleFolderScan(path, libraryId);
+        return;
+      }
+    } else {
+      result = await this.processor.handleUnlink(path, libraryId);
+      if (result.type === 'noop') {
+        result = await this.processor.handleUnlinkDir(path, libraryId);
+      }
+    }
+
+    if (result.type === 'book-missing') {
+      this.scannerService.bufferBookMissingEvent(result.libraryId, result.bookIds);
+      this.scannerService.bufferBooksUnavailableNotification(result.libraryId, result.bookIds);
+      if (type === 'delete') this.scheduleCrossLibraryReconcile();
+    } else if (result.type === 'book-restored') {
+      this.gateway.emitBookRestored({ libraryId: result.libraryId, bookIds: result.bookIds });
+      this.scannerService.bufferBooksRestoredNotification(result.libraryId, result.bookIds);
+    } else if (result.type === 'book-moved') {
+      this.gateway.emitBookMoved({ libraryId: result.libraryId, bookIds: result.bookIds });
+      // A move updates the file's path and may consolidate virtual-sibling books.
+      // Schedule a folder scan so upsertBook can drain any remaining siblings.
+      if (type === 'create') this.scheduleFolderScan(path, libraryId);
+    } else if (result.type === 'book-transferred') {
+      this.gateway.emitBookTransferred({ fromLibraryId: result.fromLibraryId, toLibraryId: result.toLibraryId, bookIds: result.bookIds });
+    }
+  }
+}

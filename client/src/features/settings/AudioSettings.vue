@@ -1,0 +1,158 @@
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type { AudioReaderSettings } from '@bookorbit/types'
+import { useReaderDefaultSettings } from '@/features/reader/shared/composables/useReaderSettings'
+import SettingsPageHeader from './SettingsPageHeader.vue'
+import SettingsResetAction from './SettingsResetAction.vue'
+
+const { t } = useI18n()
+
+const props = withDefaults(
+  defineProps<{
+    embedded?: boolean
+  }>(),
+  {
+    embedded: false,
+  },
+)
+
+const { effective, load, update, reset } = useReaderDefaultSettings<AudioReaderSettings>('m4b')
+
+onMounted(load)
+</script>
+
+<template>
+  <div
+    class="[&_.settings-hint]:overflow-hidden [&_.settings-hint]:text-ellipsis [&_.settings-hint]:whitespace-nowrap md:[&_.settings-hint]:overflow-visible md:[&_.settings-hint]:whitespace-normal"
+  >
+    <SettingsPageHeader v-if="!props.embedded" :title="t('settings.reader.audio.title')" :subtitle="t('settings.reader.audio.subtitle')" />
+
+    <!-- Playback -->
+    <div class="mb-6">
+      <p class="settings-group-label">
+        {{ t('settings.reader.audio.playback') }}
+      </p>
+      <div class="settings-card">
+        <!-- Playback speed -->
+        <div class="settings-row">
+          <div>
+            <p class="settings-label">
+              {{ t('settings.reader.audio.playbackSpeed') }}
+            </p>
+            <p class="settings-hint overflow-hidden text-ellipsis whitespace-nowrap md:overflow-visible md:whitespace-normal">
+              {{ t('settings.reader.audio.playbackSpeedHint') }}
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2 self-start md:self-auto md:justify-end">
+            <button
+              v-for="speed in [0.75, 1.0, 1.25, 1.5, 1.75, 2.0]"
+              :key="speed"
+              class="h-8 md:h-7 px-3 text-xs border-2 transition-colors font-medium rounded-md"
+              :class="
+                effective.playbackSpeed === speed
+                  ? 'border-primary text-primary bg-primary/8'
+                  : 'border-border text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground'
+              "
+              @click="update({ playbackSpeed: speed })"
+            >
+              {{ speed }}x
+            </button>
+          </div>
+        </div>
+
+        <!-- Volume -->
+        <div class="px-4 py-3.5 md:px-5 md:py-4 bg-card">
+          <div class="mb-3">
+            <div class="flex items-center justify-between gap-3">
+              <p class="settings-label">
+                {{ t('settings.reader.audio.volume') }}
+              </p>
+              <span class="settings-value">{{ Math.round(effective.volume * 100) }}%</span>
+            </div>
+            <p class="settings-hint overflow-hidden text-ellipsis whitespace-nowrap md:overflow-visible md:whitespace-normal">
+              {{ t('settings.reader.audio.volumeHint') }}
+            </p>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            :value="effective.volume"
+            class="w-full accent-primary"
+            @input="
+              update({
+                volume: parseFloat(($event.target as HTMLInputElement).value),
+              })
+            "
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Skip controls -->
+    <div class="mb-6">
+      <p class="settings-group-label">
+        {{ t('settings.reader.audio.skipControls') }}
+      </p>
+      <div class="settings-card">
+        <!-- Skip back -->
+        <div class="settings-row">
+          <div>
+            <p class="settings-label">
+              {{ t('settings.reader.audio.skipBack') }}
+            </p>
+            <p class="settings-hint overflow-hidden text-ellipsis whitespace-nowrap md:overflow-visible md:whitespace-normal">
+              {{ t('settings.reader.audio.skipBackHint') }}
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2 self-start md:self-auto md:justify-end">
+            <button
+              v-for="secs in [5, 10, 15, 30]"
+              :key="secs"
+              class="h-8 md:h-7 px-3 text-xs border-2 transition-colors font-medium rounded-md"
+              :class="
+                effective.skipBackSeconds === secs
+                  ? 'border-primary text-primary bg-primary/8'
+                  : 'border-border text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground'
+              "
+              @click="update({ skipBackSeconds: secs })"
+            >
+              {{ secs }}s
+            </button>
+          </div>
+        </div>
+
+        <!-- Skip forward -->
+        <div class="settings-row">
+          <div>
+            <p class="settings-label">
+              {{ t('settings.reader.audio.skipForward') }}
+            </p>
+            <p class="settings-hint overflow-hidden text-ellipsis whitespace-nowrap md:overflow-visible md:whitespace-normal">
+              {{ t('settings.reader.audio.skipForwardHint') }}
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2 self-start md:self-auto md:justify-end">
+            <button
+              v-for="secs in [10, 15, 30, 60]"
+              :key="secs"
+              class="h-8 md:h-7 px-3 text-xs border-2 transition-colors font-medium rounded-md"
+              :class="
+                effective.skipForwardSeconds === secs
+                  ? 'border-primary text-primary bg-primary/8'
+                  : 'border-border text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground'
+              "
+              @click="update({ skipForwardSeconds: secs })"
+            >
+              {{ secs }}s
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <SettingsResetAction @reset="reset" />
+  </div>
+</template>

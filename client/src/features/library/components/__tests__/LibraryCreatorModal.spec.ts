@@ -1,0 +1,115 @@
+import { flushPromises, mount, shallowMount } from '@vue/test-utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { Library } from '@bookorbit/types'
+import { useLibraryCreator } from '../../composables/useLibraryCreator'
+import LibraryCreatorScanner from '../LibraryCreatorScanner.vue'
+import LibraryCreatorDetails from '../LibraryCreatorDetails.vue'
+import LibraryCreatorModal from '../LibraryCreatorModal.vue'
+import LibraryCreatorSchedule from '../LibraryCreatorSchedule.vue'
+
+const apiMock = vi.hoisted(() => vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>())
+
+vi.mock('@/lib/api', () => ({ api: apiMock }))
+
+describe('LibraryCreatorModal', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+    apiMock.mockReset()
+    vi.restoreAllMocks()
+  })
+
+  it('uses fetched saved settings for delegated managers whose library list omits the source', async () => {
+    const full = { ...useLibraryCreator().form, id: 7, name: 'Library', icon: 'BookOpen', folders: [], addedAtSource: 'file_created' }
+    apiMock.mockImplementation(
+      async (url) => ({ ok: true, json: async () => (String(url).endsWith('recompute-added-at') ? null : full) }) as Response,
+    )
+    const listEntry = { id: 7, name: 'Library', folders: [], coverAspectRatio: '2/3' } as unknown as Library
+    const wrapper = shallowMount(LibraryCreatorModal, { props: { library: listEntry }, global: { stubs: { teleport: true } } })
+    await flushPromises()
+    await wrapper
+      .findAll('nav button')
+      .find((button) => button.text().includes('Scanning'))!
+      .trigger('click')
+    const scanner = wrapper.getComponent(LibraryCreatorScanner)
+    expect(scanner.props('addedAtSource')).toBe('file_created')
+    expect(scanner.props('storedAddedAtSource')).toBe('file_created')
+    wrapper.unmount()
+  })
+
+  it('renders an accessible responsive dialog with required setup identified', async () => {
+    const wrapper = shallowMount(LibraryCreatorModal, {
+      attachTo: document.body,
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+
+    const dialog = wrapper.get('[role="dialog"]')
+    expect(dialog.attributes('aria-modal')).toBe('true')
+    expect(dialog.attributes('aria-labelledby')).toBe('library-creator-title')
+    expect(wrapper.get('#library-creator-title').text()).toBe('Create a library')
+    expect(wrapper.text()).toContain('Required')
+    expect(wrapper.get('button[aria-label="Close library creator"]')).toBeTruthy()
+
+    wrapper.unmount()
+  })
+
+  it('unlocks the folder step after valid details are entered', async () => {
+    const wrapper = shallowMount(LibraryCreatorModal, {
+      attachTo: document.body,
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+
+    const details = wrapper.getComponent(LibraryCreatorDetails)
+    details.vm.$emit('update:name', 'Main Library')
+    details.vm.$emit('update:icon', 'BookOpen')
+    await wrapper.vm.$nextTick()
+
+    const continueButton = wrapper.findAll('button').find((button) => button.text().includes('Continue'))
+    expect(continueButton?.attributes('disabled')).toBeUndefined()
+    await continueButton?.trigger('click')
+    expect(wrapper.text()).toContain('Choose the server folders used by this library.')
+
+    wrapper.unmount()
+  })
+
+  it('shows required-field validation only after continuing', async () => {
+    const wrapper = shallowMount(LibraryCreatorModal, {
+      attachTo: document.body,
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+    const continueButton = wrapper.findAll('button').find((button) => button.text().includes('Continue'))
+    await continueButton?.trigger('click')
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('Enter a library name.')
+    wrapper.unmount()
+  })
+
+  it('clamps attempted podcast creation to a book library', async () => {
+    const wrapper = shallowMount(LibraryCreatorModal, {
+      attachTo: document.body,
+      global: { stubs: { teleport: true } },
+    })
+    await flushPromises()
+
+    const details = wrapper.getComponent(LibraryCreatorDetails)
+    details.vm.$emit('update:type', 'podcasts')
+    await wrapper.vm.$nextTick()
+
+    expect(details.props('type')).toBe('books')
+
+    wrapper.unmount()
+  })
+
+  it('renders only folder watching when scan scheduling is unavailable', () => {
+    const wrapper = mount(LibraryCreatorSchedule, {
+      props: { watch: true, autoScanCronExpression: null, showAutoScanSchedule: false },
+    })
+
+    expect(wrapper.text()).toContain('Watch folders')
+    expect(wrapper.text()).not.toContain('Auto-scan schedule')
+  })
+})

@@ -1,0 +1,292 @@
+import {
+  buildContributorValues,
+  buildMetadataPatch,
+  buildSourceFileTargetMap,
+  clampNonNegative,
+  clampPercent,
+  emptyCounters,
+  getSourceContributors,
+  hasErrorCode,
+  normalizeEntityName,
+  normalizeReadStatus,
+  pruneUndefined,
+  toDate,
+  truncateNullableText,
+  truncateText,
+  uniqueNumbers,
+} from './executor-utils';
+
+describe('migration executor utils', () => {
+  it('returns zeroed stage counters and unique finite numbers', () => {
+    expect(emptyCounters()).toEqual({ processed: 0, imported: 0, skipped: 0, unresolved: 0, failed: 0 });
+    expect(uniqueNumbers([1, 2, 2, Number.NaN, Infinity, 3])).toEqual([1, 2, 3]);
+  });
+
+  it('maps source files to target file ids using unique hash and mapped path fallback', () => {
+    const planned = {
+      execution: {
+        sourceData: {
+          books: [
+            {
+              sourceBookId: 's1',
+              files: [
+                { sourceFileId: 'f-hash', fileHash: 'hash-1', filePath: '/source/hash.epub' },
+                { sourceFileId: 'f-path', fileHash: null, filePath: '/source/path.epub' },
+                { sourceFileId: 'f-ambiguous', fileHash: 'hash-ambiguous', filePath: '/source/amb.epub' },
+              ],
+            },
+          ],
+        },
+        matchedBooks: [{ sourceBookId: 's1', targetBookId: 11 }],
+      },
+      plan: {
+        pathMappings: [{ sourcePrefix: '/source', targetPrefix: '/target' }],
+      },
+    };
+
+    const targetFilesByBookId = new Map([
+      [
+        11,
+        [
+          { id: 101, hash: 'hash-1', absolutePath: '/target/hash.epub', format: 'epub', sortOrder: 0, durationSeconds: null },
+          { id: 102, hash: null, absolutePath: '/target/path.epub', format: 'epub', sortOrder: 1, durationSeconds: null },
+          { id: 201, hash: 'hash-ambiguous', absolutePath: '/target/other.epub', format: 'epub', sortOrder: 2, durationSeconds: null },
+          { id: 202, hash: 'hash-ambiguous', absolutePath: '/target/second.epub', format: 'epub', sortOrder: 3, durationSeconds: null },
+          { id: 103, hash: null, absolutePath: '/target/amb.epub', format: 'epub', sortOrder: 4, durationSeconds: null },
+        ],
+      ],
+    ]);
+
+    const map = buildSourceFileTargetMap(planned as never, targetFilesByBookId);
+
+    expect(map.get('f-hash')).toBe(101);
+    expect(map.get('f-path')).toBe(102);
+    expect(map.get('f-ambiguous')).toBe(103);
+  });
+
+  it('uses compatible unique-file and deterministic ordinal fallbacks without unsafe track assignments', () => {
+    const planned = {
+      execution: {
+        sourceData: {
+          books: [
+            {
+              sourceBookId: 'single',
+              files: [{ sourceFileId: 'single-epub', fileHash: null, filePath: null, fileName: 'book.epub', format: 'epub', sortOrder: 0 }],
+            },
+            {
+              sourceBookId: 'ordered',
+              files: [
+                { sourceFileId: 'track-1', fileHash: null, filePath: null, fileName: '01.mp3', format: 'mp3', sortOrder: 0 },
+                { sourceFileId: 'track-2', fileHash: null, filePath: null, fileName: '02.mp3', format: 'mp3', sortOrder: 1 },
+              ],
+            },
+            {
+              sourceBookId: 'unsafe',
+              files: [
+                { sourceFileId: 'unsafe-1', fileHash: null, filePath: null, fileName: '01.mp3', format: 'mp3', sortOrder: 0 },
+                { sourceFileId: 'unsafe-2', fileHash: null, filePath: null, fileName: '02.mp3', format: 'mp3', sortOrder: 1 },
+              ],
+            },
+          ],
+        },
+        matchedBooks: [
+          { sourceBookId: 'single', targetBookId: 1 },
+          { sourceBookId: 'ordered', targetBookId: 2 },
+          { sourceBookId: 'unsafe', targetBookId: 3 },
+        ],
+      },
+      plan: { pathMappings: [] },
+    };
+    const targetFilesByBookId = new Map([
+      [1, [{ id: 11, hash: null, absolutePath: '/target/book.epub', format: 'epub', sortOrder: 0, durationSeconds: null }]],
+      [
+        2,
+        [
+          { id: 21, hash: null, absolutePath: '/target/01.mp3', format: 'mp3', sortOrder: 0, durationSeconds: 60 },
+          { id: 22, hash: null, absolutePath: '/target/02.mp3', format: 'mp3', sortOrder: 1, durationSeconds: 90 },
+        ],
+      ],
+      [3, [{ id: 31, hash: null, absolutePath: '/target/only.mp3', format: 'mp3', sortOrder: 0, durationSeconds: 150 }]],
+    ]);
+
+    const map = buildSourceFileTargetMap(planned as never, targetFilesByBookId);
+
+    expect(map.get('single-epub')).toBe(11);
+    expect(map.get('track-1')).toBe(21);
+    expect(map.get('track-2')).toBe(22);
+    expect(map.has('unsafe-1')).toBe(false);
+    expect(map.has('unsafe-2')).toBe(false);
+  });
+
+  it('sanitizes metadata patch values and honors presentFields', () => {
+    const patch = buildMetadataPatch({
+      title: 'A',
+      subtitle: 'B',
+      isbn10: '1234567890',
+      isbn13: '1234567890123',
+      description: 'desc',
+      publisher: 'publisher',
+      publishedYear: 2600,
+      language: 'english',
+      pageCount: -1,
+      seriesName: 'Series',
+      seriesIndex: 1.4,
+      rating: 11,
+      googleBooksId: 'g',
+      goodreadsId: 'gr',
+      amazonId: 'amz',
+      hardcoverId: 'hc',
+      koboId: 'kobo',
+      audibleId: 'aud',
+      comicvineId: 'cv',
+      durationSeconds: 3601.7,
+      abridged: null,
+      presentFields: ['title', 'subtitle', 'publishedYear', 'pageCount', 'durationSeconds', 'abridged'],
+    });
+
+    expect(patch).toEqual({
+      title: 'A',
+      subtitle: 'B',
+      publishedYear: null,
+      pageCount: null,
+      durationSeconds: 3602,
+      abridged: false,
+    });
+  });
+
+  it('maps Kobo provider IDs when present in source metadata', () => {
+    const patch = buildMetadataPatch({
+      title: null,
+      subtitle: null,
+      isbn10: null,
+      isbn13: null,
+      description: null,
+      publisher: null,
+      publishedYear: null,
+      language: null,
+      koboId: 'kobo-book-slug',
+      presentFields: ['koboId'],
+    });
+
+    expect(patch).toEqual({ koboId: 'kobo-book-slug' });
+  });
+
+  it('normalizes publisher and series metadata text in migration patches', () => {
+    const patch = buildMetadataPatch({
+      title: null,
+      subtitle: null,
+      isbn10: null,
+      isbn13: null,
+      description: null,
+      publisher: '  Tor\t Books  ',
+      publishedYear: null,
+      language: null,
+      seriesName: ' Dune   Chronicles ',
+      presentFields: ['publisher', 'seriesName'],
+    });
+
+    expect(patch).toEqual({ publisher: 'Tor Books', seriesName: 'Dune Chronicles' });
+  });
+
+  it('builds contributor values with truncation, normalization, and defaulted sort name', () => {
+    const values = buildContributorValues({
+      name: '  Name\t Value  ',
+      sortName: null,
+      description: 'Bio',
+    });
+
+    expect(values).toEqual({
+      name: 'Name Value',
+      sortName: 'Name Value',
+      description: 'Bio',
+    });
+  });
+
+  describe('normalizeEntityName', () => {
+    // Search matches these names with ILIKE, and unaccent() does not touch whitespace, so an
+    // imported name that keeps a non-breaking space is invisible to every search for it.
+    it.each([
+      ['non-breaking space', 'Dan\u00A0Brown'],
+      ['doubled space', 'Dan  Brown'],
+      ['tab', 'Dan\tBrown'],
+      ['newline between parts', 'Dan\nBrown'],
+      ['leading and trailing whitespace', '  Dan Brown\t'],
+    ])('collapses %s', (_label, name) => {
+      expect(normalizeEntityName(name, 500)).toBe('Dan Brown');
+    });
+
+    it('returns null for names that are empty once normalized', () => {
+      expect(normalizeEntityName('   ', 500)).toBeNull();
+      expect(normalizeEntityName(null, 500)).toBeNull();
+      expect(normalizeEntityName(undefined, 500)).toBeNull();
+    });
+
+    it('truncates to the column limit', () => {
+      expect(normalizeEntityName('X'.repeat(250), 200)).toBe('X'.repeat(200));
+    });
+
+    it('does not leave a trailing space when the cut lands on one', () => {
+      expect(normalizeEntityName('abcd efgh', 5)).toBe('abcd');
+    });
+  });
+
+  it('derives source contributors from structured data then falls back to parsed legacy names', () => {
+    const structured = getSourceContributors(
+      [
+        { name: ' B\t Value ', sortName: 'Bee  Value', description: null, displayOrder: 2 },
+        { name: 'A', sortName: null, description: 'Bio', displayOrder: 1 },
+        { name: 'a', sortName: null, description: null, displayOrder: 3 },
+      ],
+      null,
+    );
+
+    expect(structured).toEqual([
+      { name: 'A', sortName: null, description: 'Bio' },
+      { name: 'B Value', sortName: 'Bee Value', description: null },
+    ]);
+
+    const legacy = getSourceContributors(undefined, '["Ann  Marie", "Bob", "ann marie"]');
+    expect(legacy).toEqual([
+      { name: 'Ann Marie', sortName: 'Ann Marie', description: null },
+      { name: 'Bob', sortName: 'Bob', description: null },
+    ]);
+  });
+
+  it('prunes undefined keys and recognizes error codes', () => {
+    expect(pruneUndefined({ a: 1, b: undefined, c: null })).toEqual({ a: 1, c: null });
+    expect(hasErrorCode({ code: '23505' }, '23505')).toBe(true);
+    expect(hasErrorCode({ code: 'x' }, '23505')).toBe(false);
+    expect(hasErrorCode(null, 'x')).toBe(false);
+  });
+
+  it('parses dates and clamps progress percentages', () => {
+    expect(toDate('2026-01-01T00:00:00.000Z')).toEqual(new Date('2026-01-01T00:00:00.000Z'));
+    expect(toDate('bad-date')).toBeNull();
+    expect(toDate(null)).toBeNull();
+
+    expect(clampPercent(null)).toBe(0);
+    expect(clampPercent(-5)).toBe(0);
+    expect(clampPercent(12.5)).toBe(12.5);
+    expect(clampPercent(150)).toBe(100);
+
+    expect(clampNonNegative(null)).toBe(0);
+    expect(clampNonNegative(-2)).toBe(0);
+    expect(clampNonNegative(9)).toBe(9);
+  });
+
+  it('truncates text helpers and normalizes read status from status/percentage', () => {
+    expect(truncateText('abcdef', 4)).toBe('abcd');
+    expect(truncateText('abc', 4)).toBe('abc');
+    expect(truncateNullableText(undefined, 2)).toBeUndefined();
+    expect(truncateNullableText(null, 2)).toBeNull();
+    expect(truncateNullableText('abcd', 3)).toBe('abc');
+
+    expect(normalizeReadStatus('completed', null)).toBe('read');
+    expect(normalizeReadStatus('in_progress', null)).toBe('reading');
+    expect(normalizeReadStatus('paused', null)).toBe('on_hold');
+    expect(normalizeReadStatus('wishlist', null)).toBe('want_to_read');
+    expect(normalizeReadStatus('unknown', 99)).toBe('read');
+    expect(normalizeReadStatus('unknown', 10)).toBe('reading');
+    expect(normalizeReadStatus('unknown', 0)).toBe('unread');
+  });
+});

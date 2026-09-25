@@ -1,0 +1,470 @@
+import { randomUUID } from 'node:crypto';
+import { Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { NotificationType, ACHIEVEMENT_CATEGORY_LABELS } from '@bookorbit/types';
+import type {
+  AchievementCatalogueResponse,
+  AchievementCategoryGroup,
+  AchievementItem,
+  AchievementCategory,
+  AchievementCelebrationClaim,
+} from '@bookorbit/types';
+import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
+import { getYearInTimeZone, resolveTimeZone, toDateKeyInTimeZone } from '../../common/utils/timezone.utils';
+import type { RequestUser } from '../../common/types/request-user';
+
+import { NotificationService } from '../notification/notification.service';
+import { UserService } from '../user/user.service';
+import { AchievementRepository } from './achievement.repository';
+import {
+  AchievementEventsService,
+  ACHIEVEMENT_EVENT_READING_SESSION_SAVED,
+  ACHIEVEMENT_EVENT_BOOK_STATUS_CHANGED,
+  ACHIEVEMENT_EVENT_ANNOTATION_CREATED,
+  ACHIEVEMENT_EVENT_COLLECTION_CREATED,
+  ACHIEVEMENT_EVENT_LIBRARY_CATALOG_CHANGED,
+  ACHIEVEMENT_EVENT_ACHIEVEMENT_AWARDED,
+  ACHIEVEMENT_EVENT_BOOK_RATING_CHANGED,
+  ACHIEVEMENT_EVENT_BOOK_PROGRESS_CHANGED,
+  ACHIEVEMENT_EVENT_BACKFILL,
+} from './achievement-events.service';
+import { EvaluatorRegistry } from './evaluators/evaluator-registry';
+import { ACHIEVEMENT_SEED } from './seed/achievement-seed';
+import type { AchievementRow, UserAchievementRow } from '../../db/schema';
+
+@Injectable()
+export class AchievementService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(AchievementService.name);
+  private readonly eventHandlers = new Map<string, (payload: Record<string, unknown>) => void>();
+  private readonly backfillRuns = new Map<number, { pending: boolean }>();
+  private seedPromise: Promise<void> | null = null;
+
+  constructor(
+    private readonly repo: AchievementRepository,
+    private readonly events: AchievementEventsService,
+    private readonly registry: EvaluatorRegistry,
+    private readonly notificationService: NotificationService,
+    private readonly userService: UserService,
+  ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.repo.backfillExistingCelebrations();
+    await this.ensureCatalogueSeeded();
+    this.registerEventListeners();
+  }
+
+  // Memoized so the catalogue is seeded exactly once, and so a concurrent onModuleInit hook
+  // (the auto-backfill) can await it before awarding achievements whose keys are FK'd to the catalogue.
+  ensureCatalogueSeeded(): Promise<void> {
+    if (!this.seedPromise) {
+      this.seedPromise = this.seedCatalogue();
+    }
+    return this.seedPromise;
+  }
+
+  async getCatalogue(user: RequestUser): Promise<AchievementCatalogueResponse> {
+    const userId = user.id;
+    const [allAchievements, userAchievements] = await Promise.all([this.repo.findAllAchievements(), this.repo.findUserAchievements(userId)]);
+
+    const earnedMap = new Map<string, UserAchievementRow>();
+    for (const ua of userAchievements) {
+      earnedMap.set(ua.achievementKey, ua);
+    }
+
+    const timeZone = resolveTimeZone((user.settings as { timezone?: unknown } | undefined)?.timezone, 'UTC');
+    const progressMap = await this.computeProgress(userId, user.isSuperuser, timeZone, allAchievements, earnedMap);
+    const accessibleBookIds = await this.getAccessibleContextBookIds(user, userAchievements);
+
+    const categoryOrder: AchievementCategory[] = ['reading', 'library', 'exploration', 'dedication', 'devices'];
+    const grouped = new Map<AchievementCategory, AchievementItem[]>();
+
+    for (const cat of categoryOrder) {
+      grouped.set(cat, []);
+    }
+
+    for (const achievement of allAchievements) {
+      const earned = earnedMap.get(achievement.key);
+      const category = achievement.category as AchievementCategory;
+      const items = grouped.get(category);
+      if (!items) continue;
+
+      items.push(this.toItem(achievement, earned, progressMap.get(achievement.key) ?? null, accessibleBookIds));
+    }
+
+    let totalEarned = 0;
+    let totalAvailable = 0;
+    const categories: AchievementCategoryGroup[] = [];
+
+    for (const cat of categoryOrder) {
+      const items = grouped.get(cat) ?? [];
+      const earnedCount = items.filter((i) => i.earned).length;
+      totalEarned += earnedCount;
+      totalAvailable += items.length;
+
+      categories.push({
+        key: cat,
+        label: ACHIEVEMENT_CATEGORY_LABELS[cat],
+        earnedCount,
+        totalCount: items.length,
+        achievements: items,
+      });
+    }
+
+    return { categories, totalEarned, totalAvailable };
+  }
+
+  async claimCelebration(user: RequestUser): Promise<AchievementCelebrationClaim | null> {
+    if (!(await this.userService.isAchievementEnabled(user.id))) return null;
+
+    const claimedAt = new Date();
+    const expiresAt = new Date(claimedAt.getTime() + 15 * 60 * 1000);
+    const claimId = randomUUID();
+    const claimed = await this.repo.claimNextCelebration(user.id, claimId, claimedAt, new Date(claimedAt.getTime() - 15 * 60 * 1000));
+    if (!claimed) return null;
+
+    const accessibleBookIds = await this.getAccessibleContextBookIds(user, [claimed.award]);
+    return {
+      claimId,
+      expiresAt: expiresAt.toISOString(),
+      achievement: this.toItem(claimed.achievement, claimed.award, null, accessibleBookIds),
+    };
+  }
+
+  async acknowledgeCelebration(user: RequestUser, claimId: string): Promise<void> {
+    const result = await this.repo.acknowledgeCelebration(user.id, claimId, new Date());
+    if (result === 'foreign') throw new NotFoundException('Achievement celebration claim not found');
+  }
+
+  async handleEvent(eventName: string, payload: Record<string, unknown>): Promise<void> {
+    const userId = payload.userId as number;
+    if (!userId) return;
+
+    const event = 'achievement.evaluate';
+    const startedAt = Date.now();
+
+    try {
+      if (!(await this.userService.isAchievementEnabled(userId))) return;
+
+      const [earnedKeys, isSuperuser, timeZone] = await Promise.all([
+        this.repo.findUserEarnedKeys(userId),
+        this.repo.findUserIsSuperuser(userId),
+        this.repo.findUserTimeZone(userId),
+      ]);
+      const awards = await this.registry.evaluate({ userId, isSuperuser, eventName, timeZone, payload }, earnedKeys);
+      // Backfill is a retroactive catch-up, so it awards silently instead of flooding the user with notifications.
+      const notify = eventName !== ACHIEVEMENT_EVENT_BACKFILL;
+
+      let awarded = 0;
+      for (const award of awards) {
+        if (earnedKeys.has(award.key)) continue;
+        const row = await this.repo.award(userId, award.key, award.context);
+        if (row) {
+          awarded++;
+          earnedKeys.add(award.key);
+          if (notify) await this.sendNotification(userId, award.key);
+        }
+      }
+
+      if (awarded > 0) {
+        await this.evaluateMetaBadges(userId, isSuperuser, timeZone, earnedKeys, notify);
+      }
+
+      if (awarded > 0) {
+        this.logger.log(
+          `[${event}] [end] userId=${userId} event=${eventName} durationMs=${Date.now() - startedAt} awarded=${awarded} - achievement evaluation completed`,
+        );
+      }
+    } catch (error) {
+      const errorClass = error instanceof Error ? error.name : 'Error';
+      const errorMessage = sanitizeLogValue(error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        `[${event}] [fail] userId=${userId} event=${eventName} durationMs=${Date.now() - startedAt} errorClass=${errorClass} error="${errorMessage}" - achievement evaluation failed`,
+      );
+    }
+  }
+
+  private async seedCatalogue(): Promise<void> {
+    try {
+      await this.repo.upsertCatalogue(ACHIEVEMENT_SEED);
+      this.logger.log(`[achievement.seed] [end] count=${ACHIEVEMENT_SEED.length} - achievement catalogue seeded`);
+    } catch (error) {
+      const errorMessage = sanitizeLogValue(error instanceof Error ? error.message : String(error));
+      this.logger.error(`[achievement.seed] [fail] error="${errorMessage}" - failed to seed achievement catalogue`);
+    }
+  }
+
+  private async getAccessibleContextBookIds(user: RequestUser, awards: UserAchievementRow[]): Promise<Set<number>> {
+    const ids = awards.map((award) => this.contextBookId(award.contextJson)).filter((id): id is number => id !== null);
+    return this.repo.findAccessibleBookIds(user.id, user.isSuperuser, ids);
+  }
+
+  private toItem(
+    achievement: AchievementRow,
+    earned: UserAchievementRow | undefined,
+    currentProgress: number | null,
+    accessibleBookIds: Set<number>,
+  ): AchievementItem {
+    const lockedSecret = achievement.hidden && !earned;
+    const context = earned?.contextJson && typeof earned.contextJson === 'object' ? (earned.contextJson as Record<string, unknown>) : null;
+    const rawBookId = this.contextBookId(context);
+    const contextBookId = rawBookId !== null && accessibleBookIds.has(rawBookId) ? rawBookId : null;
+    const contextBookTitle = typeof context?.bookTitle === 'string' && context.bookTitle.trim().length > 0 ? context.bookTitle : null;
+
+    return {
+      key: achievement.key,
+      groupKey: lockedSecret ? null : achievement.groupKey,
+      tier: lockedSecret ? null : achievement.tier,
+      category: achievement.category as AchievementCategory,
+      name: lockedSecret ? 'Secret Achievement' : achievement.name,
+      description: lockedSecret ? 'Keep reading to reveal this achievement.' : achievement.description,
+      iconName: lockedSecret ? 'lock' : achievement.iconName,
+      rarity: lockedSecret ? 'common' : (achievement.rarity as AchievementItem['rarity']),
+      threshold: lockedSecret ? null : achievement.threshold,
+      hidden: achievement.hidden,
+      sortOrder: achievement.sortOrder,
+      earned: !!earned,
+      awardedAt: earned?.awardedAt?.toISOString() ?? null,
+      context: lockedSecret ? null : context,
+      contextBookId: lockedSecret ? null : contextBookId,
+      contextBookTitle: lockedSecret ? null : contextBookTitle,
+      currentProgress: lockedSecret ? null : currentProgress,
+    };
+  }
+
+  private contextBookId(context: unknown): number | null {
+    if (!context || typeof context !== 'object') return null;
+    const value = (context as Record<string, unknown>).bookId;
+    return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null;
+  }
+
+  onModuleDestroy(): void {
+    for (const [eventName, handler] of this.eventHandlers) {
+      this.events.removeListener(eventName, handler);
+    }
+    this.eventHandlers.clear();
+  }
+
+  private registerEventListeners(): void {
+    const events = [
+      ACHIEVEMENT_EVENT_READING_SESSION_SAVED,
+      ACHIEVEMENT_EVENT_BOOK_STATUS_CHANGED,
+      ACHIEVEMENT_EVENT_ANNOTATION_CREATED,
+      ACHIEVEMENT_EVENT_COLLECTION_CREATED,
+      ACHIEVEMENT_EVENT_LIBRARY_CATALOG_CHANGED,
+      ACHIEVEMENT_EVENT_BOOK_RATING_CHANGED,
+      ACHIEVEMENT_EVENT_BOOK_PROGRESS_CHANGED,
+    ];
+
+    for (const eventName of events) {
+      const handler = (payload: Record<string, unknown>): void => {
+        void this.handleEvent(eventName, payload);
+      };
+      this.eventHandlers.set(eventName, handler);
+      this.events.on(eventName, handler);
+    }
+
+    const backfillHandler = (payload: Record<string, unknown>): void => {
+      this.handleBackfillEvent(payload);
+    };
+    this.eventHandlers.set(ACHIEVEMENT_EVENT_BACKFILL, backfillHandler);
+    this.events.on(ACHIEVEMENT_EVENT_BACKFILL, backfillHandler);
+  }
+
+  /**
+   * A backfill re-evaluates the whole catalogue and carries no data beyond the user, so emitters that
+   * fire it per unit of work (a KOReader device catching up over many uploads) would otherwise stack
+   * full evaluations for one user in parallel. Runs are serialized per user and a burst collapses into
+   * a single trailing re-run, which still sees the newest data because every evaluator reads the database.
+   */
+  private handleBackfillEvent(payload: Record<string, unknown>): void {
+    const userId = payload.userId as number;
+    if (!userId) return;
+
+    const active = this.backfillRuns.get(userId);
+    if (active) {
+      active.pending = true;
+      return;
+    }
+
+    const run = { pending: false };
+    this.backfillRuns.set(userId, run);
+    void this.drainBackfillRuns(userId, run, payload);
+  }
+
+  private async drainBackfillRuns(userId: number, run: { pending: boolean }, payload: Record<string, unknown>): Promise<void> {
+    try {
+      do {
+        run.pending = false;
+        await this.handleEvent(ACHIEVEMENT_EVENT_BACKFILL, payload);
+      } while (run.pending);
+    } finally {
+      this.backfillRuns.delete(userId);
+    }
+  }
+
+  private async sendNotification(userId: number, achievementKey: string): Promise<void> {
+    const achievement = await this.repo.findAchievementByKey(achievementKey);
+    if (!achievement) return;
+
+    await this.notificationService.notify({
+      type: NotificationType.AchievementUnlocked,
+      title: 'Achievement Unlocked!',
+      message: achievement.name,
+      actionUrl: '/statistics?tab=achievements',
+      meta: { achievementKey, achievementName: achievement.name, rarity: achievement.rarity, iconName: achievement.iconName },
+      scope: { kind: 'user', userId },
+    });
+  }
+
+  private async evaluateMetaBadges(userId: number, isSuperuser: boolean, timeZone: string, earnedKeys: Set<string>, notify: boolean): Promise<void> {
+    const metaAwards = await this.registry.evaluate(
+      { userId, isSuperuser, eventName: ACHIEVEMENT_EVENT_ACHIEVEMENT_AWARDED, timeZone, payload: { userId } },
+      earnedKeys,
+    );
+    for (const award of metaAwards) {
+      if (earnedKeys.has(award.key)) continue;
+      const row = await this.repo.award(userId, award.key, award.context);
+      if (row) {
+        earnedKeys.add(award.key);
+        if (notify) await this.sendNotification(userId, award.key);
+      }
+    }
+  }
+
+  private async computeProgress(
+    userId: number,
+    isSuperuser: boolean,
+    timeZone: string,
+    allAchievements: AchievementRow[],
+    earnedMap: Map<string, UserAchievementRow>,
+  ): Promise<Map<string, number>> {
+    const progressMap = new Map<string, number>();
+
+    const tieredGroups = new Map<string, AchievementRow[]>();
+    for (const a of allAchievements) {
+      if (a.groupKey && a.tier) {
+        const existing = tieredGroups.get(a.groupKey) ?? [];
+        existing.push(a);
+        tieredGroups.set(a.groupKey, existing);
+      }
+    }
+
+    const groupsToFetch = Array.from(tieredGroups.entries())
+      .filter(([, tiers]) => tiers.sort((a, b) => (a.tier ?? 0) - (b.tier ?? 0)).some((t) => !earnedMap.has(t.key)))
+      .map(([groupKey]) => groupKey);
+
+    const progressEntries = await Promise.all(
+      groupsToFetch.map(async (groupKey) => [groupKey, await this.getProgressForGroup(userId, isSuperuser, timeZone, groupKey)] as const),
+    );
+
+    for (const [groupKey, progress] of progressEntries) {
+      if (progress === null) continue;
+      const tiers = tieredGroups.get(groupKey) ?? [];
+      for (const tier of tiers) {
+        if (!earnedMap.has(tier.key)) {
+          progressMap.set(tier.key, progress);
+        }
+      }
+    }
+
+    const singleBadgesToFetch = allAchievements.filter((a) => !a.groupKey && a.threshold !== null && !earnedMap.has(a.key));
+
+    await Promise.all(
+      singleBadgesToFetch.map(async (a) => {
+        const progress = await this.computeSingleBadgeProgress(userId, isSuperuser, timeZone, a.key);
+        if (progress !== null) {
+          progressMap.set(a.key, progress);
+        }
+      }),
+    );
+
+    return progressMap;
+  }
+
+  private async computeSingleBadgeProgress(userId: number, isSuperuser: boolean, timeZone: string, key: string): Promise<number | null> {
+    switch (key) {
+      case 'marathoner':
+        return this.repo.getMaxSessionMinutes(userId);
+      case 'binge_reader': {
+        const now = new Date();
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return this.repo.countBooksFinishedInDateRange(userId, oneWeekAgo, now);
+      }
+      case 'curator':
+        return this.repo.countCollections(userId);
+      case 'author_deep_dive':
+        return this.repo.maxBooksPerAuthor(userId);
+      case 'multi_format':
+        return this.repo.countDistinctFormats(userId, isSuperuser);
+      case 'century_span':
+        return this.repo.countDistinctCenturiesRead(userId);
+      case 'decade_sampler':
+        return this.repo.countDistinctDecadesRead(userId);
+      case 'short_story_fan':
+        return this.repo.countFinishedBooksByMaxPageCount(userId, 100);
+      case 'genre_devotee':
+        return this.repo.maxBooksPerGenre(userId);
+      case 'note_keeper':
+        return this.repo.countAnnotationsWithNotes(userId);
+      case 'deep_dive_session':
+        return this.repo.countAnnotationsOnDay(userId, new Date(), timeZone);
+      case 'monthly_reader_2': {
+        const [year, month] = toDateKeyInTimeZone(new Date(), timeZone).split('-');
+        return this.repo.countBooksFinishedInMonth(userId, Number(year), Number(month));
+      }
+      case 'yearly_finisher_12':
+        return this.repo.countBooksFinishedInYear(userId, getYearInTimeZone(new Date(), timeZone));
+      case 'category_sweeper':
+        return this.repo.countDistinctEarnedCategories(userId);
+      case 'consistent_reader':
+        return null;
+      case 'weekend_rhythm':
+        return null;
+      case 'seasonal_reader': {
+        return this.repo.countDistinctSeasonsWithReading(userId, getYearInTimeZone(new Date(), timeZone));
+      }
+      case 'across_the_board':
+        return this.repo.countDistinctRatingValues(userId);
+      case 'power_hour':
+        return this.repo.getMaxSessionPages(userId);
+      case 'speed_reader':
+        return this.repo.getMaxPagesInADay(userId, timeZone);
+      case 'wordsmith':
+        return this.repo.getMaxNoteLength(userId);
+      case 'box_of_crayons':
+        return this.repo.countDistinctColors(userId);
+      case 'full_orbit':
+        return this.repo.countDistinctSources(userId);
+      case 'two_worlds':
+        return this.repo.maxSourcesOnSingleBook(userId);
+      default:
+        return null;
+    }
+  }
+
+  private async getProgressForGroup(userId: number, isSuperuser: boolean, timeZone: string, groupKey: string): Promise<number | null> {
+    switch (groupKey) {
+      case 'books_finished':
+        return this.repo.countFinishedBooks(userId);
+      case 'pages_read':
+        return this.repo.sumPagesRead(userId);
+      case 'hours_read':
+        return this.repo.sumReadingHours(userId);
+      case 'library_builder':
+        return this.repo.countAccessibleBooks(userId, isSuperuser);
+      case 'annotator':
+        return this.repo.countAnnotations(userId);
+      case 'genre_explorer':
+        return this.repo.countDistinctGenresRead(userId);
+      case 'polyglot':
+        return this.repo.countDistinctLanguagesRead(userId);
+      case 'streak':
+        return this.repo.getCurrentStreak(userId, timeZone);
+      case 'long_book':
+        return this.repo.getMaxFinishedBookPageCount(userId);
+      case 'critic':
+        return this.repo.countRatings(userId);
+      default:
+        return null;
+    }
+  }
+}

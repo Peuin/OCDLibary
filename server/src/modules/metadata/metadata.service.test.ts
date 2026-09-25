@@ -1,0 +1,2046 @@
+vi.mock('fs/promises', () => ({
+  access: vi.fn(),
+  link: vi.fn(),
+  mkdir: vi.fn(),
+  readFile: vi.fn(),
+  rename: vi.fn(),
+  writeFile: vi.fn(),
+  readdir: vi.fn().mockResolvedValue([]),
+  rm: vi.fn(),
+}));
+
+vi.mock('./lib/cover', () => ({
+  generateThumbnail: vi.fn(),
+  imageExt: vi.fn(),
+}));
+
+vi.mock('./lib/cbz-metadata', () => ({
+  extractCbzMetadata: vi.fn(),
+  extractCbrMetadata: vi.fn(),
+  extractCb7Metadata: vi.fn(),
+}));
+
+vi.mock('./lib/epub', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./lib/epub')>()),
+  extractEpubMetadata: vi.fn(),
+}));
+
+vi.mock('./lib/cover-epub', () => ({
+  extractEpubCover: vi.fn().mockImplementation(() => Promise.resolve(null)),
+}));
+
+vi.mock('./lib/cover-fb2', () => ({
+  extractFb2Cover: vi.fn().mockImplementation(() => Promise.resolve(null)),
+}));
+
+vi.mock('./lib/cover-cbz', () => ({
+  extractCbzCover: vi.fn().mockImplementation(() => Promise.resolve(null)),
+}));
+
+vi.mock('./lib/cover-cbr', () => ({
+  extractCbrCover: vi.fn().mockImplementation(() => Promise.resolve(null)),
+}));
+
+vi.mock('./lib/cover-cb7', () => ({
+  extractCb7Cover: vi.fn().mockImplementation(() => Promise.resolve(null)),
+}));
+
+vi.mock('./lib/filename-parser', () => ({
+  parseBookFilename: vi.fn(),
+}));
+
+vi.mock('./lib/fb2-parser', () => ({
+  parseFb2File: vi.fn(),
+}));
+
+vi.mock('./lib/mobi-parser', () => ({
+  parseMobiFile: vi.fn(),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  extractMobiCover: (_path: string) => Promise.resolve(null),
+}));
+
+vi.mock('./lib/pdf-parser', () => ({
+  parsePdfFile: vi.fn(),
+}));
+
+vi.mock('./extractors/audio.extractor', () => ({
+  extractAudioMetadata: vi.fn().mockImplementation(() =>
+    Promise.resolve({
+      title: null,
+      subtitle: null,
+      authors: [],
+      narrators: [],
+      publisher: null,
+      publishedYear: null,
+      description: null,
+      language: null,
+      seriesName: null,
+      seriesIndex: null,
+      genres: [],
+      audibleId: null,
+      durationSeconds: null,
+      chapters: [],
+      coverBytes: null,
+    }),
+  ),
+  parseAudioDuration: vi.fn().mockImplementation(() => Promise.resolve(null)),
+  probeAudioChapters: vi.fn().mockImplementation(() => Promise.resolve({ chapters: [], durationMs: null })),
+}));
+
+import { access, link, mkdir, readFile, readdir, rename, rm, writeFile } from 'fs/promises';
+import { Logger } from '@nestjs/common';
+
+import { authors, bookAuthors, bookGenres, bookMetadata, books, bookTags, genres, tags } from '../../db/schema';
+import { extractCbzMetadata, type ParsedCbzMetadata } from './lib/cbz-metadata';
+import { generateThumbnail, imageExt } from './lib/cover';
+import { extractCbzCover } from './lib/cover-cbz';
+import { extractEpubCover } from './lib/cover-epub';
+import { extractEpubMetadata } from './lib/epub';
+import { parseBookFilename } from './lib/filename-parser';
+import { parseMobiFile } from './lib/mobi-parser';
+import { parsePdfFile } from './lib/pdf-parser';
+import { extractAudioMetadata, parseAudioDuration, probeAudioChapters } from './extractors/audio.extractor';
+import { METADATA_AUTHORS_REPLACED } from './metadata-events.service';
+import { MetadataService } from './metadata.service';
+import { MetadataExtractionService } from './metadata-extraction.service';
+
+const mockAccess = access as MockedFunction<typeof access>;
+const mockLink = link as MockedFunction<typeof link>;
+const mockRename = rename as MockedFunction<typeof rename>;
+const mockMkdir = mkdir as MockedFunction<typeof mkdir>;
+const mockReadFile = readFile as MockedFunction<typeof readFile>;
+const mockWriteFile = writeFile as MockedFunction<typeof writeFile>;
+const mockReaddir = readdir as MockedFunction<typeof readdir>;
+const mockRm = rm as MockedFunction<typeof rm>;
+const mockGenerateThumbnail = generateThumbnail as MockedFunction<typeof generateThumbnail>;
+const mockImageExt = imageExt as MockedFunction<typeof imageExt>;
+const mockParseBookFilename = parseBookFilename as MockedFunction<typeof parseBookFilename>;
+const mockParseMobiFile = parseMobiFile as MockedFunction<typeof parseMobiFile>;
+const mockParsePdfFile = parsePdfFile as MockedFunction<typeof parsePdfFile>;
+const mockExtractEpubCover = extractEpubCover as MockedFunction<typeof extractEpubCover>;
+const mockExtractEpubMetadata = extractEpubMetadata as MockedFunction<typeof extractEpubMetadata>;
+const mockExtractCbzMetadata = extractCbzMetadata as MockedFunction<typeof extractCbzMetadata>;
+const mockExtractCbzCover = extractCbzCover as MockedFunction<typeof extractCbzCover>;
+const mockExtractAudioMetadata = extractAudioMetadata as MockedFunction<typeof extractAudioMetadata>;
+const mockParseAudioDuration = parseAudioDuration as MockedFunction<typeof parseAudioDuration>;
+const mockProbeAudioChapters = probeAudioChapters as MockedFunction<typeof probeAudioChapters>;
+
+const makeDb = () => {
+  const updateWhere = vi.fn().mockResolvedValue(undefined);
+  const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+
+  const deleteWhere = vi.fn().mockResolvedValue(undefined);
+  const deleteBuilder = { where: deleteWhere };
+
+  const selectLimit = vi.fn().mockResolvedValue([]);
+  const selectWhereResult = {
+    limit: selectLimit,
+    then: (onFulfilled: (value: unknown[]) => unknown, onRejected?: (reason: unknown) => unknown) =>
+      Promise.resolve([]).then(onFulfilled, onRejected),
+  };
+  const selectWhere = vi.fn().mockReturnValue(selectWhereResult);
+  const selectFrom = vi.fn().mockReturnValue({ where: selectWhere });
+
+  const insertReturning = vi.fn().mockResolvedValue([]);
+  const insertOnConflictDoNothing = vi.fn().mockResolvedValue(undefined);
+  const insertValues = vi.fn().mockReturnValue({
+    returning: insertReturning,
+    onConflictDoNothing: insertOnConflictDoNothing,
+  });
+
+  const db: any = {
+    update: vi.fn().mockReturnValue({ set: updateSet }),
+    delete: vi.fn().mockReturnValue(deleteBuilder),
+    select: vi.fn().mockReturnValue({ from: selectFrom }),
+    insert: vi.fn().mockReturnValue({ values: insertValues }),
+    execute: vi.fn().mockResolvedValue({ rowCount: 0, rows: [] }),
+  };
+  const transaction = vi.fn().mockImplementation(async (callback: (tx: typeof db) => Promise<unknown>) => callback(db));
+  db.transaction = transaction;
+
+  return {
+    db,
+    updateSet,
+    updateWhere,
+    deleteWhere,
+    selectLimit,
+    insertValues,
+    transaction,
+  };
+};
+
+describe('MetadataService', () => {
+  const config = { get: vi.fn().mockReturnValue('/books') };
+  const embedder = { embedBook: vi.fn().mockResolvedValue(undefined) };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+
+    config.get.mockReturnValue('/books');
+    embedder.embedBook.mockResolvedValue(undefined);
+
+    mockAccess.mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    mockLink.mockResolvedValue(undefined);
+    mockRename.mockResolvedValue(undefined);
+    mockMkdir.mockResolvedValue(undefined);
+    mockReadFile.mockResolvedValue('');
+    mockWriteFile.mockResolvedValue(undefined);
+    mockReaddir.mockResolvedValue([]);
+    mockRm.mockResolvedValue(undefined);
+    mockGenerateThumbnail.mockResolvedValue(Buffer.from('thumbnail-bytes'));
+    mockImageExt.mockReturnValue('png');
+    mockParseBookFilename.mockReturnValue({ title: 'Fallback Title', publishedYear: 2001 });
+    mockParseMobiFile.mockResolvedValue(null);
+    mockParsePdfFile.mockResolvedValue(null);
+    mockExtractCbzMetadata.mockResolvedValue(null);
+    mockExtractCbzCover.mockResolvedValue(null);
+    mockExtractEpubMetadata.mockResolvedValue(null);
+    mockExtractEpubCover.mockResolvedValue(null);
+    mockExtractAudioMetadata.mockResolvedValue({
+      title: null,
+      subtitle: null,
+      authors: [],
+      narrators: [],
+      publisher: null,
+      publishedYear: null,
+      description: null,
+      language: null,
+      seriesName: null,
+      seriesIndex: null,
+      genres: [],
+      audibleId: null,
+      durationSeconds: null,
+      chapters: [],
+      coverBytes: null,
+    });
+    mockParseAudioDuration.mockResolvedValue(null);
+    mockProbeAudioChapters.mockResolvedValue({ chapters: [], durationMs: null });
+  });
+
+  function makeService(
+    db: unknown,
+    metadataEvents?: unknown,
+    overrides?: {
+      scoreService?: { calculateAndSave: ReturnType<typeof vi.fn> };
+      narratorService?: { replaceForBook: ReturnType<typeof vi.fn> };
+      comicMetadataRepository?: { upsert: ReturnType<typeof vi.fn> };
+      bookMetadataLockService?: {
+        isFieldLocked: ReturnType<typeof vi.fn>;
+        filterAutomatedBookUpdate: ReturnType<typeof vi.fn>;
+      };
+      embedder?: { embedBook: ReturnType<typeof vi.fn> } | null;
+      seriesExpectedCount?: { record: ReturnType<typeof vi.fn> };
+    },
+  ) {
+    return new MetadataService(
+      db as never,
+      config as never,
+      new MetadataExtractionService(),
+      (overrides?.scoreService ?? { calculateAndSave: vi.fn().mockResolvedValue(undefined) }) as never,
+      (overrides?.narratorService ?? { replaceForBook: vi.fn().mockResolvedValue(undefined) }) as never,
+      (overrides?.comicMetadataRepository ?? { upsert: vi.fn().mockResolvedValue(undefined) }) as never,
+      (overrides?.bookMetadataLockService ?? {
+        isFieldLocked: vi.fn().mockResolvedValue(false),
+        filterAutomatedBookUpdate: vi.fn().mockImplementation((_bookId: number, dto: unknown) => Promise.resolve({ dto, skippedFields: [] })),
+      }) as never,
+      (overrides?.embedder ?? embedder) as never,
+      metadataEvents as never,
+      undefined,
+      undefined,
+      overrides?.seriesExpectedCount as never,
+    );
+  }
+
+  function stubEpubCoverExtraction(cover: Buffer): void {
+    mockExtractEpubMetadata.mockResolvedValueOnce({
+      title: 'Refreshable book',
+      subtitle: null,
+      description: null,
+      isbn10: null,
+      isbn13: null,
+      publisher: null,
+      publishedYear: null,
+      language: null,
+      seriesName: null,
+      seriesIndex: null,
+      authors: [],
+      narrators: [],
+      genres: [],
+      tags: [],
+      rating: null,
+      pageCount: null,
+      googleBooksId: null,
+      goodreadsId: null,
+      amazonId: null,
+      hardcoverId: null,
+      hardcoverEditionId: null,
+      openLibraryId: null,
+      ranobedbId: null,
+      itunesId: null,
+      coverBuffer: null,
+    });
+    mockExtractEpubCover.mockResolvedValueOnce(cover);
+  }
+
+  it('downloadAndSaveCover writes cover/thumbnail and updates metadata when download is valid', async () => {
+    const { db, updateSet } = makeDb();
+    const service = makeService(db);
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(Buffer.from('image-bytes')),
+    }) as never;
+
+    await expect(service.downloadAndSaveCover('https://img.example/cover.png', 9)).resolves.toBe(true);
+
+    expect(mockMkdir).toHaveBeenCalledWith('/books/covers/9', { recursive: true });
+    expect(mockWriteFile).toHaveBeenCalledWith('/books/covers/9/cover_extracted.png', Buffer.from('image-bytes'));
+    expect(mockWriteFile).toHaveBeenCalledWith('/books/covers/9/thumbnail.jpg', Buffer.from('thumbnail-bytes'));
+    expect(db.update).toHaveBeenCalledWith(bookMetadata);
+    expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ coverSource: 'extracted', updatedAt: expect.any(Date) }));
+  });
+
+  it('saveExtractedCoverBytes removes stale extracted files before writing new cover', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    mockReaddir.mockResolvedValue(['cover_extracted.jpg', 'cover_extracted.png']);
+
+    await service.saveExtractedCoverBytes(11, Buffer.from('image-bytes'));
+
+    expect(mockRm).toHaveBeenCalledWith('/books/covers/11/cover_extracted.jpg', { force: true });
+    expect(mockRm).toHaveBeenCalledWith('/books/covers/11/cover_extracted.png', { force: true });
+    expect(mockWriteFile).toHaveBeenCalledWith('/books/covers/11/cover_extracted.png', Buffer.from('image-bytes'));
+  });
+
+  // The Kobo CoverImageId is versioned from coverUpdatedAt, so it must move whenever the served
+  // image does, and stay put when it does not (issue #943).
+  describe('coverUpdatedAt stamping', () => {
+    it('stamps coverUpdatedAt when an overwriting extraction replaces the cover', async () => {
+      const { db, updateSet } = makeDb();
+      const service = makeService(db);
+      mockReaddir.mockResolvedValue(['cover_extracted.png']);
+
+      await service.saveExtractedCoverBytes(21, Buffer.from('image-bytes'));
+
+      expect(db.update).toHaveBeenCalledWith(bookMetadata);
+      expect(updateSet).toHaveBeenCalledWith({ coverUpdatedAt: expect.any(Date) });
+    });
+
+    it('stamps coverUpdatedAt when first-writer-wins matches no row but the image still changed', async () => {
+      const { db, updateSet, selectLimit } = makeDb();
+      const service = makeService(db);
+      selectLimit.mockResolvedValue([{ coverSource: 'extracted' }]);
+      mockReaddir.mockResolvedValue(['cover_extracted.png', 'thumbnail.jpg']);
+      stubEpubCoverExtraction(Buffer.from('fresher-image-bytes'));
+
+      await expect(service.refreshCoverForBook(23, '/book.epub', 'epub')).resolves.toBe(true);
+
+      expect(mockWriteFile).toHaveBeenCalledWith('/books/covers/23/cover_extracted.png', Buffer.from('fresher-image-bytes'));
+      expect(updateSet).toHaveBeenCalledWith({ coverUpdatedAt: expect.any(Date) });
+    });
+
+    it('leaves coverUpdatedAt alone when a DB-owned custom cover still wins', async () => {
+      const { db, updateSet, selectLimit } = makeDb();
+      const service = makeService(db);
+      selectLimit.mockResolvedValue([{ coverSource: 'custom' }]);
+      mockReaddir.mockResolvedValue(['cover_custom.jpg', 'cover_extracted.png', 'thumbnail.jpg']);
+      stubEpubCoverExtraction(Buffer.from('image-bytes'));
+
+      await expect(service.refreshCoverForBook(24, '/book.epub', 'epub')).resolves.toBe(true);
+
+      expect(updateSet).not.toHaveBeenCalledWith(expect.objectContaining({ coverUpdatedAt: expect.anything() }));
+    });
+  });
+
+  it('saveExtractedCoverBytes removes stale custom files unless the DB owns a custom cover', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    mockReaddir.mockResolvedValue(['cover_custom.jpg', 'cover_extracted.png', 'thumbnail.jpg']);
+
+    await service.saveExtractedCoverBytes(12, Buffer.from('image-bytes'));
+
+    expect(mockRm).toHaveBeenCalledWith('/books/covers/12/cover_custom.jpg', { force: true });
+    expect(mockRm).toHaveBeenCalledWith('/books/covers/12/cover_extracted.png', { force: true });
+    expect(mockWriteFile).toHaveBeenCalledWith('/books/covers/12/thumbnail.jpg', Buffer.from('thumbnail-bytes'));
+    expect(db.update).toHaveBeenCalledWith(books);
+  });
+
+  it('refreshCoverForBook preserves a DB-owned custom cover while refreshing extracted fallback', async () => {
+    const { db, selectLimit } = makeDb();
+    const service = makeService(db);
+    selectLimit.mockResolvedValue([{ coverSource: 'custom' }]);
+    mockReaddir.mockResolvedValue(['cover_custom.jpg', 'cover_extracted.png', 'thumbnail.jpg']);
+    mockExtractEpubMetadata.mockResolvedValueOnce({
+      title: 'Refreshable book',
+      subtitle: null,
+      description: null,
+      isbn10: null,
+      isbn13: null,
+      publisher: null,
+      publishedYear: null,
+      language: null,
+      seriesName: null,
+      seriesIndex: null,
+      authors: [],
+      narrators: [],
+      genres: [],
+      tags: [],
+      rating: null,
+      pageCount: null,
+      googleBooksId: null,
+      goodreadsId: null,
+      amazonId: null,
+      hardcoverId: null,
+      hardcoverEditionId: null,
+      openLibraryId: null,
+      ranobedbId: null,
+      itunesId: null,
+      coverBuffer: null,
+    });
+    mockExtractEpubCover.mockResolvedValueOnce(Buffer.from('image-bytes'));
+
+    await expect(service.refreshCoverForBook(13, '/book.epub', 'epub')).resolves.toBe(true);
+
+    expect(mockRm).not.toHaveBeenCalledWith('/books/covers/13/cover_custom.jpg', { force: true });
+    expect(mockRm).toHaveBeenCalledWith('/books/covers/13/cover_extracted.png', { force: true });
+    expect(mockWriteFile).toHaveBeenCalledWith('/books/covers/13/cover_extracted.png', Buffer.from('image-bytes'));
+    expect(mockWriteFile).not.toHaveBeenCalledWith('/books/covers/13/thumbnail.jpg', expect.any(Buffer));
+    expect(db.update).not.toHaveBeenCalledWith(books);
+  });
+
+  it('refreshCoverForBook repairs a missing thumbnail from the active custom cover', async () => {
+    const { db, selectLimit, updateSet } = makeDb();
+    const service = makeService(db);
+    selectLimit.mockResolvedValue([{ coverSource: 'custom' }]);
+    mockReaddir.mockResolvedValue(['cover_custom.jpg', 'cover_extracted.png']);
+    mockReadFile.mockResolvedValue(Buffer.from('custom-cover-bytes'));
+    stubEpubCoverExtraction(Buffer.from('extracted-cover-bytes'));
+
+    await expect(service.refreshCoverForBook(14, '/book.epub', 'epub')).resolves.toBe(true);
+
+    expect(mockReadFile).toHaveBeenCalledWith('/books/covers/14/cover_custom.jpg');
+    expect(mockGenerateThumbnail).toHaveBeenCalledWith(Buffer.from('custom-cover-bytes'));
+    expect(mockWriteFile).toHaveBeenCalledWith('/books/covers/14/thumbnail.jpg', Buffer.from('thumbnail-bytes'));
+    expect(updateSet).toHaveBeenCalledWith({ coverUpdatedAt: expect.any(Date) });
+    expect(db.update).toHaveBeenCalledWith(books);
+  });
+
+  it('refreshCoverForBook promotes the extracted cover when the stored custom cover is missing', async () => {
+    const { db, selectLimit, updateSet } = makeDb();
+    const service = makeService(db);
+    selectLimit.mockResolvedValue([{ coverSource: 'custom' }]);
+    mockReaddir.mockResolvedValue(['cover_extracted.jpg']);
+    stubEpubCoverExtraction(Buffer.from('extracted-cover-bytes'));
+
+    await expect(service.refreshCoverForBook(16, '/book.epub', 'epub')).resolves.toBe(true);
+
+    expect(mockWriteFile).toHaveBeenCalledWith('/books/covers/16/thumbnail.jpg', Buffer.from('thumbnail-bytes'));
+    expect(updateSet).toHaveBeenCalledWith({ coverSource: 'extracted', updatedAt: expect.any(Date) });
+  });
+
+  it('refreshCoverForBook keeps the custom cover source when the cover directory reads back empty', async () => {
+    const { db, selectLimit, updateSet } = makeDb();
+    const service = makeService(db);
+    selectLimit.mockResolvedValue([{ coverSource: 'custom' }]);
+    // An unmounted cover volume is recreated by mkdir and then lists empty, which must not be read
+    // as "the user deleted their custom cover".
+    mockReaddir.mockResolvedValue([]);
+    stubEpubCoverExtraction(Buffer.from('extracted-cover-bytes'));
+
+    await expect(service.refreshCoverForBook(19, '/book.epub', 'epub')).resolves.toBe(true);
+
+    expect(updateSet).not.toHaveBeenCalledWith({ coverSource: 'extracted', updatedAt: expect.any(Date) });
+  });
+
+  it('ensureThumbnailForBook lazily repairs a missing thumbnail from the preferred cover', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    mockReaddir.mockResolvedValue(['cover_extracted.png', 'cover_custom.jpg']);
+    mockReadFile.mockResolvedValue(Buffer.from('custom-cover-bytes'));
+
+    await expect(service.ensureThumbnailForBook(15)).resolves.toBe('/books/covers/15/thumbnail.jpg');
+
+    expect(mockReadFile).toHaveBeenCalledWith('/books/covers/15/cover_custom.jpg');
+    expect(mockGenerateThumbnail).toHaveBeenCalledWith(Buffer.from('custom-cover-bytes'));
+
+    // The thumbnail is staged in the cover directory and hard-linked into place, so an interrupted
+    // write can never leave a truncated thumbnail.jpg that later requests would accept.
+    const [tempPath, tempBytes] = mockWriteFile.mock.calls[0]!;
+    expect(tempPath).toMatch(/^\/books\/covers\/15\/\.thumbnail-repair-.+\.tmp$/);
+    expect(tempBytes).toEqual(Buffer.from('thumbnail-bytes'));
+    expect(mockLink).toHaveBeenCalledWith(tempPath, '/books/covers/15/thumbnail.jpg');
+    expect(mockRm).toHaveBeenCalledWith(tempPath, { force: true });
+  });
+
+  it('ensureThumbnailForBook keeps a thumbnail created by a concurrent cover update', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    mockReaddir.mockResolvedValue(['cover_custom.jpg']);
+    mockReadFile.mockResolvedValue(Buffer.from('custom-cover-bytes'));
+    mockLink.mockRejectedValue(Object.assign(new Error('already exists'), { code: 'EEXIST' }));
+
+    await expect(service.ensureThumbnailForBook(17)).resolves.toBe('/books/covers/17/thumbnail.jpg');
+    expect(mockWriteFile).not.toHaveBeenCalledWith('/books/covers/17/thumbnail.jpg', expect.anything(), expect.anything());
+  });
+
+  it('ensureThumbnailForBook publishes by rename when the filesystem has no hard links', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    mockReaddir.mockResolvedValue(['cover_custom.jpg']);
+    mockReadFile.mockResolvedValue(Buffer.from('custom-cover-bytes'));
+    mockLink.mockRejectedValue(Object.assign(new Error('operation not permitted'), { code: 'EPERM' }));
+
+    await expect(service.ensureThumbnailForBook(26)).resolves.toBe('/books/covers/26/thumbnail.jpg');
+
+    // The bytes must reach the served path through a rename of a fully written file, never a direct
+    // write, so an interrupted repair cannot leave a truncated thumbnail that nothing revalidates.
+    const [tempPath] = mockWriteFile.mock.calls[0]!;
+    expect(tempPath).toMatch(/^\/books\/covers\/26\/\.thumbnail-repair-.+\.tmp$/);
+    expect(mockRename).toHaveBeenCalledWith(tempPath, '/books/covers/26/thumbnail.jpg');
+    expect(mockWriteFile).not.toHaveBeenCalledWith('/books/covers/26/thumbnail.jpg', expect.anything(), expect.anything());
+  });
+
+  it('ensureThumbnailForBook leaves a published thumbnail alone when hard links are unavailable', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    mockReaddir.mockResolvedValue(['cover_custom.jpg']);
+    mockReadFile.mockResolvedValue(Buffer.from('custom-cover-bytes'));
+    mockLink.mockRejectedValue(Object.assign(new Error('operation not permitted'), { code: 'EPERM' }));
+    mockAccess.mockResolvedValue(undefined);
+
+    await expect(service.ensureThumbnailForBook(27)).resolves.toBe('/books/covers/27/thumbnail.jpg');
+
+    expect(mockRename).not.toHaveBeenCalled();
+  });
+
+  it('ensureThumbnailForBook resolves null instead of throwing when the cover cannot be read', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    mockReaddir.mockResolvedValue(['cover_custom.jpg']);
+    mockReadFile.mockResolvedValue(Buffer.from('custom-cover-bytes'));
+    mockGenerateThumbnail.mockRejectedValueOnce(new Error('Input buffer contains unsupported image format'));
+
+    await expect(service.ensureThumbnailForBook(18)).resolves.toBeNull();
+  });
+
+  it('ensureThumbnailForBook bounds concurrent thumbnail generation', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    let active = 0;
+    let peak = 0;
+    const releases: Array<() => void> = [];
+    mockReaddir.mockResolvedValue(['cover_custom.jpg']);
+    mockReadFile.mockImplementation(
+      () =>
+        new Promise<Buffer>((resolve) => {
+          active++;
+          peak = Math.max(peak, active);
+          releases.push(() => {
+            active--;
+            resolve(Buffer.from('custom-cover-bytes'));
+          });
+        }),
+    );
+
+    const repairs = [21, 22, 23, 24, 25].map((bookId) => service.ensureThumbnailForBook(bookId));
+    await vi.waitFor(() => expect(releases).toHaveLength(4));
+
+    expect(peak).toBe(4);
+    releases.splice(0).forEach((release) => release());
+    await vi.waitFor(() => expect(releases).toHaveLength(1));
+    releases.splice(0).forEach((release) => release());
+
+    await expect(Promise.all(repairs)).resolves.toEqual([
+      '/books/covers/21/thumbnail.jpg',
+      '/books/covers/22/thumbnail.jpg',
+      '/books/covers/23/thumbnail.jpg',
+      '/books/covers/24/thumbnail.jpg',
+      '/books/covers/25/thumbnail.jpg',
+    ]);
+  });
+
+  it('downloadAndSaveCover no-ops on empty payloads and network failures', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(Buffer.alloc(0)),
+    }) as never;
+    await expect(service.downloadAndSaveCover('https://img.example/empty.png', 4)).resolves.toBe(false);
+
+    expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(db.update).not.toHaveBeenCalled();
+
+    (global.fetch as vi.Mock).mockRejectedValue(new Error('timeout'));
+    await expect(service.downloadAndSaveCover('https://img.example/fail.png', 4)).resolves.toBe(false);
+    expect(mockWriteFile).not.toHaveBeenCalled();
+  });
+
+  it('downloadAndSaveCover skips when cover is locked or HTTP response is not ok', async () => {
+    const { db } = makeDb();
+    const lockService = {
+      isFieldLocked: vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false),
+      filterAutomatedBookUpdate: vi.fn(),
+    };
+    const service = makeService(db, undefined, {
+      bookMetadataLockService: lockService,
+    });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      arrayBuffer: () => Promise.resolve(Buffer.from('ignored')),
+    }) as never;
+
+    await expect(service.downloadAndSaveCover('https://img.example/locked.png', 4)).resolves.toBe(false);
+    await expect(service.downloadAndSaveCover('https://img.example/not-found.png', 4)).resolves.toBe(false);
+    expect(mockWriteFile).not.toHaveBeenCalled();
+  });
+
+  it('extractAndSave short-circuits for unsupported formats and empty parser output', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+
+    await expect(service.extractAndSave(1, '/tmp/book.unknown', 'unknown')).resolves.toBeUndefined();
+
+    mockParsePdfFile.mockResolvedValueOnce(null);
+    await expect(service.extractAndSave(2, '/tmp/book.pdf', 'pdf')).resolves.toBeUndefined();
+    expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it('extractAndSaveIfAvailable(opf) persists standalone sidecar OPF metadata', async () => {
+    const { db, updateSet } = makeDb();
+    const service = makeService(db);
+    const replaceAuthorsSpy = vi.spyOn(service, 'replaceAuthors').mockResolvedValue(undefined);
+
+    mockReadFile.mockResolvedValue(`
+      <package xmlns="http://www.idpf.org/2007/opf" version="2.0">
+        <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+          <dc:title>Sidecar Title</dc:title>
+          <dc:creator opf:role="aut">Sidecar Author</dc:creator>
+          <dc:identifier opf:scheme="GOOGLE">google-sidecar</dc:identifier>
+        </metadata>
+      </package>
+    `);
+
+    await expect(service.extractAndSaveIfAvailable(55, '/books/metadata.opf', 'opf')).resolves.toBe(true);
+
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Sidecar Title',
+        googleBooksId: 'google-sidecar',
+        updatedAt: expect.any(Date),
+      }),
+    );
+    expect(replaceAuthorsSpy).toHaveBeenCalledWith(55, [{ name: 'Sidecar Author', sortName: null }]);
+  });
+
+  it('refreshCoverForBook returns false and avoids db writes when extractor reports no cover', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    // extractEpubCover is mocked to return null by default; parsePdfFile returns null → no cover
+    await expect(service.refreshCoverForBook(7, '/book.epub', 'epub')).resolves.toBe(false);
+    expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it('refreshCoverForBook handles missing extractors, locked cover field, and successful refresh', async () => {
+    const { db, updateSet } = makeDb();
+    const lockService = {
+      isFieldLocked: vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false),
+      filterAutomatedBookUpdate: vi.fn().mockImplementation((_bookId: number, dto: unknown) => Promise.resolve({ dto, skippedFields: [] })),
+    };
+    const service = makeService(db, undefined, {
+      bookMetadataLockService: lockService,
+    });
+
+    await expect(service.refreshCoverForBook(7, '/book.unknown', 'unknown')).resolves.toBe(false);
+
+    await expect(service.refreshCoverForBook(7, '/book.epub', 'epub')).resolves.toBe(false);
+
+    mockExtractEpubMetadata.mockResolvedValueOnce({
+      title: 'Refreshable book',
+      subtitle: null,
+      description: null,
+      isbn10: null,
+      isbn13: null,
+      publisher: null,
+      publishedYear: null,
+      language: null,
+      seriesName: null,
+      seriesIndex: null,
+      authors: [],
+      narrators: [],
+      genres: [],
+      tags: [],
+      rating: null,
+      pageCount: null,
+      googleBooksId: null,
+      goodreadsId: null,
+      amazonId: null,
+      hardcoverId: null,
+      openLibraryId: null,
+      ranobedbId: null,
+      itunesId: null,
+      coverBuffer: null,
+    });
+    mockExtractEpubCover.mockResolvedValueOnce(Buffer.from('epub-cover-2'));
+    await expect(service.refreshCoverForBook(8, '/book2.epub', 'epub')).resolves.toBe(true);
+
+    expect(mockWriteFile).toHaveBeenCalledWith('/books/covers/8/cover_extracted.png', expect.any(Buffer));
+    expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ coverSource: 'extracted' }));
+  });
+
+  it('extractAndSave propagates extractor errors', async () => {
+    const { db } = makeDb();
+    mockParsePdfFile.mockRejectedValue(new Error('bad metadata'));
+    const service = makeService(db);
+
+    await expect(service.extractAndSave(15, '/books/a.pdf', 'pdf')).rejects.toThrow('bad metadata');
+  });
+
+  it('extractAndSave propagates score calculation failures after persisting metadata', async () => {
+    const { db } = makeDb();
+    const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const scoreService = {
+      calculateAndSave: vi.fn().mockRejectedValue(new Error('score failed')),
+    };
+    const failingEmbedder = {
+      embedBook: vi.fn().mockRejectedValue(new Error('embed failed')),
+    };
+    const service = makeService(db, undefined, {
+      scoreService,
+      embedder: failingEmbedder,
+    });
+
+    mockParsePdfFile.mockResolvedValue({
+      title: 'Warn book',
+      subtitle: null,
+      description: null,
+      isbn10: null,
+      isbn13: null,
+      publisher: null,
+      publishedYear: null,
+      language: null,
+      seriesName: null,
+      seriesIndex: null,
+      authors: [],
+      narrators: [],
+      genres: [],
+      tags: [],
+      rating: null,
+      pageCount: null,
+      googleBooksId: null,
+      goodreadsId: null,
+      amazonId: null,
+      hardcoverId: null,
+      openLibraryId: null,
+      ranobedbId: null,
+      itunesId: null,
+      coverBuffer: null,
+    });
+
+    await expect(service.extractAndSave(44, '/tmp/warn-book.pdf', 'pdf')).rejects.toThrow('score failed');
+    await Promise.resolve();
+
+    expect(scoreService.calculateAndSave).toHaveBeenCalledWith(44);
+    expect(failingEmbedder.embedBook).toHaveBeenCalledWith(44);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[metadata.extract_and_save] [fail]'));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[metadata.embedding] [fail]'));
+  });
+
+  it('extractAndSave(pdf) surfaces parser warnings in logs', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+    const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+    mockParsePdfFile.mockImplementation((_absolutePath, options) => {
+      options?.onWarning?.({
+        code: 'cover-extraction-failed',
+        absolutePath: '/tmp/warn.pdf',
+        errorClass: 'Error',
+        errorMessage: 'pdftoppm missing',
+      });
+
+      return Promise.resolve({
+        title: 'Warn PDF',
+        subtitle: null,
+        description: null,
+        isbn10: null,
+        isbn13: null,
+        publisher: null,
+        publishedYear: null,
+        language: null,
+        seriesName: null,
+        seriesIndex: null,
+        authors: [],
+        narrators: [],
+        genres: [],
+        tags: [],
+        rating: null,
+        pageCount: null,
+        googleBooksId: null,
+        goodreadsId: null,
+        amazonId: null,
+        hardcoverId: null,
+        openLibraryId: null,
+        ranobedbId: null,
+        itunesId: null,
+        coverBuffer: null,
+      });
+    });
+
+    await service.extractAndSave(21, '/tmp/warn.pdf', 'pdf');
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[metadata.pdf_parse] [fail]'));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('pdftoppm missing'));
+  });
+
+  it('extractAndSave(pdf) persists fallback title/year, page count, and extracted cover bytes', async () => {
+    const { db, updateSet } = makeDb();
+    const service = makeService(db);
+    const replaceAuthorsSpy = vi.spyOn(service, 'replaceAuthors').mockResolvedValue(undefined);
+    const replaceGenresSpy = vi.spyOn(service, 'replaceGenres').mockResolvedValue(undefined);
+    const replaceTagsSpy = vi.spyOn(service, 'replaceTags').mockResolvedValue(undefined);
+
+    mockParsePdfFile.mockResolvedValue({
+      title: null,
+      subtitle: 'Subtitle',
+      description: 'Description',
+      isbn10: '1234567890',
+      isbn13: '9781234567897',
+      publisher: '  Publisher\t Name  ',
+      publishedYear: null,
+      language: 'en',
+      seriesName: 'Series   Name',
+      seriesIndex: '2',
+      authors: [{ name: 'Author A', sortName: null }],
+      narrators: [],
+      genres: ['Fantasy'],
+      tags: ['Shelf'],
+      rating: 4.6,
+      pageCount: 321,
+      googleBooksId: 'google-1',
+      goodreadsId: 'goodreads-1',
+      amazonId: 'amazon-1',
+      hardcoverId: 'hardcover-1',
+      hardcoverEditionId: '8941973',
+      openLibraryId: 'open-library-1',
+      ranobedbId: 'ranobe-1',
+      itunesId: 'itunes-1',
+      coverBuffer: Buffer.from('jpeg-bytes'),
+    });
+    mockParseBookFilename.mockReturnValue({ title: 'Title From Filename', publishedYear: 1999 });
+
+    await service.extractAndSave(22, '/tmp/book.pdf', 'pdf');
+
+    expect(mockParsePdfFile).toHaveBeenCalledWith(
+      '/tmp/book.pdf',
+      expect.objectContaining({
+        extractCover: true,
+        onWarning: expect.any(Function),
+      }),
+    );
+
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Title From Filename',
+        publishedYear: 1999,
+        subtitle: 'Subtitle',
+        description: 'Description',
+        publisher: 'Publisher Name',
+        pageCount: 321,
+        seriesName: 'Series Name',
+        rating: 5,
+        googleBooksId: 'google-1',
+        goodreadsId: 'goodreads-1',
+        amazonId: 'amazon-1',
+        hardcoverId: 'hardcover-1',
+        hardcoverEditionId: '8941973',
+        openLibraryId: 'open-library-1',
+        ranobedbId: 'ranobe-1',
+        itunesId: 'itunes-1',
+        updatedAt: expect.any(Date),
+      }),
+    );
+    expect(mockWriteFile).toHaveBeenCalledWith('/books/covers/22/cover_extracted.png', Buffer.from('jpeg-bytes'));
+    expect(replaceAuthorsSpy).toHaveBeenCalledWith(22, [{ name: 'Author A', sortName: null }]);
+    expect(replaceGenresSpy).toHaveBeenCalledWith(22, ['Fantasy']);
+    expect(replaceTagsSpy).toHaveBeenCalledWith(22, ['Shelf']);
+    expect(embedder.embedBook).toHaveBeenCalledWith(22);
+  });
+
+  it('extractAndSave(cbz) persists comicvineId parsed from the embedded ComicInfo.xml', async () => {
+    const { db, updateSet } = makeDb();
+    const service = makeService(db);
+    vi.spyOn(service, 'replaceAuthors').mockResolvedValue(undefined);
+    vi.spyOn(service, 'replaceGenres').mockResolvedValue(undefined);
+
+    mockExtractCbzMetadata.mockResolvedValue({
+      title: 'Amazing Series',
+      subtitle: null,
+      seriesName: 'Amazing Series',
+      seriesIndex: '1',
+      seriesTotalBooks: null,
+      description: null,
+      publisher: null,
+      publishedDate: null,
+      publishedYear: null,
+      language: null,
+      pageCount: null,
+      rating: null,
+      isbn10: null,
+      isbn13: null,
+      authors: [],
+      genres: [],
+      tags: [],
+      googleBooksId: null,
+      goodreadsId: null,
+      amazonId: null,
+      hardcoverId: null,
+      hardcoverEditionId: null,
+      openLibraryId: null,
+      ranobedbId: null,
+      koboId: null,
+      comicvineId: '140529',
+      lubimyczytacId: null,
+      aladinId: null,
+      itunesId: null,
+      comicMetadata: null,
+    });
+
+    await service.extractAndSave(23, '/tmp/book.cbz', 'cbz');
+
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        comicvineId: '140529',
+      }),
+    );
+  });
+
+  describe('extractAndSave(cbz) series length from ComicInfo Count', () => {
+    function comicMetadata(overrides: Partial<ParsedCbzMetadata> = {}): ParsedCbzMetadata {
+      return {
+        title: 'Amazing Series',
+        subtitle: null,
+        seriesName: 'Amazing Series',
+        seriesIndex: '1',
+        seriesTotalBooks: null,
+        description: null,
+        publisher: null,
+        publishedDate: null,
+        publishedYear: null,
+        language: null,
+        pageCount: null,
+        rating: null,
+        isbn10: null,
+        isbn13: null,
+        authors: [],
+        genres: [],
+        tags: [],
+        googleBooksId: null,
+        goodreadsId: null,
+        amazonId: null,
+        hardcoverId: null,
+        hardcoverEditionId: null,
+        openLibraryId: null,
+        ranobedbId: null,
+        koboId: null,
+        comicvineId: null,
+        lubimyczytacId: null,
+        aladinId: null,
+        itunesId: null,
+        comicMetadata: null,
+        ...overrides,
+      };
+    }
+
+    async function scanWith(metadata: ParsedCbzMetadata) {
+      const { db } = makeDb();
+      const seriesExpectedCount = { record: vi.fn().mockResolvedValue(1) };
+      const service = makeService(db, undefined, { seriesExpectedCount });
+      vi.spyOn(service, 'replaceAuthors').mockResolvedValue(undefined);
+      vi.spyOn(service, 'replaceGenres').mockResolvedValue(undefined);
+      mockExtractCbzMetadata.mockResolvedValue(metadata);
+
+      await service.extractAndSave(24, '/tmp/book.cbz', 'cbz');
+      return seriesExpectedCount;
+    }
+
+    it('records the series length the file declared', async () => {
+      const seriesExpectedCount = await scanWith(comicMetadata({ seriesTotalBooks: 12 }));
+
+      expect(seriesExpectedCount.record).toHaveBeenCalledWith('Amazing Series', 12);
+    });
+
+    it('passes the absent length through so no series is annotated', async () => {
+      const seriesExpectedCount = await scanWith(comicMetadata({ seriesTotalBooks: null }));
+
+      expect(seriesExpectedCount.record).toHaveBeenCalledWith('Amazing Series', null);
+    });
+
+    it('scans without error when the expected-count service is not provided', async () => {
+      const { db } = makeDb();
+      const service = makeService(db);
+      vi.spyOn(service, 'replaceAuthors').mockResolvedValue(undefined);
+      vi.spyOn(service, 'replaceGenres').mockResolvedValue(undefined);
+      mockExtractCbzMetadata.mockResolvedValue(comicMetadata({ seriesTotalBooks: 12 }));
+
+      await expect(service.extractAndSave(25, '/tmp/book.cbz', 'cbz')).resolves.toBeUndefined();
+    });
+  });
+
+  it('extractAndSave(mobi) ignores malformed publishedDate values from providers', async () => {
+    const { db, updateSet } = makeDb();
+    const service = makeService(db);
+    vi.spyOn(service, 'replaceAuthors').mockResolvedValue(undefined);
+    vi.spyOn(service, 'replaceGenres').mockResolvedValue(undefined);
+
+    mockParseMobiFile.mockResolvedValue({
+      title: 'Mobi Title',
+      description: null,
+      isbn: 'isbn',
+      publisher: null,
+      publishedDate: '20',
+      language: 'en',
+      authors: ['Author'],
+      tags: ['Tag'],
+    });
+
+    await service.extractAndSave(33, '/tmp/book.mobi', 'mobi');
+
+    expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ publishedYear: null }));
+  });
+
+  it('extractAndSave(mobi) normalizes out-of-range 4-digit years to null before db writes', async () => {
+    const { db, updateSet } = makeDb();
+    const service = makeService(db);
+    vi.spyOn(service, 'replaceAuthors').mockResolvedValue(undefined);
+    vi.spyOn(service, 'replaceGenres').mockResolvedValue(undefined);
+
+    mockParseMobiFile.mockResolvedValue({
+      title: 'Ancient Book',
+      description: null,
+      isbn: 'isbn',
+      publisher: null,
+      publishedDate: '0101-01-01',
+      language: 'en',
+      authors: ['Author'],
+      tags: ['Tag'],
+    });
+
+    await service.extractAndSave(34, '/tmp/ancient-book.mobi', 'mobi');
+
+    expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ publishedYear: null }));
+  });
+
+  it('extractAndSave(audio) persists expanded audiobook metadata through lock filtering', async () => {
+    const { db, updateSet } = makeDb();
+    const narratorService = {
+      replaceForBook: vi.fn().mockResolvedValue(undefined),
+    };
+    const lockService = {
+      isFieldLocked: vi.fn().mockResolvedValue(false),
+      filterAutomatedBookUpdate: vi.fn().mockImplementation((_bookId: number, dto: unknown) => Promise.resolve({ dto, skippedFields: [] })),
+    };
+    const service = makeService(db, undefined, {
+      narratorService,
+      bookMetadataLockService: lockService,
+    });
+    const replaceAuthorsSpy = vi.spyOn(service, 'replaceAuthors').mockResolvedValue(undefined);
+    const replaceGenresSpy = vi.spyOn(service, 'replaceGenres').mockResolvedValue(undefined);
+
+    mockExtractAudioMetadata.mockResolvedValueOnce({
+      title: 'Audio Title',
+      subtitle: 'Audio Subtitle',
+      authors: [{ name: 'Audio Author', sortName: null }],
+      narrators: ['Audio Narrator'],
+      publisher: 'Audio   Publisher',
+      publishedYear: 2024,
+      description: 'Audio Description',
+      language: 'eng',
+      seriesName: 'Audio\tSeries',
+      seriesIndex: '2',
+      genres: ['Fantasy', 'Adventure'],
+      audibleId: 'B0AUDIBLE',
+      librofmId: '9781234567890',
+      durationSeconds: 1234,
+      chapters: [{ title: 'Chapter 1', startMs: 0 }],
+      coverBytes: null,
+    });
+
+    await service.extractAndSave(41, '/tmp/audio.m4b', 'm4b');
+
+    expect(lockService.filterAutomatedBookUpdate).toHaveBeenCalledWith(
+      41,
+      expect.objectContaining({
+        title: 'Audio Title',
+        subtitle: 'Audio Subtitle',
+        seriesName: 'Audio Series',
+        seriesIndex: '2',
+        genres: ['Fantasy', 'Adventure'],
+        audibleId: 'B0AUDIBLE',
+        librofmId: '9781234567890',
+        audioMetadata: expect.objectContaining({
+          narrators: ['Audio Narrator'],
+          durationSeconds: 1234,
+          chapters: [{ title: 'Chapter 1', startMs: 0 }],
+        }),
+      }),
+    );
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Audio Title',
+        subtitle: 'Audio Subtitle',
+        publisher: 'Audio Publisher',
+        publishedYear: 2024,
+        language: 'eng',
+        seriesName: 'Audio Series',
+        seriesIndex: '2',
+        audibleId: 'B0AUDIBLE',
+        librofmId: '9781234567890',
+        durationSeconds: 1234,
+        chapters: [{ title: 'Chapter 1', startMs: 0 }],
+        updatedAt: expect.any(Date),
+      }),
+    );
+    expect(replaceAuthorsSpy).toHaveBeenCalledWith(41, [{ name: 'Audio Author', sortName: null }]);
+    expect(replaceGenresSpy).toHaveBeenCalledWith(41, ['Fantasy', 'Adventure']);
+    expect(narratorService.replaceForBook).toHaveBeenCalledWith(41, ['Audio Narrator']);
+  });
+
+  it('replaceAuthors normalizes names and deduplicates case-insensitively before db writes', async () => {
+    const { db, deleteWhere, transaction } = makeDb();
+    const service = makeService(db);
+    const insertedAuthors: Array<{ name: string; sortName: string | null }> = [];
+    const insertedBookAuthors: Array<{ bookId: number; authorId: number; displayOrder: number }> = [];
+
+    db.insert.mockImplementation((table: unknown) => {
+      if (table === authors) {
+        return {
+          values: (rows: Array<{ name: string; sortName: string | null }>) => {
+            insertedAuthors.push(...rows);
+            return {
+              onConflictDoNothing: () => ({
+                returning: () => Promise.resolve([{ id: 81, name: 'Alice Smith' }]),
+              }),
+            };
+          },
+        };
+      }
+      if (table === bookAuthors) {
+        return {
+          values: (rows: Array<{ bookId: number; authorId: number; displayOrder: number }>) => {
+            insertedBookAuthors.push(...rows);
+            return { onConflictDoNothing: () => Promise.resolve(undefined) };
+          },
+        };
+      }
+      throw new Error('unexpected table in insert');
+    });
+
+    await service.replaceAuthors(5, [
+      { name: '  Alice\t\n Smith  ', sortName: '  Smith,\nAlice  ' },
+      { name: 'alice smith', sortName: 'ignored duplicate' },
+      { name: '   ', sortName: null },
+    ]);
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(db.delete).toHaveBeenCalledWith(bookAuthors);
+    expect(deleteWhere).toHaveBeenCalledTimes(1);
+    expect(db.select).toHaveBeenCalledTimes(1);
+    expect(insertedAuthors).toEqual([{ name: 'Alice Smith', sortName: 'Smith, Alice' }]);
+    expect(insertedBookAuthors).toEqual([{ bookId: 5, authorId: 81, displayOrder: 0 }]);
+  });
+
+  it('replaceAuthors canonicalizes a legacy whitespace variant before linking it', async () => {
+    const { db, updateSet, updateWhere } = makeDb();
+    const service = makeService(db);
+    const insertedAuthors: Array<{ name: string; sortName: string | null }> = [];
+    const insertedBookAuthors: Array<{ bookId: number; authorId: number; displayOrder: number }> = [];
+
+    db.select.mockImplementation(() => ({
+      from: () => ({
+        where: () => Promise.resolve([{ id: 9, name: 'Known  Author', normalizedName: 'known author' }]),
+      }),
+    }));
+    db.insert.mockImplementation((table: unknown) => {
+      if (table === authors) {
+        return {
+          values: (rows: Array<{ name: string; sortName: string | null }>) => {
+            insertedAuthors.push(...rows);
+            return {
+              onConflictDoNothing: () => ({
+                returning: () => Promise.resolve([]),
+              }),
+            };
+          },
+        };
+      }
+      if (table === bookAuthors) {
+        return {
+          values: (rows: Array<{ bookId: number; authorId: number; displayOrder: number }>) => {
+            insertedBookAuthors.push(...rows);
+            return { onConflictDoNothing: () => Promise.resolve(undefined) };
+          },
+        };
+      }
+      throw new Error('unexpected table in insert');
+    });
+
+    await service.replaceAuthors(6, [{ name: 'Known Author', sortName: null }]);
+
+    expect(insertedAuthors).toEqual([]);
+    expect(db.update).toHaveBeenCalledWith(authors);
+    expect(updateSet).toHaveBeenCalledWith({ name: 'Known Author' });
+    expect(updateWhere).toHaveBeenCalledTimes(1);
+    expect(db.execute).toHaveBeenCalledTimes(2);
+    expect(insertedBookAuthors).toEqual([{ bookId: 6, authorId: 9, displayOrder: 0 }]);
+  });
+
+  it('replaceAuthors prefers an existing clean author row over a legacy whitespace variant', async () => {
+    const { db, updateSet } = makeDb();
+    const service = makeService(db);
+    const insertedBookAuthors: Array<{ bookId: number; authorId: number; displayOrder: number }> = [];
+
+    db.select.mockImplementation(() => ({
+      from: () => ({
+        where: () =>
+          Promise.resolve([
+            { id: 9, name: 'Known  Author', normalizedName: 'known author' },
+            { id: 10, name: 'Known Author', normalizedName: 'known author' },
+          ]),
+      }),
+    }));
+    db.insert.mockImplementation((table: unknown) => {
+      if (table === authors) {
+        return {
+          values: () => ({
+            onConflictDoNothing: () => ({
+              returning: () => Promise.resolve([]),
+            }),
+          }),
+        };
+      }
+      if (table === bookAuthors) {
+        return {
+          values: (rows: Array<{ bookId: number; authorId: number; displayOrder: number }>) => {
+            insertedBookAuthors.push(...rows);
+            return { onConflictDoNothing: () => Promise.resolve(undefined) };
+          },
+        };
+      }
+      throw new Error('unexpected table in insert');
+    });
+
+    await service.replaceAuthors(6, [{ name: 'Known Author', sortName: null }]);
+
+    expect(updateSet).not.toHaveBeenCalledWith({ name: 'Known Author' });
+    expect(insertedBookAuthors).toEqual([{ bookId: 6, authorId: 10, displayOrder: 0 }]);
+  });
+
+  it('replaceAuthors emits author replaced event with linked author ids', async () => {
+    const { db } = makeDb();
+    const metadataEvents = { emit: vi.fn() };
+    const service = makeService(db, metadataEvents);
+
+    db.select.mockImplementation(() => ({
+      from: () => ({
+        where: () => Promise.resolve([]),
+      }),
+    }));
+    db.insert.mockImplementation((table: unknown) => {
+      if (table === authors) {
+        return {
+          values: () => ({
+            onConflictDoNothing: () => ({
+              returning: () => Promise.resolve([{ id: 81, name: 'New Author' }]),
+            }),
+          }),
+        };
+      }
+      if (table === bookAuthors) {
+        return {
+          values: () => ({
+            onConflictDoNothing: () => Promise.resolve(undefined),
+          }),
+        };
+      }
+      throw new Error('unexpected table in insert');
+    });
+
+    await service.replaceAuthors(7, [{ name: 'New Author', sortName: null }]);
+
+    expect(metadataEvents.emit).toHaveBeenCalledWith(METADATA_AUTHORS_REPLACED, { bookId: 7, authorIds: [81] });
+  });
+
+  it('replaceGenres runs in transaction and normalizes unique names', async () => {
+    const { db, transaction } = makeDb();
+    const service = makeService(db);
+    const insertedGenres: string[] = [];
+    const insertedBookGenres: Array<{ bookId: number; genreId: number }> = [];
+
+    db.insert.mockImplementation((table: unknown) => {
+      if (table === genres) {
+        return {
+          values: (rows: Array<{ name: string }>) => {
+            insertedGenres.push(...rows.map((row) => row.name));
+            return {
+              onConflictDoNothing: () => ({
+                returning: () => Promise.resolve(rows.map((row, index) => ({ id: 77 + index, name: row.name }))),
+              }),
+            };
+          },
+        };
+      }
+      if (table === bookGenres) {
+        return {
+          values: (rows: Array<{ bookId: number; genreId: number }>) => {
+            insertedBookGenres.push(...rows);
+            return { onConflictDoNothing: () => Promise.resolve(undefined) };
+          },
+        };
+      }
+      throw new Error('unexpected table in insert');
+    });
+
+    // The non-breaking space and the doubled space collapse onto the plain 'Fantasy' entry;
+    // stored un-collapsed they would each become a separate row that no search can reach.
+    await service.replaceGenres(12, [' Fantasy ', 'Fantasy', 'Fantasy\u00A0', 'Epic  Fantasy', 'Epic\tFantasy', '', 'X'.repeat(250)]);
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(db.delete).toHaveBeenCalledWith(bookGenres);
+    expect(insertedGenres).toEqual(['Fantasy', 'Epic Fantasy', 'X'.repeat(200)]);
+    expect(insertedBookGenres).toEqual([
+      { bookId: 12, genreId: 77 },
+      { bookId: 12, genreId: 78 },
+      { bookId: 12, genreId: 79 },
+    ]);
+  });
+
+  it('replaceTags runs in transaction and normalizes unique names', async () => {
+    const { db, transaction } = makeDb();
+    const service = makeService(db);
+    const insertedTags: string[] = [];
+
+    db.insert.mockImplementation((table: unknown) => {
+      if (table === tags) {
+        return {
+          values: (rows: Array<{ name: string }>) => {
+            insertedTags.push(...rows.map((row) => row.name));
+            return {
+              onConflictDoNothing: () => ({
+                returning: () => Promise.resolve(rows.map((row, index) => ({ id: 88 + index, name: row.name }))),
+              }),
+            };
+          },
+        };
+      }
+      if (table === bookTags) {
+        return {
+          values: () => ({
+            onConflictDoNothing: () => Promise.resolve(undefined),
+          }),
+        };
+      }
+      throw new Error('unexpected table in insert');
+    });
+
+    await service.replaceTags(19, [' Shelf ', 'Shelf', '', 'Y'.repeat(230)]);
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(db.delete).toHaveBeenCalledWith(bookTags);
+    expect(insertedTags).toEqual(['Shelf', 'Y'.repeat(200)]);
+  });
+
+  describe('narrators from a sidecar OPF', () => {
+    const opfXml = (metadataBody: string) => `
+      <package xmlns="http://www.idpf.org/2007/opf" version="2.0">
+        <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+          <dc:title>Sidecar Title</dc:title>
+          ${metadataBody}
+        </metadata>
+      </package>`;
+
+    it('persists narrators declared by role nrt on a non-audio source', async () => {
+      const { db } = makeDb();
+      const narratorService = { replaceForBook: vi.fn().mockResolvedValue(undefined) };
+      const service = makeService(db, undefined, { narratorService });
+      mockReadFile.mockResolvedValue(
+        opfXml(`
+          <dc:creator opf:role="nrt">First Narrator</dc:creator>
+          <dc:contributor opf:role="nrt">Second Narrator</dc:contributor>
+        `),
+      );
+
+      await service.extractAndSave(31, '/books/Book/book.opf', 'opf');
+
+      expect(narratorService.replaceForBook).toHaveBeenCalledWith(31, ['First Narrator', 'Second Narrator']);
+    });
+
+    it('leaves narrators untouched when the OPF declares none', async () => {
+      const { db } = makeDb();
+      const narratorService = { replaceForBook: vi.fn().mockResolvedValue(undefined) };
+      const service = makeService(db, undefined, { narratorService });
+      mockReadFile.mockResolvedValue(opfXml(`<dc:publisher>Ace</dc:publisher>`));
+
+      await service.extractAndSave(32, '/books/Book/book.opf', 'opf');
+
+      expect(narratorService.replaceForBook).not.toHaveBeenCalled();
+    });
+
+    it('skips narrators when the field is locked', async () => {
+      const { db } = makeDb();
+      const narratorService = { replaceForBook: vi.fn().mockResolvedValue(undefined) };
+      const lockService = {
+        isFieldLocked: vi.fn().mockResolvedValue(false),
+        filterAutomatedBookUpdate: vi.fn().mockImplementation((_bookId: number, dto: Record<string, unknown>) => {
+          const rest = { ...dto };
+          delete rest.audioMetadata;
+          return Promise.resolve({ dto: rest, skippedFields: ['narrators'] });
+        }),
+      };
+      const service = makeService(db, undefined, { narratorService, bookMetadataLockService: lockService });
+      mockReadFile.mockResolvedValue(opfXml(`<dc:creator opf:role="nrt">First Narrator</dc:creator>`));
+
+      await service.extractAndSave(33, '/books/Book/book.opf', 'opf');
+
+      expect(lockService.filterAutomatedBookUpdate).toHaveBeenCalledWith(
+        33,
+        expect.objectContaining({ audioMetadata: { narrators: ['First Narrator'] } }),
+      );
+      expect(narratorService.replaceForBook).not.toHaveBeenCalled();
+    });
+  });
+
+  it('extractAudioChaptersAndNarrators leaves narrators alone when the audio tags name none', async () => {
+    const { db, updateSet } = makeDb();
+    const narratorService = { replaceForBook: vi.fn().mockResolvedValue(undefined) };
+    const lockService = {
+      isFieldLocked: vi.fn().mockResolvedValue(false),
+      filterAutomatedBookUpdate: vi.fn().mockImplementation((_bookId: number, dto: unknown) => Promise.resolve({ dto, skippedFields: [] })),
+    };
+    const service = makeService(db, undefined, { narratorService, bookMetadataLockService: lockService });
+
+    mockExtractAudioMetadata.mockResolvedValueOnce({
+      title: null,
+      subtitle: null,
+      authors: [],
+      narrators: [],
+      publisher: null,
+      publishedYear: null,
+      description: null,
+      language: null,
+      seriesName: null,
+      seriesIndex: null,
+      genres: [],
+      audibleId: null,
+      librofmId: null,
+      durationSeconds: null,
+      chapters: [{ title: 'Chapter 1', startMs: 0 }],
+      coverBytes: null,
+    } as never);
+
+    await service.extractAudioChaptersAndNarrators(73, '/tmp/audio.m4b', 'm4b');
+
+    expect(lockService.filterAutomatedBookUpdate).toHaveBeenCalledWith(
+      73,
+      expect.objectContaining({ audioMetadata: { chapters: [{ title: 'Chapter 1', startMs: 0 }] } }),
+    );
+    expect(narratorService.replaceForBook).not.toHaveBeenCalled();
+    expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ chapters: [{ title: 'Chapter 1', startMs: 0 }] }));
+  });
+
+  it('extractAudioChaptersAndNarrators updates filtered audio fields and supports early exits', async () => {
+    const { db, updateSet } = makeDb();
+    const narratorService = {
+      replaceForBook: vi.fn().mockResolvedValue(undefined),
+    };
+    const lockService = {
+      isFieldLocked: vi.fn().mockResolvedValue(false),
+      filterAutomatedBookUpdate: vi.fn().mockResolvedValue({
+        dto: {
+          audibleId: 'B0SIDE',
+          librofmId: '9780987654321',
+          audioMetadata: {
+            chapters: [{ title: 'Chapter 1', startMs: 0 }],
+            narrators: ['Narrator A'],
+          },
+        },
+        skippedFields: [],
+      }),
+    };
+    const service = makeService(db, undefined, {
+      narratorService,
+      bookMetadataLockService: lockService,
+    });
+
+    mockExtractAudioMetadata.mockResolvedValueOnce({
+      title: null,
+      subtitle: null,
+      authors: [],
+      narrators: ['Narrator A'],
+      publisher: null,
+      publishedYear: null,
+      description: null,
+      language: null,
+      seriesName: null,
+      seriesIndex: null,
+      genres: [],
+      audibleId: 'B0SIDE',
+      librofmId: '9780987654321',
+      durationSeconds: null,
+      chapters: [{ title: 'Chapter 1', startMs: 0 }],
+      coverBytes: null,
+    });
+    await service.extractAudioChaptersAndNarrators(70, '/tmp/audio.m4b', 'm4b');
+
+    expect(lockService.filterAutomatedBookUpdate).toHaveBeenCalledWith(
+      70,
+      expect.objectContaining({
+        audibleId: 'B0SIDE',
+        librofmId: '9780987654321',
+        audioMetadata: expect.objectContaining({
+          chapters: [{ title: 'Chapter 1', startMs: 0 }],
+          narrators: ['Narrator A'],
+        }),
+      }),
+    );
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        audibleId: 'B0SIDE',
+        updatedAt: expect.any(Date),
+      }),
+    );
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        librofmId: '9780987654321',
+        updatedAt: expect.any(Date),
+      }),
+    );
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chapters: [{ title: 'Chapter 1', startMs: 0 }],
+        updatedAt: expect.any(Date),
+      }),
+    );
+    expect(narratorService.replaceForBook).toHaveBeenCalledWith(70, ['Narrator A']);
+
+    await expect(service.extractAudioChaptersAndNarrators(71, '/tmp/audio.unknown', 'unknown')).resolves.toBeUndefined();
+
+    await expect(service.extractAudioChaptersAndNarrators(72, '/tmp/book.pdf', 'pdf')).resolves.toBeUndefined();
+  });
+
+  describe('extractMergedAudioChapters', () => {
+    const partOne = '/books/Red Rising/Red Rising - 01.m4b';
+    const partTwo = '/books/Red Rising/Red Rising - 02.m4b';
+
+    function makeLockService() {
+      return {
+        isFieldLocked: vi.fn().mockResolvedValue(false),
+        filterAutomatedBookUpdate: vi.fn().mockImplementation((_bookId: number, dto: unknown) => Promise.resolve({ dto, skippedFields: [] })),
+      };
+    }
+
+    function probeReturns(probes: Record<string, { chapters: { title: string; startMs: number }[]; durationMs: number | null }>) {
+      mockProbeAudioChapters.mockImplementation((absolutePath: string) =>
+        Promise.resolve(probes[absolutePath] ?? { chapters: [], durationMs: null }),
+      );
+    }
+
+    it('stores one chapter list covering every file, offset into the combined timeline', async () => {
+      const { db, updateSet } = makeDb();
+      const lockService = makeLockService();
+      const service = makeService(db, undefined, { bookMetadataLockService: lockService });
+
+      probeReturns({
+        [partOne]: {
+          chapters: [
+            { title: 'Chapter 1', startMs: 0 },
+            { title: 'Chapter 2', startMs: 120_000 },
+          ],
+          durationMs: 360_000,
+        },
+        [partTwo]: { chapters: [{ title: 'Chapter 3', startMs: 0 }], durationMs: 240_000 },
+      });
+
+      await service.extractMergedAudioChapters(42, [partOne, partTwo], { filesChanged: true });
+
+      expect(mockProbeAudioChapters).toHaveBeenCalledTimes(2);
+      expect(mockProbeAudioChapters).toHaveBeenNthCalledWith(1, partOne);
+      expect(mockProbeAudioChapters).toHaveBeenNthCalledWith(2, partTwo);
+      expect(updateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chapters: [
+            { title: 'Chapter 1', startMs: 0 },
+            { title: 'Chapter 2', startMs: 120_000 },
+            { title: 'Chapter 3', startMs: 360_000 },
+          ],
+          updatedAt: expect.any(Date),
+        }),
+      );
+    });
+
+    it('probes files in the order it is given, since offsets depend on playback order', async () => {
+      const { db, updateSet } = makeDb();
+      const service = makeService(db, undefined, { bookMetadataLockService: makeLockService() });
+
+      probeReturns({
+        [partOne]: { chapters: [{ title: 'First', startMs: 0 }], durationMs: 100_000 },
+        [partTwo]: { chapters: [{ title: 'Second', startMs: 0 }], durationMs: 100_000 },
+      });
+
+      await service.extractMergedAudioChapters(42, [partTwo, partOne], { filesChanged: true });
+
+      expect(updateSet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chapters: [
+            { title: 'Second', startMs: 0 },
+            { title: 'First', startMs: 100_000 },
+          ],
+        }),
+      );
+    });
+
+    it('does nothing for a single-file audiobook, which extraction already covers', async () => {
+      const { db, updateSet } = makeDb();
+      const service = makeService(db, undefined, { bookMetadataLockService: makeLockService() });
+
+      await service.extractMergedAudioChapters(42, [partOne], { filesChanged: true });
+
+      expect(mockProbeAudioChapters).not.toHaveBeenCalled();
+      expect(updateSet).not.toHaveBeenCalled();
+    });
+
+    it('leaves stored chapters alone when a file length cannot be read', async () => {
+      const { db, updateSet } = makeDb();
+      const service = makeService(db, undefined, { bookMetadataLockService: makeLockService() });
+
+      probeReturns({
+        [partOne]: { chapters: [{ title: 'Chapter 1', startMs: 0 }], durationMs: null },
+        [partTwo]: { chapters: [{ title: 'Chapter 2', startMs: 0 }], durationMs: 240_000 },
+      });
+
+      await service.extractMergedAudioChapters(42, [partOne, partTwo], { filesChanged: true });
+
+      expect(updateSet).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing when no file carries embedded chapters', async () => {
+      const { db, updateSet } = makeDb();
+      const service = makeService(db, undefined, { bookMetadataLockService: makeLockService() });
+
+      probeReturns({
+        [partOne]: { chapters: [], durationMs: 360_000 },
+        [partTwo]: { chapters: [], durationMs: 240_000 },
+      });
+
+      await service.extractMergedAudioChapters(42, [partOne, partTwo], { filesChanged: true });
+
+      expect(updateSet).not.toHaveBeenCalled();
+    });
+
+    it('passes the merged chapters through the metadata lock filter', async () => {
+      const { db, updateSet } = makeDb();
+      const lockService = makeLockService();
+      const service = makeService(db, undefined, { bookMetadataLockService: lockService });
+
+      probeReturns({
+        [partOne]: { chapters: [{ title: 'Chapter 1', startMs: 0 }], durationMs: 360_000 },
+        [partTwo]: { chapters: [{ title: 'Chapter 2', startMs: 0 }], durationMs: 240_000 },
+      });
+
+      await service.extractMergedAudioChapters(42, [partOne, partTwo], { filesChanged: true });
+
+      expect(lockService.filterAutomatedBookUpdate).toHaveBeenCalledWith(42, {
+        audioMetadata: {
+          chapters: [
+            { title: 'Chapter 1', startMs: 0 },
+            { title: 'Chapter 2', startMs: 360_000 },
+          ],
+        },
+      });
+      expect(updateSet).toHaveBeenCalled();
+    });
+
+    describe('with no file changed', () => {
+      function withStoredState(db: any, chapters: unknown[], fileRows: { absolutePath: string; durationSeconds: number | null }[]) {
+        let call = 0;
+        db.select.mockImplementation(() => ({
+          from: () => ({
+            where: () => {
+              call += 1;
+              if (call === 1) return { limit: () => Promise.resolve([{ chapters }]) };
+              return Promise.resolve(fileRows);
+            },
+          }),
+        }));
+      }
+
+      it('rebuilds a list that stops at the first file, repairing an older scan', async () => {
+        const { db, updateSet } = makeDb();
+        const service = makeService(db, undefined, { bookMetadataLockService: makeLockService() });
+        withStoredState(
+          db,
+          [
+            { title: 'Chapter 1', startMs: 0 },
+            { title: 'Chapter 2', startMs: 240_000 },
+          ],
+          [
+            { absolutePath: partOne, durationSeconds: 360 },
+            { absolutePath: partTwo, durationSeconds: 240 },
+          ],
+        );
+        probeReturns({
+          [partOne]: {
+            chapters: [
+              { title: 'Chapter 1', startMs: 0 },
+              { title: 'Chapter 2', startMs: 240_000 },
+            ],
+            durationMs: 360_000,
+          },
+          [partTwo]: { chapters: [{ title: 'Chapter 3', startMs: 0 }], durationMs: 240_000 },
+        });
+
+        await service.extractMergedAudioChapters(42, [partOne, partTwo], { filesChanged: false });
+
+        expect(updateSet).toHaveBeenCalledWith(
+          expect.objectContaining({
+            chapters: [
+              { title: 'Chapter 1', startMs: 0 },
+              { title: 'Chapter 2', startMs: 240_000 },
+              { title: 'Chapter 3', startMs: 360_000 },
+            ],
+          }),
+        );
+      });
+
+      it('leaves an already merged list alone without probing the files again', async () => {
+        const { db, updateSet } = makeDb();
+        const service = makeService(db, undefined, { bookMetadataLockService: makeLockService() });
+        withStoredState(
+          db,
+          [
+            { title: 'Chapter 1', startMs: 0 },
+            { title: 'Chapter 3', startMs: 360_000 },
+          ],
+          [
+            { absolutePath: partOne, durationSeconds: 360 },
+            { absolutePath: partTwo, durationSeconds: 240 },
+          ],
+        );
+
+        await service.extractMergedAudioChapters(42, [partOne, partTwo], { filesChanged: false });
+
+        expect(mockProbeAudioChapters).not.toHaveBeenCalled();
+        expect(updateSet).not.toHaveBeenCalled();
+      });
+
+      it('leaves a book with no stored chapters to the per-file fallback', async () => {
+        const { db, updateSet } = makeDb();
+        const service = makeService(db, undefined, { bookMetadataLockService: makeLockService() });
+        withStoredState(
+          db,
+          [],
+          [
+            { absolutePath: partOne, durationSeconds: 360 },
+            { absolutePath: partTwo, durationSeconds: 240 },
+          ],
+        );
+
+        await service.extractMergedAudioChapters(42, [partOne, partTwo], { filesChanged: false });
+
+        expect(mockProbeAudioChapters).not.toHaveBeenCalled();
+        expect(updateSet).not.toHaveBeenCalled();
+      });
+
+      it('does not rebuild when a file length is unknown, since coverage cannot be judged', async () => {
+        const { db, updateSet } = makeDb();
+        const service = makeService(db, undefined, { bookMetadataLockService: makeLockService() });
+        withStoredState(
+          db,
+          [{ title: 'Chapter 1', startMs: 0 }],
+          [
+            { absolutePath: partOne, durationSeconds: null },
+            { absolutePath: partTwo, durationSeconds: 240 },
+          ],
+        );
+
+        await service.extractMergedAudioChapters(42, [partOne, partTwo], { filesChanged: false });
+
+        expect(mockProbeAudioChapters).not.toHaveBeenCalled();
+        expect(updateSet).not.toHaveBeenCalled();
+      });
+    });
+
+    it('writes nothing when the lock filter drops the chapters', async () => {
+      const { db, updateSet } = makeDb();
+      const lockService = {
+        isFieldLocked: vi.fn().mockResolvedValue(false),
+        filterAutomatedBookUpdate: vi.fn().mockResolvedValue({ dto: {}, skippedFields: ['chapters'] }),
+      };
+      const service = makeService(db, undefined, { bookMetadataLockService: lockService });
+
+      probeReturns({
+        [partOne]: { chapters: [{ title: 'Chapter 1', startMs: 0 }], durationMs: 360_000 },
+        [partTwo]: { chapters: [{ title: 'Chapter 2', startMs: 0 }], durationMs: 240_000 },
+      });
+
+      await service.extractMergedAudioChapters(42, [partOne, partTwo], { filesChanged: true });
+
+      expect(updateSet).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fixed-layout persistence', () => {
+    function epubOpf(renditionLayout: string | null) {
+      return {
+        title: 'Manga Vol. 1',
+        subtitle: null,
+        description: null,
+        isbn10: null,
+        isbn13: null,
+        publisher: null,
+        publishedDate: null,
+        publishedYear: null,
+        language: null,
+        pageCount: null,
+        rating: null,
+        seriesName: null,
+        seriesIndex: null,
+        authors: [],
+        narrators: [],
+        genres: [],
+        tags: [],
+        customMetadata: {},
+        coverHref: null,
+        renditionLayout,
+      };
+    }
+
+    it('records a comic as fixed layout so Kobo sync can announce it as EPUB3FL', async () => {
+      const { db, updateSet } = makeDb();
+      const service = makeService(db);
+      mockExtractEpubMetadata.mockResolvedValueOnce(epubOpf('pre-paginated') as never);
+
+      await service.extractAndSave(42, '/books/manga.epub', 'epub');
+
+      expect(updateSet).toHaveBeenCalledWith({ isFixedLayout: true });
+    });
+
+    it('records a reflowable novel explicitly, so it is never re-read on every sync', async () => {
+      const { db, updateSet } = makeDb();
+      const service = makeService(db);
+      mockExtractEpubMetadata.mockResolvedValueOnce(epubOpf('reflowable') as never);
+
+      await service.extractAndSave(42, '/books/novel.epub', 'epub');
+
+      expect(updateSet).toHaveBeenCalledWith({ isFixedLayout: false });
+    });
+
+    it('records an EPUB that declares no layout as reflowable', async () => {
+      const { db, updateSet } = makeDb();
+      const service = makeService(db);
+      mockExtractEpubMetadata.mockResolvedValueOnce(epubOpf(null) as never);
+
+      await service.extractAndSave(42, '/books/plain.epub', 'epub');
+
+      expect(updateSet).toHaveBeenCalledWith({ isFixedLayout: false });
+    });
+
+    it('writes nothing for a format whose extractor cannot report a layout', async () => {
+      const { db, updateSet } = makeDb();
+      const service = makeService(db);
+      vi.spyOn(service, 'replaceAuthors').mockResolvedValue(undefined);
+      vi.spyOn(service, 'replaceGenres').mockResolvedValue(undefined);
+      vi.spyOn(service, 'replaceTags').mockResolvedValue(undefined);
+      mockParsePdfFile.mockResolvedValueOnce({
+        title: 'Scan',
+        subtitle: null,
+        description: null,
+        isbn10: null,
+        isbn13: null,
+        publisher: null,
+        publishedYear: null,
+        language: null,
+        seriesName: null,
+        seriesIndex: null,
+        authors: [],
+        genres: [],
+        tags: [],
+        rating: null,
+        pageCount: 10,
+      } as never);
+
+      await service.extractAndSave(42, '/books/scan.pdf', 'pdf');
+
+      expect(updateSet).not.toHaveBeenCalledWith(expect.objectContaining({ isFixedLayout: expect.anything() }));
+    });
+  });
+
+  it('extractAudioFileDuration writes duration only when parser returns a value', async () => {
+    const { db, updateSet } = makeDb();
+    const service = makeService(db);
+
+    mockParseAudioDuration.mockResolvedValueOnce(null).mockResolvedValueOnce(4321);
+    await service.extractAudioFileDuration(99, '/tmp/book.m4b');
+    await service.extractAudioFileDuration(99, '/tmp/book.m4b');
+
+    expect(updateSet).toHaveBeenCalledWith({ durationSeconds: 4321 });
+  });
+
+  it('extractAndAggregateAudioDuration writes the per-file duration before re-aggregating the total', async () => {
+    const { db } = makeDb();
+    const service = makeService(db);
+
+    const callOrder: string[] = [];
+    const extractSpy = vi.spyOn(service, 'extractAudioFileDuration').mockImplementation(() => {
+      callOrder.push('extract');
+      return Promise.resolve();
+    });
+    const aggregateSpy = vi.spyOn(service, 'aggregateAudioDuration').mockImplementation(() => {
+      callOrder.push('aggregate');
+      return Promise.resolve();
+    });
+
+    await service.extractAndAggregateAudioDuration(55, '/tmp/book.m4b');
+
+    expect(extractSpy).toHaveBeenCalledWith(55, '/tmp/book.m4b');
+    expect(aggregateSpy).toHaveBeenCalledWith(55);
+    expect(callOrder).toEqual(['extract', 'aggregate']);
+  });
+
+  it('replaceNarrators and upsertComicMetadata delegate to collaborators', async () => {
+    const { db } = makeDb();
+    const narratorService = {
+      replaceForBook: vi.fn().mockResolvedValue(undefined),
+    };
+    const comicMetadataRepository = {
+      upsert: vi.fn().mockResolvedValue(undefined),
+    };
+    const service = makeService(db, undefined, {
+      narratorService,
+      comicMetadataRepository,
+    });
+
+    await service.replaceNarrators(22, [{ name: 'N1', sortName: null }]);
+    await service.upsertComicMetadata(22, { issueNumber: 3 });
+
+    expect(narratorService.replaceForBook).toHaveBeenCalledWith(22, [{ name: 'N1', sortName: null }]);
+    expect(comicMetadataRepository.upsert).toHaveBeenCalledWith(22, { issueNumber: 3 });
+  });
+
+  it('replaceGenres and replaceTags use provided executors and resolve unresolved relation names', async () => {
+    const { db, transaction } = makeDb();
+    const service = makeService(db);
+
+    const genreDeleteWhere = vi.fn().mockResolvedValue(undefined);
+    const tagDeleteWhere = vi.fn().mockResolvedValue(undefined);
+    const bookGenreLinks: Array<{ bookId: number; genreId: number }> = [];
+    const bookTagLinks: Array<{ bookId: number; tagId: number }> = [];
+
+    const executor = {
+      delete: vi.fn((table: unknown) => {
+        if (table === bookGenres) return { where: genreDeleteWhere };
+        if (table === bookTags) return { where: tagDeleteWhere };
+        throw new Error('unexpected table in delete');
+      }),
+      insert: vi.fn((table: unknown) => {
+        if (table === genres) {
+          return {
+            values: () => ({
+              onConflictDoNothing: () => ({
+                returning: () => Promise.resolve([]),
+              }),
+            }),
+          };
+        }
+        if (table === tags) {
+          return {
+            values: () => ({
+              onConflictDoNothing: () => ({
+                returning: () => Promise.resolve([]),
+              }),
+            }),
+          };
+        }
+        if (table === bookGenres) {
+          return {
+            values: (rows: Array<{ bookId: number; genreId: number }>) => {
+              bookGenreLinks.push(...rows);
+              return { onConflictDoNothing: () => Promise.resolve(undefined) };
+            },
+          };
+        }
+        if (table === bookTags) {
+          return {
+            values: (rows: Array<{ bookId: number; tagId: number }>) => {
+              bookTagLinks.push(...rows);
+              return { onConflictDoNothing: () => Promise.resolve(undefined) };
+            },
+          };
+        }
+        throw new Error('unexpected table in insert');
+      }),
+      select: vi.fn((fields: Record<string, unknown>) => {
+        const hasGenreName = Object.values(fields).includes(genres.name);
+        return {
+          from: () => ({
+            where: () => (hasGenreName ? Promise.resolve([{ id: 501, name: 'Mystery' }]) : Promise.resolve([{ id: 601, name: 'Shelf' }])),
+          }),
+        };
+      }),
+    };
+
+    await service.replaceGenres(41, ['Mystery'], { executor: executor as never });
+    await service.replaceTags(41, ['Shelf'], { executor: executor as never });
+
+    expect(transaction).not.toHaveBeenCalled();
+    expect(genreDeleteWhere).toHaveBeenCalledTimes(1);
+    expect(tagDeleteWhere).toHaveBeenCalledTimes(1);
+    expect(bookGenreLinks).toEqual([{ bookId: 41, genreId: 501 }]);
+    expect(bookTagLinks).toEqual([{ bookId: 41, tagId: 601 }]);
+  });
+
+  it('aggregateAudioDuration sums only files that match the selected primary audio format', async () => {
+    const primaryWhere = vi.fn().mockResolvedValue([{ format: 'm4b' }]);
+    const primaryInnerJoin = vi.fn().mockReturnValue({ where: primaryWhere });
+    const primaryFrom = vi.fn().mockReturnValue({ innerJoin: primaryInnerJoin });
+
+    const aggregateWhere = vi.fn().mockResolvedValue([{ total: 3600 }]);
+    const aggregateFrom = vi.fn().mockReturnValue({ where: aggregateWhere });
+
+    const updateWhere = vi.fn().mockResolvedValue(undefined);
+    const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+
+    const db = {
+      select: vi.fn().mockReturnValueOnce({ from: primaryFrom }).mockReturnValueOnce({ from: aggregateFrom }),
+      update: vi.fn().mockReturnValue({ set: updateSet }),
+    };
+
+    const service = makeService(db);
+
+    await service.aggregateAudioDuration(42);
+
+    expect(primaryWhere).toHaveBeenCalledTimes(1);
+    expect(aggregateWhere).toHaveBeenCalledTimes(1);
+    expect(updateSet).toHaveBeenCalledWith({ durationSeconds: 3600 });
+  });
+
+  it('aggregateAudioDuration no-ops when selected primary file is not an audio format', async () => {
+    const primaryWhere = vi.fn().mockResolvedValue([]);
+    const primaryInnerJoin = vi.fn().mockReturnValue({ where: primaryWhere });
+    const primaryFrom = vi.fn().mockReturnValue({ innerJoin: primaryInnerJoin });
+
+    const db = {
+      select: vi.fn().mockReturnValueOnce({ from: primaryFrom }),
+      update: vi.fn(),
+    };
+
+    const service = makeService(db);
+
+    await service.aggregateAudioDuration(99);
+
+    expect(db.update).not.toHaveBeenCalled();
+  });
+});
