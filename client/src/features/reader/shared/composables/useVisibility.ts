@@ -3,9 +3,9 @@ import { onUnmounted, ref } from 'vue'
 const AUTO_HIDE_DELAY_MS = 3000
 
 export function useVisibility() {
-  const headerVisible = ref(false)
-  const footerVisible = ref(false)
-  const isPinned = ref(false)
+  const headerVisible = ref(true)
+  const footerVisible = ref(true)
+  const isPinned = ref(true)
 
   let isVisibilityLocked = false
   let hideTimer: ReturnType<typeof setTimeout> | null = null

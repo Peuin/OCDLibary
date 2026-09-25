@@ -161,7 +161,9 @@
           "mauve": "Mauve",
           "orchid": "Orchid",
           "rose-quartz": "ローズクォーツ",
-          "blush": "赤面"
+          "blush": "赤面",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "アクセントカラー"

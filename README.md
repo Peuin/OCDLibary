@@ -126,6 +126,15 @@ docker compose up -d
 
 Open `http://your-server-ip:3000` and complete setup using your `SETUP_BOOTSTRAP_TOKEN`.
 
+To build and run the app image locally from this checkout instead of pulling GHCR:
+
+```bash
+cp .env.example .env
+pnpm run docker:local:up
+```
+
+The local stack uses `docker-compose.yml` plus `docker-compose.local.yml`, builds `bookorbit:local`, starts PostgreSQL, and serves BookOrbit at `http://localhost:3000`.
+
 For the full installation guide including reverse proxy setup, file permissions on NAS, secrets from mounted files, external databases, OIDC hardening, and environment variable reference, see **[bookorbit.app/installation](https://bookorbit.app/installation)**.
 
 ## How I Actually Use BookOrbit

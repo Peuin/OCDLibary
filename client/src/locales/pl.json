@@ -167,7 +167,9 @@
           "mauve": "fioletowe",
           "orchid": "Orchidea",
           "rose-quartz": "Kwarc różowy",
-          "blush": "Rumieniec"
+          "blush": "Rumieniec",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Kolor akcentujący",

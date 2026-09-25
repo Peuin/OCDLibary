@@ -164,7 +164,9 @@
           "mauve": "Mauve",
           "orchid": "Orchid",
           "rose-quartz": "Ruusukvartsi",
-          "blush": "Punastuminen"
+          "blush": "Punastuminen",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Korostuksen väri"

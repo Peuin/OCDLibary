@@ -165,7 +165,9 @@
           "mauve": "Mauve",
           "orchid": "Orchid",
           "rose-quartz": "Cvartz de Trandafiri",
-          "blush": "Blurare"
+          "blush": "Blurare",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Culoare accent"

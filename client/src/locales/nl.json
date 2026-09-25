@@ -166,7 +166,9 @@
           "mauve": "Paars",
           "orchid": "Orchidee",
           "rose-quartz": "Roze Quartz",
-          "blush": "Blos"
+          "blush": "Blos",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Accentkleur",

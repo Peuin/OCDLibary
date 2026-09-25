@@ -7,6 +7,41 @@
 
 /* Vivid - 32 colors, neutral + rainbow order */
 
+/* Carmel: ocdvietnam.org brand brown (#905127) with its cream (#f8d595) as the pastel pair */
+html.accent-carmel {
+  --tint-h: 52;
+  --tint-c: 0.01;
+  --primary: oklch(0.501 0.101 52);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.501 0.101 52);
+  --sidebar-primary: oklch(0.501 0.101 52);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+}
+html.accent-carmel.dark {
+  --tint-c: 0.02;
+  --primary: oklch(0.74 0.1 52);
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.74 0.1 52);
+  --sidebar-primary: oklch(0.74 0.1 52);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+}
+
+html.accent-cream {
+  --tint-h: 82;
+  --primary: oklch(0.888 0.09 82);
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.888 0.09 82);
+  --sidebar-primary: oklch(0.888 0.09 82);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+}
+html.accent-cream.dark {
+  --primary: oklch(0.9 0.085 82);
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.9 0.085 82);
+  --sidebar-primary: oklch(0.9 0.085 82);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+}
+
 html.accent-white {
   --tint-h: 0;
   --tint-c: 0;

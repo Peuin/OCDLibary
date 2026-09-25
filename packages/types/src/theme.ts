@@ -5,6 +5,7 @@ export const THEME_IDS = [...RESOLVED_THEME_IDS, "system"] as const;
 export type Theme = (typeof THEME_IDS)[number];
 
 export const ACCENT_IDS = [
+  "carmel",
   "grey",
   "scarlet",
   "vermilion",
@@ -69,6 +70,7 @@ export const ACCENT_IDS = [
   "orchid",
   "rose-quartz",
   "blush",
+  "cream",
 ] as const;
 export type Accent = (typeof ACCENT_IDS)[number];
 

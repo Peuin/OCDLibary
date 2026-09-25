@@ -1,0 +1,10 @@
+name: bookorbit-local
+
+services:
+  app:
+    image: bookorbit:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: local

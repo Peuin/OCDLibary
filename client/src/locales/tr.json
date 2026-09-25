@@ -107,7 +107,9 @@
           "mauve": "Eflatun",
           "orchid": "Orkide",
           "rose-quartz": "Pembe Kuvars",
-          "blush": "Kırmızı"
+          "blush": "Kırmızı",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Vurgu rengi"

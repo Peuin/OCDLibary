@@ -14,6 +14,7 @@ import {
   type ResolvedTheme,
   type Theme,
 } from '@bookorbit/types'
+import { DEFAULT_ACCENT } from '@/lib/theme-accent-meta'
 import { storage } from '@/services/storage'
 
 export { ACCENT_VIVID, ACCENT_PASTEL, ACCENT_OPTIONS, ACCENT_PAIRS, ACCENT_ROWS } from '@/lib/theme-accent-meta'
@@ -71,8 +72,8 @@ export const useThemeStore = defineStore('theme', () => {
   const theme = ref<Theme>(THEME_IDS.includes(storedTheme) ? storedTheme : 'system')
   const resolvedTheme = computed<ResolvedTheme>(() => (theme.value === 'system' ? systemTheme.value : theme.value))
 
-  const storedAccent = storage.get<Accent>('accent', 'blue')
-  const accent = ref<Accent>(ACCENT_IDS.includes(storedAccent) ? storedAccent : 'blue')
+  const storedAccent = storage.get<Accent>('accent', DEFAULT_ACCENT)
+  const accent = ref<Accent>(ACCENT_IDS.includes(storedAccent) ? storedAccent : DEFAULT_ACCENT)
 
   const storedRadius = storage.get<Radius>('radius', 'default')
   const radius = ref<Radius>(RADIUS_IDS.includes(storedRadius) ? storedRadius : 'default')

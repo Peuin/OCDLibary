@@ -22,10 +22,27 @@ describe('useVisibility', () => {
     vi.useRealTimers()
   })
 
+  it('defaults to pinned visible controls', async () => {
+    vi.useFakeTimers()
+    const { visibility, wrapper } = mountVisibility()
+
+    expect(visibility.isPinned.value).toBe(true)
+    expect(visibility.headerVisible.value).toBe(true)
+    expect(visibility.footerVisible.value).toBe(true)
+
+    await vi.advanceTimersByTimeAsync(3000)
+
+    expect(visibility.headerVisible.value).toBe(true)
+    expect(visibility.footerVisible.value).toBe(true)
+    wrapper.unmount()
+  })
+
   it('temporarily reveals unpinned controls from a middle tap', async () => {
     vi.useFakeTimers()
     const { visibility, wrapper } = mountVisibility()
 
+    visibility.togglePinned()
+    await vi.advanceTimersByTimeAsync(3000)
     visibility.handleMiddleTap()
 
     expect(visibility.isPinned.value).toBe(false)
@@ -43,6 +60,8 @@ describe('useVisibility', () => {
     vi.useFakeTimers()
     const { visibility, wrapper } = mountVisibility()
 
+    visibility.togglePinned()
+    visibility.hideOverlays()
     visibility.handleMiddleTap()
     visibility.handleMiddleTap()
 
@@ -56,8 +75,6 @@ describe('useVisibility', () => {
     vi.useFakeTimers()
     const { visibility, wrapper } = mountVisibility()
 
-    visibility.handleMiddleTap()
-    visibility.togglePinned()
     await vi.advanceTimersByTimeAsync(3000)
 
     expect(visibility.isPinned.value).toBe(true)

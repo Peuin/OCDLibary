@@ -163,7 +163,9 @@
           "mauve": "Mauve",
           "orchid": "Orchid",
           "rose-quartz": "Rose Quartz",
-          "blush": "Blush"
+          "blush": "Blush",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Χρώμα έμφασης"

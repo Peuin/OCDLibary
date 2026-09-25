@@ -165,7 +165,9 @@
           "mauve": "Mauve",
           "orchid": "Orchid",
           "rose-quartz": "Křemen",
-          "blush": "Vyprázdnit"
+          "blush": "Vyprázdnit",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Barva zvýraznění"

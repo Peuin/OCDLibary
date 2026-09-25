@@ -167,7 +167,9 @@
           "mauve": "Mauve",
           "orchid": "Orchidée",
           "rose-quartz": "Quartz rose",
-          "blush": "Fard à joues"
+          "blush": "Fard à joues",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Couleur d'accentuation",

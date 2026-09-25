@@ -13,12 +13,8 @@ import {
   BarChart3,
   Trophy,
   MoreVertical,
-  BadgeQuestionMark,
   Headphones,
-  ExternalLink,
-  Sparkles,
   Languages,
-  Info,
 } from '@lucide/vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -53,13 +49,11 @@ import BookUploadModal from '@/features/library/components/BookUploadModal.vue'
 import { useLibraryUploadEvents } from '@/features/library/composables/useLibraryUploadEvents'
 import NotificationSheet from '@/features/notifications/components/NotificationSheet.vue'
 import { useNotifications } from '@/features/notifications/composables/useNotifications'
-import { useWhatsNew } from '@/features/whats-new/composables/useWhatsNew'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { DEFAULT_FORMAT_PRIORITY, LOCALE_LABELS, Permission, type Locale } from '@bookorbit/types'
 import { useThemeStore } from '@/stores/theme'
 import { useLocaleStore } from '@/stores/locale'
 import { getFormatColor } from '@/features/book/lib/format-colors'
-import { useLegalNotices } from '@/components/legal/useLegalNotices'
 import { hasReadAlong, isReadAlongFormat, READ_ALONG_FORMAT_COLOR, READ_ALONG_FORMAT_TITLE } from '@/features/book/lib/file-capabilities'
 
 const { t } = useI18n()
@@ -70,12 +64,9 @@ const { open: openChangePassword } = useChangePasswordDialog()
 const { hasPermission, isDemoRestrictedAccount } = usePermissions()
 const { onLibraryUploadCompleted } = useLibraryUploadEvents()
 const { subscribe: subscribeNotifications } = useNotifications()
-const { hasUnseen: hasUnseenWhatsNew } = useWhatsNew()
 const themeStore = useThemeStore()
 const localeStore = useLocaleStore()
-const { openLegalNotices } = useLegalNotices()
 const currentLanguageLabel = computed(() => LOCALE_LABELS[localeStore.locale])
-const documentationUrl = 'https://bookorbit.app/what-is-bookorbit'
 
 const iconRadiusClass = computed(() => (themeStore.radius === 'sharp' ? 'rounded-none' : 'rounded-full'))
 
@@ -147,10 +138,6 @@ function openLanguageSheet() {
 
 function openAppearanceSheet() {
   appearanceSheetOpen.value = true
-}
-
-function navigateToWhatsNew() {
-  router.push({ name: 'whats-new' })
 }
 
 const uploadOpen = ref(false)
@@ -677,24 +664,6 @@ function formatBadgeStyle(fmt: string, result?: GlobalSearchResult) {
               {{ t('components.appHeader.settings') }}
             </DropdownMenuItem>
 
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem @click="navigateToWhatsNew">
-              <Sparkles :size="15" class="mr-2 text-muted-foreground" />
-              {{ t('components.appHeader.whatsNew') }}
-              <span v-if="hasUnseenWhatsNew" class="ml-auto h-1.5 w-1.5 rounded-full bg-primary" :aria-label="t('components.appHeader.new')" />
-            </DropdownMenuItem>
-            <DropdownMenuItem as-child>
-              <a :href="documentationUrl" target="_blank" rel="noopener noreferrer">
-                <BadgeQuestionMark :size="15" class="mr-2 text-muted-foreground" />
-                {{ t('components.appHeader.documentation') }}
-                <ExternalLink :size="12" class="ml-auto text-muted-foreground" />
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem @click="openLegalNotices">
-              <Info :size="15" class="mr-2 text-muted-foreground" />
-              {{ t('components.legalNotices.about') }}
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -752,51 +721,9 @@ function formatBadgeStyle(fmt: string, result?: GlobalSearchResult) {
           </Tooltip>
         </div>
 
-        <!-- Group 2: Preferences (Help, Appearance, Language, Settings) -->
+        <!-- Group 2: Preferences (Appearance, Language, Settings) -->
         <Separator orientation="vertical" class="hidden h-4 md:block" />
         <div class="hidden md:flex items-center gap-1.5">
-          <Tooltip>
-            <DropdownMenu>
-              <TooltipTrigger as-child>
-                <DropdownMenuTrigger as-child>
-                  <Button
-                    data-tour="documentation-link"
-                    variant="ghost"
-                    size="icon"
-                    :class="['relative', controlClass]"
-                    :aria-label="t('components.appHeader.help')"
-                  >
-                    <BadgeQuestionMark :size="15" />
-                    <span
-                      v-if="hasUnseenWhatsNew"
-                      class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background"
-                      :aria-label="t('components.appHeader.newReleaseNotes')"
-                    />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <DropdownMenuContent align="end" class="w-48">
-                <DropdownMenuItem as-child>
-                  <a :href="documentationUrl" target="_blank" rel="noopener noreferrer">
-                    <BadgeQuestionMark :size="14" class="mr-2 text-muted-foreground" />
-                    {{ t('components.appHeader.documentation') }}
-                    <ExternalLink :size="12" class="ml-auto text-muted-foreground" />
-                  </a>
-                </DropdownMenuItem>
-                <DropdownMenuItem @click="navigateToWhatsNew">
-                  <Sparkles :size="14" class="mr-2 text-muted-foreground" />
-                  {{ t('components.appHeader.whatsNew') }}
-                  <span v-if="hasUnseenWhatsNew" class="ml-auto h-1.5 w-1.5 rounded-full bg-primary" :aria-label="t('components.appHeader.new')" />
-                </DropdownMenuItem>
-                <DropdownMenuItem @click="openLegalNotices">
-                  <Info :size="14" class="mr-2 text-muted-foreground" />
-                  {{ t('components.legalNotices.about') }}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <TooltipContent>{{ t('components.appHeader.help') }}</TooltipContent>
-          </Tooltip>
-
           <Tooltip>
             <Popover>
               <TooltipTrigger as-child>

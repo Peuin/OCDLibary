@@ -34,6 +34,8 @@ const ACCENT_META_BY_ID: Record<Accent, AccentMetaDefinition> = {
     previewColor: 'oklch(0.985 0 0)',
     swatchClass: 'ring-1 ring-border',
   },
+  carmel: { label: 'Carmel', tone: 'vivid', hue: 52, primary: [0.501, 0.101, 0.74, 0.1] },
+  cream: { label: 'Cream', tone: 'pastel', hue: 82, primary: [0.888, 0.09, 0.9, 0.085] },
   grey: { label: 'Grey', tone: 'pastel', hue: 0, primary: [0.55, 0, 0.75, 0] },
   scarlet: { label: 'Scarlet', tone: 'vivid', hue: 2, primary: [0.58, 0.25, 0.74, 0.2] },
   rosewater: { label: 'Rosewater', tone: 'pastel', hue: 2, primary: [0.7, 0.125, 0.8, 0.11] },
@@ -99,7 +101,7 @@ const ACCENT_META_BY_ID: Record<Accent, AccentMetaDefinition> = {
   blush: { label: 'Blush', tone: 'pastel', hue: 328, primary: [0.68, 0.13, 0.81, 0.12] },
 }
 
-export const DEFAULT_ACCENT: Accent = 'blue'
+export const DEFAULT_ACCENT: Accent = 'carmel'
 
 export function resolveAccent(accent: string | null | undefined): Accent {
   if (!accent) return DEFAULT_ACCENT
@@ -129,6 +131,7 @@ const ALL_ACCENT_OPTIONS: readonly AccentOption[] = ACCENT_IDS.map((id) => {
 })
 
 const ACCENT_PAIR_IDS = [
+  ['carmel', 'cream'],
   ['white', 'grey'],
   ['orange', 'peach'],
   ['copper', 'sand'],
@@ -174,7 +177,7 @@ export const ACCENT_VIVID: readonly AccentOption[] = ACCENT_PAIRS.map((pair) => 
 
 export const ACCENT_PASTEL: readonly AccentOption[] = ACCENT_PAIRS.map((pair) => pair.pastel)
 
-const PAIRS_PER_GROUP = ACCENT_PAIRS.length / 2
+const PAIRS_PER_GROUP = Math.ceil(ACCENT_PAIRS.length / 2)
 const FIRST_PAIR_GROUP = ACCENT_PAIRS.slice(0, PAIRS_PER_GROUP)
 const SECOND_PAIR_GROUP = ACCENT_PAIRS.slice(PAIRS_PER_GROUP)
 

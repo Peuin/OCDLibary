@@ -3,6 +3,7 @@ import './lib/echarts'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import { DEFAULT_LOCALE } from '@bookorbit/types'
 
 import App from './App.vue'
 import router from './router'
@@ -53,6 +54,10 @@ try {
   await Promise.all([fetchSetupStatus(), useLoginOptions().fetchLoginOptions()])
 } catch {
   // If setup-status check fails, continue with normal auth bootstrap.
+}
+
+if (needsSetup.value === true) {
+  await localeStore.setLocale(DEFAULT_LOCALE)
 }
 
 const { init } = useAuth()

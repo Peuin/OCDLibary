@@ -166,7 +166,9 @@
           "mauve": "Mauve",
           "orchid": "Orchid",
           "rose-quartz": "Розовый кварц",
-          "blush": "Смешать"
+          "blush": "Смешать",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Цвет акцента"

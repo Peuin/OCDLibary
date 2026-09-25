@@ -69,11 +69,17 @@ describe('locale store', () => {
     expect(matchSupportedLocale(['zh-MO'])).toBe('zh-Hant')
   })
 
-  it('prefers the stored locale over browser detection', async () => {
+  it('prefers the stored locale over the default locale', async () => {
     storedValues.set('locale', 'nl')
     const { detectInitialLocale } = await import('../locale')
 
     expect(detectInitialLocale()).toBe('nl')
+  })
+
+  it('defaults to English when no stored locale exists', async () => {
+    const { detectInitialLocale } = await import('../locale')
+
+    expect(detectInitialLocale()).toBe('en')
   })
 
   it('persists only after locale activation succeeds', async () => {

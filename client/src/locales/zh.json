@@ -167,7 +167,9 @@
           "mauve": "淡紫",
           "orchid": "兰花紫",
           "rose-quartz": "粉石英",
-          "blush": "腮红"
+          "blush": "腮红",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "主题色"

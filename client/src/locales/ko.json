@@ -167,7 +167,9 @@
           "mauve": "모브",
           "orchid": "오키드",
           "rose-quartz": "로즈 쿼츠",
-          "blush": "블러시"
+          "blush": "블러시",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "강조 색상"

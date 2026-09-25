@@ -55,8 +55,9 @@ describe('accent option collections', () => {
     expect(vividIds.size + pastelIds.size).toBe(ACCENT_IDS.length)
   })
 
-  it('starts with white and orange, then wraps the red accents to the end', () => {
+  it('starts with the carmel brand accent, white and orange, then wraps the red accents to the end', () => {
     expect(ACCENT_VIVID.map((option) => option.id)).toEqual([
+      'carmel',
       'white',
       'orange',
       'copper',
@@ -93,22 +94,22 @@ describe('accent option collections', () => {
   })
 
   it('organizes each bright row directly above its pastel counterparts', () => {
-    expect(ACCENT_PAIRS).toHaveLength(32)
+    expect(ACCENT_PAIRS).toHaveLength(33)
     expect(ACCENT_ROWS).toHaveLength(4)
-    expect(ACCENT_ROWS.every((row) => row.length === 16)).toBe(true)
+    expect(ACCENT_ROWS.map((row) => row.length)).toEqual([17, 17, 16, 16])
 
-    const firstGroup = ACCENT_PAIRS.slice(0, 16)
-    const secondGroup = ACCENT_PAIRS.slice(16)
+    const firstGroup = ACCENT_PAIRS.slice(0, 17)
+    const secondGroup = ACCENT_PAIRS.slice(17)
     expect(ACCENT_ROWS[0]).toEqual(firstGroup.map((pair) => pair.vivid))
     expect(ACCENT_ROWS[1]).toEqual(firstGroup.map((pair) => pair.pastel))
     expect(ACCENT_ROWS[2]).toEqual(secondGroup.map((pair) => pair.vivid))
     expect(ACCENT_ROWS[3]).toEqual(secondGroup.map((pair) => pair.pastel))
 
-    for (const pair of ACCENT_PAIRS) {
+    for (const pair of ACCENT_PAIRS.slice(1)) {
       expect(ACCENT_HUE[pair.pastel.id]).toBe(ACCENT_HUE[pair.vivid.id])
     }
 
-    for (const pair of ACCENT_PAIRS.slice(1)) {
+    for (const pair of ACCENT_PAIRS.slice(2)) {
       const [vividLightness, vividChroma, vividDarkLightness, vividDarkChroma] = ACCENT_PRIMARY[pair.vivid.id]
       const [pastelLightness, pastelChroma, pastelDarkLightness, pastelDarkChroma] = ACCENT_PRIMARY[pair.pastel.id]
       expect(pastelLightness).toBeGreaterThan(vividLightness)
@@ -119,13 +120,13 @@ describe('accent option collections', () => {
   })
 
   it('keeps the vivid palette saturated and in continuous rainbow order', () => {
-    for (const option of ACCENT_VIVID.slice(1)) {
+    for (const option of ACCENT_VIVID.slice(2)) {
       const [, lightChroma, , darkChroma] = ACCENT_PRIMARY[option.id]
       expect(lightChroma).toBeGreaterThanOrEqual(0.16)
       expect(darkChroma).toBeGreaterThanOrEqual(0.14)
     }
 
-    const unwrappedHues = ACCENT_VIVID.slice(1).map((option) => {
+    const unwrappedHues = ACCENT_VIVID.slice(2).map((option) => {
       const hue = ACCENT_HUE[option.id]
       return hue < ACCENT_HUE.orange ? hue + 360 : hue
     })
@@ -133,7 +134,7 @@ describe('accent option collections', () => {
   })
 
   it('keeps every pastel visibly related without washing it out', () => {
-    for (const pair of ACCENT_PAIRS.slice(1)) {
+    for (const pair of ACCENT_PAIRS.slice(2)) {
       const [, vividChroma, , vividDarkChroma] = ACCENT_PRIMARY[pair.vivid.id]
       const [, pastelChroma, , pastelDarkChroma] = ACCENT_PRIMARY[pair.pastel.id]
       expect(pastelChroma / vividChroma).toBeGreaterThanOrEqual(0.45)
@@ -149,6 +150,10 @@ describe('accent option collections', () => {
       const hue = ACCENT_HUE[option.id]
       expect(option.color).toBe(`light-dark(oklch(${lightL} ${lightC} ${hue}), oklch(${darkL} ${darkC} ${hue}))`)
     }
+  })
+
+  it('defaults to the carmel brand accent', () => {
+    expect(DEFAULT_ACCENT).toBe('carmel')
   })
 
   it('always previews the white accent as white', () => {

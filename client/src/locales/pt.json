@@ -167,7 +167,9 @@
           "mauve": "Malva",
           "orchid": "Lilás",
           "rose-quartz": "Quartzo rosa",
-          "blush": "Rosa-blush"
+          "blush": "Rosa-blush",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Cor de destaque",

@@ -167,7 +167,9 @@
           "mauve": "Mályva",
           "orchid": "Orchidea",
           "rose-quartz": "Rózsakvarc",
-          "blush": "Pír"
+          "blush": "Pír",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Kiemelőszín"

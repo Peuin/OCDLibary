@@ -166,7 +166,9 @@
           "mauve": "Vijolična",
           "orchid": "Orhideja",
           "rose-quartz": "Rožni kremen",
-          "blush": "Rdečilo"
+          "blush": "Rdečilo",
+          "carmel": "Carmel",
+          "cream": "Cream"
         },
         "accentColor": {
           "label": "Poudarjena barva",

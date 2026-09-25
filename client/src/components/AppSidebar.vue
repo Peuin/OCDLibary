@@ -2,22 +2,18 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Aperture, BookCopy, CircleArrowUp, FolderOpen, Heart, Orbit, Podcast } from '@lucide/vue'
+import { Aperture, BookCopy, FolderOpen, Orbit, Podcast } from '@lucide/vue'
 import { APP_FEATURES, Permission, type Library, type LibraryType, type MediaType } from '@bookorbit/types'
 import { formatCompactNumber, formatNumber } from '@/i18n/formatters'
 import { entityCount } from '@/lib/entity-count'
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail, SidebarSeparator, useSidebar } from '@/components/ui/sidebar'
+import { Sidebar, SidebarContent, SidebarHeader, SidebarRail, SidebarSeparator, useSidebar } from '@/components/ui/sidebar'
 import SidebarZone from '@/components/sidebar/SidebarZone.vue'
 import SidebarNavItem from '@/components/sidebar/SidebarNavItem.vue'
 import SidebarBadge from '@/components/sidebar/SidebarBadge.vue'
 import SidebarEntitySection from '@/components/sidebar/SidebarEntitySection.vue'
 import SidebarModeSwitch from '@/components/sidebar/SidebarModeSwitch.vue'
 import SidebarSectionPopover from '@/components/sidebar/SidebarSectionPopover.vue'
-import SidebarGithubStar from '@/components/sidebar/SidebarGithubStar.vue'
-import SidebarAppLinks from '@/components/sidebar/SidebarAppLinks.vue'
-import { buildSidebarVersionUi } from '@/components/sidebar/versionUi'
 import { mergedMediaOrder, ownedInOrder, type DisplayOrderEntry } from '@/components/sidebar/sidebar-order'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useSidebarNav } from '@/composables/useSidebarNav'
 import { useBrowseCounts } from '@/composables/useBrowseCounts'
 import { mediaModeHome, useMediaMode } from '@/composables/useMediaMode'
@@ -35,9 +31,7 @@ import CreateSmartScopeDialog from '@/features/smart-scope/components/CreateSmar
 import CreateCollectionDialog from '@/features/collection/components/CreateCollectionDialog.vue'
 import LibraryCreatorModal from '@/features/library/components/LibraryCreatorModal.vue'
 import { useLibraryCreationRedirect } from '@/features/library/composables/useLibraryCreationRedirect'
-import { useAppInfo } from '@/features/settings/composables/useAppInfo'
 import SettingsSidebar from '@/features/settings/components/SettingsSidebar.vue'
-import { useWhatsNew } from '@/features/whats-new/composables/useWhatsNew'
 import { useBookRequestSummary } from '@/features/book-requests/composables/useBookRequestSummary'
 import { useBookRequestProgress } from '@/features/book-requests/composables/useBookRequestProgress'
 
@@ -53,8 +47,6 @@ const { hasPermission } = usePermissions()
 const { subscribeLibrary, getProgress } = useScanProgress()
 const podcastImportProgress = APP_FEATURES.podcasts ? usePodcastImportProgress() : null
 const { handleLibraryCreated } = useLibraryCreationRedirect()
-const { version, updateAvailable, latestVersion, loadAppInfo } = useAppInfo()
-const { hasUnseen: hasUnseenWhatsNew } = useWhatsNew()
 const { fetchSummary: fetchBookDockSummary, subscribe: subscribeBookDockSummary } = useBookDockSummary()
 const { fetchCounts: fetchBrowseCounts, refreshCounts: refreshBrowseCounts } = useBrowseCounts()
 const { summary: bookRequestSummary, fetchSummary: fetchBookRequestSummary, refreshSummary: refreshBookRequestSummary } = useBookRequestSummary()
@@ -64,8 +56,6 @@ const outstandingRequestTotal = computed(() =>
 const { zones } = useSidebarNav(() => outstandingRequestTotal.value)
 const requestProgress = hasPermission(Permission.BookRequestAccess) ? useBookRequestProgress() : null
 useLibraryScanRefresh()
-
-const SUPPORT_URL = 'https://ko-fi.com/neonbookorbit'
 
 // Shared scopes belong to their owner, so their display order is not this user's to persist.
 const ownedBookScopes = computed(() => bookScopes.value.filter((scope) => scope.isOwner))
@@ -109,7 +99,6 @@ const defaultPodcastLibraryId = computed(() => podcastLibraries.value[0]?.id ?? 
 
 const isRail = computed(() => state.value === 'collapsed' && !isMobile.value)
 const isSettingsRoute = computed(() => typeof route.name === 'string' && route.name.startsWith('settings-'))
-const versionUi = computed(() => buildSidebarVersionUi(version.value, updateAvailable.value, latestVersion.value))
 
 function activeIdFor(...routeNames: string[]): number | null {
   const id = route.params.id
@@ -269,7 +258,6 @@ onMounted(async () => {
   void fetchCollections()
   void fetchBrowseCounts()
   if (hasPermission(Permission.BookRequestAccess)) void fetchBookRequestSummary()
-  void loadAppInfo()
   if (hasPermission('book_dock_access')) {
     void fetchBookDockSummary()
     subscribeBookDockSummary()
@@ -645,68 +633,6 @@ onUnmounted(() => stopLibraryUploadListener())
         </template>
       </template>
     </SidebarContent>
-
-    <SidebarFooter v-if="!isSettingsRoute" class="border-t border-sidebar-border px-4 py-2 group-data-[collapsible=icon]:px-2">
-      <div
-        class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 group-data-[collapsible=icon]:grid-cols-1 group-data-[collapsible=icon]:justify-items-center group-data-[collapsible=icon]:gap-1"
-      >
-        <div
-          class="flex items-center justify-self-start group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:justify-self-center"
-        >
-          <SidebarGithubStar :is-rail="isRail" />
-
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <a
-                :href="SUPPORT_URL"
-                target="_blank"
-                rel="noopener noreferrer"
-                :aria-label="t('components.sidebar.supportAria')"
-                class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-destructive outline-hidden transition-colors duration-150 hover:bg-(--shell-accent-wash) focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-              >
-                <Heart :size="16" class="fill-current" aria-hidden="true" />
-              </a>
-            </TooltipTrigger>
-            <TooltipContent :side="isRail ? 'right' : 'top'">{{ t('components.sidebar.support') }}</TooltipContent>
-          </Tooltip>
-        </div>
-
-        <div class="flex min-w-0 items-center justify-center gap-1 group-data-[collapsible=icon]:hidden">
-          <RouterLink
-            v-if="versionUi.currentLabel"
-            to="/whats-new"
-            class="inline-flex min-w-0 items-center gap-1.5 rounded-md text-[13px] font-medium text-muted-foreground outline-hidden transition-colors duration-150 hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-            @click="handleNavigate"
-          >
-            <span class="truncate">{{ versionUi.currentLabel }}</span>
-            <span
-              v-if="hasUnseenWhatsNew"
-              class="h-1.5 w-1.5 flex-none rounded-full bg-primary"
-              :aria-label="t('components.sidebar.newReleaseNotes')"
-            />
-          </RouterLink>
-
-          <Tooltip v-if="versionUi.showUpdate">
-            <TooltipTrigger as-child>
-              <a
-                :href="versionUi.updateHref"
-                target="_blank"
-                rel="noopener noreferrer"
-                :aria-label="t('components.sidebar.openUpdateRelease', { version: versionUi.updateVersionLabel })"
-                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-success outline-hidden transition-colors duration-150 hover:bg-(--shell-accent-wash) focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-              >
-                <CircleArrowUp :size="18" aria-hidden="true" />
-              </a>
-            </TooltipTrigger>
-            <TooltipContent side="top">{{ t('components.sidebar.updateTooltip', { version: versionUi.updateVersionLabel }) }}</TooltipContent>
-          </Tooltip>
-        </div>
-
-        <div class="justify-self-end group-data-[collapsible=icon]:justify-self-center">
-          <SidebarAppLinks :is-rail="isRail" />
-        </div>
-      </div>
-    </SidebarFooter>
 
     <SidebarRail />
   </Sidebar>
