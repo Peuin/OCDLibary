@@ -24,6 +24,7 @@ import sl from '@/locales/sl.json'
 import sv from '@/locales/sv.json'
 import turkish from '@/locales/tr.json'
 import uk from '@/locales/uk.json'
+import vietnamese from '@/locales/vi.json'
 import zh from '@/locales/zh.json'
 import traditionalChinese from '@/locales/zh-Hant.json'
 import { compileIcuCatalog, icuCountValues, isIcuPluralMessage, splitIcuCount } from './icu'
@@ -349,6 +350,7 @@ describe('ICU message compilation', () => {
     ['sv', sv, [0, 1, 2]],
     ['tr', turkish, [0, 1, 2]],
     ['uk', uk, [0, 1, 2, 5, 1.5]],
+    ['vi', vietnamese, [0, 1, 2, 5, 1.5, 1_234]],
     ['zh', zh, [0, 1, 2]],
     ['zh-Hant', traditionalChinese, [0, 1, 2]],
   ] as const)('formats every ICU message for all relevant plural categories in %s', (locale, catalog, counts) => {
