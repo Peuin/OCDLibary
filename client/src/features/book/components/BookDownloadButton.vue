@@ -123,14 +123,14 @@ function handleExportPrimary() {
           v-for="file in audiolessEpubFiles"
           :key="`audioless-${file.id}`"
           class="flex w-full items-center gap-2.5 px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors"
-          title="Download EPUB for KOReader with audio files removed"
+          :title="t('book.feedback.audiolessEpub')"
           @click="handleAudiolessEpubDownload(file)"
         >
           <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0" :style="formatBadgeStyle('epub')"
             >EPUB</span
           >
           <span class="flex-1 text-left text-muted-foreground text-xs truncate">KOReader EPUB</span>
-          <span class="text-[10px] font-medium text-muted-foreground shrink-0">no audio</span>
+          <span class="text-[10px] font-medium text-muted-foreground shrink-0">{{ t('book.feedback.noAudio') }}</span>
         </button>
       </template>
 
@@ -154,15 +154,17 @@ function handleExportPrimary() {
           v-for="file in audiolessEpubFiles"
           :key="`audioless-${file.id}`"
           class="flex w-full items-center gap-2.5 px-2 py-1.5 rounded text-sm hover:bg-muted transition-colors"
-          title="Download EPUB for KOReader with audio files removed"
+          :title="t('book.feedback.audiolessEpub')"
           @click="handleAudiolessEpubDownload(file)"
         >
           <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0" :style="formatBadgeStyle('epub')"
             >EPUB</span
           >
           <span class="flex-1 text-left text-muted-foreground text-xs truncate">KOReader EPUB</span>
-          <span class="text-[10px] font-medium text-muted-foreground shrink-0">no audio</span>
-          <span v-if="isAudiolessEpubCandidate(file) && file.role === 'primary'" class="text-[10px] text-primary font-medium shrink-0">Primary</span>
+          <span class="text-[10px] font-medium text-muted-foreground shrink-0">{{ t('book.feedback.noAudio') }}</span>
+          <span v-if="isAudiolessEpubCandidate(file) && file.role === 'primary'" class="text-[10px] text-primary font-medium shrink-0">{{
+            t('book.file.primary')
+          }}</span>
         </button>
         <div class="my-1 border-t border-border" />
         <button

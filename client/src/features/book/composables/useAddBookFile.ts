@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { computed, ref } from 'vue'
 import { getValidToken } from '@/lib/api'
 import type { AddBookFileResult } from '@bookorbit/types'
@@ -64,7 +65,7 @@ async function uploadSingle(item: BookFileUploadItem, bookId: number): Promise<v
         item.status = 'error'
         try {
           const body = JSON.parse(xhr.responseText)
-          item.error = body.message ?? 'Upload failed'
+          item.error = body.message ?? i18n.global.t('book.feedback.uploadFailed')
         } catch {
           item.error = `Upload failed (${xhr.status})`
         }
@@ -74,7 +75,7 @@ async function uploadSingle(item: BookFileUploadItem, bookId: number): Promise<v
 
     xhr.onerror = () => {
       item.status = 'error'
-      item.error = 'Network error'
+      item.error = i18n.global.t('book.feedback.networkError')
       resolve()
     }
 

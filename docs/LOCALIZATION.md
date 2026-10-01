@@ -1,6 +1,6 @@
 # Localization
 
-BookOrbit uses Vue I18n catalogs under `client/src/locales/`. English is the source language, and Crowdin is the source of truth for every other catalog listed below.
+BookOrbit uses Vue I18n catalogs under `client/src/locales/`. English is the source language, and Crowdin is the upstream source of truth for target catalogs, except for the fork-maintained Vietnamese catalog.
 
 ## Supported Catalogs
 
@@ -29,6 +29,7 @@ BookOrbit uses Vue I18n catalogs under `client/src/locales/`. English is the sou
 | Swedish              | `sv-SE`             | `sv.json`      |
 | Turkish              | `tr`                | `tr.json`      |
 | Ukrainian            | `uk`                | `uk.json`      |
+| Vietnamese           | `vi`                | `vi.json`      |
 | Simplified Chinese   | `zh-CN`             | `zh.json`      |
 | Traditional Chinese  | `zh-TW`             | `zh-Hant.json` |
 
@@ -37,6 +38,10 @@ Crowdin's `%two_letters_code%` placeholder reduces the regional IDs above to Boo
 Verify every ID against Crowdin's language list rather than assuming the two-letter form exists. Several languages have no bare two-letter ID at all: Swedish is `sv-SE`, and `sv-FI` reduces to the same `sv.json`, so enabling both would collide.
 
 Chinese uses separate application locales for each script. Simplified Chinese remains under `zh`, while Traditional Chinese uses `zh-Hant`. The `languages_mapping` entry in `crowdin.yml` maps Crowdin's `zh-TW` target to `zh-Hant.json` so it cannot collide with the Simplified catalog. Browser matching uses explicit or inferred script subtags: `zh-CN` and `zh-SG` resolve to `zh`, while `zh-TW`, `zh-HK`, and `zh-MO` resolve to `zh-Hant`.
+
+## Vietnamese (fork-maintained)
+
+This fork maintains `vi.json` directly in Git and does not run Crowdin workflows. Git is the sole source of truth for Vietnamese translations. The Crowdin restrictions below apply to upstream catalogs, not Vietnamese. When adding English keys or merging upstream changes, translate missing Vietnamese keys and check complete key coverage alongside `validate:locales`. Keep placeholders, exact ICU selectors, and Vietnamese `other` plural branches intact.
 
 ## Adding User-Facing Copy
 

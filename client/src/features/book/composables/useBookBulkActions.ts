@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import {
@@ -29,20 +30,41 @@ export type BulkEditableField = BulkEditableArrayField | BulkEditableScalarField
 export type BulkEditableValue = string | number | string[] | null
 
 export const BULK_EDITABLE_FIELD_LABELS: Record<BulkEditableField, string> = {
-  seriesName: 'Series',
-  publisher: 'Publisher',
-  language: 'Language',
-  publishedYear: 'Year',
-  authors: 'Authors',
-  genres: 'Genres',
-  tags: 'Tags',
-  narrators: 'Narrators',
+  get seriesName() {
+    return i18n.global.t('book.collapsedSeries.label')
+  },
+  get publisher() {
+    return i18n.global.t('book.sort.fields.publisher')
+  },
+  get language() {
+    return i18n.global.t('book.sort.fields.language')
+  },
+  get publishedYear() {
+    return i18n.global.t('book.detail.editMetadata.yearLabel')
+  },
+  get authors() {
+    return i18n.global.t('book.detail.editMetadata.authorsLabel')
+  },
+  get genres() {
+    return i18n.global.t('book.detail.editMetadata.genresLabel')
+  },
+  get tags() {
+    return i18n.global.t('book.detail.editMetadata.tagsLabel')
+  },
+  get narrators() {
+    return i18n.global.t('book.detail.editMetadata.narratorsLabel')
+  },
 }
 
 export const BULK_EDITABLE_FIELD_OPTIONS: { value: BulkEditableField; label: string }[] = [
   ...BULK_EDITABLE_SCALAR_FIELDS,
   ...BULK_EDITABLE_ARRAY_FIELDS,
-].map((value) => ({ value, label: BULK_EDITABLE_FIELD_LABELS[value] }))
+].map((value) => ({
+  value,
+  get label() {
+    return BULK_EDITABLE_FIELD_LABELS[value]
+  },
+}))
 const BULK_FIELD_LOCK_FIELD: Record<BulkEditableField, BookMetadataLockField> = {
   seriesName: 'seriesName',
   publisher: 'publisher',
@@ -109,7 +131,7 @@ export function useBookBulkActions(
     const total = querySelection?.value ? querySelection.value.total : ids.length
     markRefreshing(ids)
     refreshFeedback.markRefreshingMany(ids)
-    inFlight.value = { label: 'Refreshing metadata', processed: 0, total, failed: 0 }
+    inFlight.value = { label: i18n.global.t('book.feedback.refreshingMetadata'), processed: 0, total, failed: 0 }
     const res = await api('/api/v1/books/bulk-refresh-metadata', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -117,9 +139,9 @@ export function useBookBulkActions(
     })
     if (!res.ok) {
       clearRefreshing(ids)
-      refreshFeedback.markFailedMany(ids, 'Metadata refresh failed')
+      refreshFeedback.markFailedMany(ids, i18n.global.t('book.tableView.metadataRefreshFailed'))
       inFlight.value = null
-      toast.error('Failed to refresh metadata')
+      toast.error(i18n.global.t('book.feedback.refreshFailed'))
       return
     }
     const reader = res.body!.getReader()
@@ -158,13 +180,13 @@ export function useBookBulkActions(
               }
 
               if (succeeded) refreshFeedback.markSuccess(bookId, changedColumns)
-              else refreshFeedback.markFailed(bookId, data.error || 'Metadata refresh failed')
+              else refreshFeedback.markFailed(bookId, data.error || i18n.global.t('book.tableView.metadataRefreshFailed'))
 
               bumpVersion(bookId)
               clearRefreshing([bookId])
-              const prev: InFlightOp = inFlight.value ?? { label: 'Refreshing metadata', processed: 0, total, failed: 0 }
+              const prev: InFlightOp = inFlight.value ?? { label: i18n.global.t('book.feedback.refreshingMetadata'), processed: 0, total, failed: 0 }
               inFlight.value = {
-                label: 'Refreshing metadata',
+                label: i18n.global.t('book.feedback.refreshingMetadata'),
                 processed: prev.processed + 1,
                 total,
                 failed: (prev.failed ?? 0) + (succeeded ? 0 : 1),
@@ -182,7 +204,7 @@ export function useBookBulkActions(
     } finally {
       for (const id of ids) {
         if (refreshFeedback.getFeedback(id)?.state === 'refreshing') {
-          refreshFeedback.markFailed(id, 'Metadata refresh interrupted')
+          refreshFeedback.markFailed(id, i18n.global.t('book.feedback.refreshInterrupted'))
           bumpVersion(id)
         }
       }
@@ -197,9 +219,9 @@ export function useBookBulkActions(
       }
     }
     if (failed > 0) {
-      toast.warning(`Refreshed ${processed} book${processed === 1 ? '' : 's'}, ${failed} failed`)
+      toast.warning(i18n.global.t('book.feedback.refreshedWithFailures', { count: processed, failed }))
     } else {
-      toast.success(`Refreshed metadata for ${processed} book${processed === 1 ? '' : 's'}`)
+      toast.success(i18n.global.t('book.feedback.refreshedBooks', { count: processed }))
     }
   }
 
@@ -208,7 +230,7 @@ export function useBookBulkActions(
     const ids = querySelection?.value ? [] : [...selectedIds.value]
     const total = querySelection?.value ? querySelection.value.total : ids.length
     markRefreshing(ids)
-    inFlight.value = { label: 'Re-extracting covers', processed: 0, total }
+    inFlight.value = { label: i18n.global.t('book.feedback.reExtracting'), processed: 0, total }
     const res = await api('/api/v1/books/bulk-re-extract-cover', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -217,7 +239,7 @@ export function useBookBulkActions(
     if (!res.ok) {
       clearRefreshing(ids)
       inFlight.value = null
-      toast.error('Failed to re-extract covers')
+      toast.error(i18n.global.t('book.feedback.reExtractFailed'))
       return
     }
     const reader = res.body!.getReader()
@@ -237,7 +259,7 @@ export function useBookBulkActions(
               bumpedIds.add(data.bookId)
               bumpVersion(data.bookId)
               clearRefreshing([data.bookId])
-              inFlight.value = { label: 'Re-extracting covers', processed: inFlight.value!.processed + 1, total }
+              inFlight.value = { label: i18n.global.t('book.feedback.reExtracting'), processed: inFlight.value!.processed + 1, total }
             }
             if (data.done) {
               processed = data.processed
@@ -255,7 +277,7 @@ export function useBookBulkActions(
       clearRefreshing(ids)
       inFlight.value = null
     }
-    toast.success(`Re-extracted ${updated} of ${processed} cover${processed === 1 ? '' : 's'}`)
+    toast.success(i18n.global.t('book.feedback.coversExtracted', { updated, count: processed }))
   }
 
   async function handleDownloadFiles(scope: ExportScope) {
@@ -272,7 +294,7 @@ export function useBookBulkActions(
       body: JSON.stringify({ ...getSelectionPayload(), status }),
     })
     if (!res.ok) {
-      toast.error('Failed to update status')
+      toast.error(i18n.global.t('book.feedback.statusFailed'))
       return
     }
     const nowIso = new Date().toISOString()
@@ -281,7 +303,7 @@ export function useBookBulkActions(
       readStatus: buildLocalReadStatus(status, book.readStatus, nowIso),
     }))
     const count = querySelection?.value ? querySelection.value.total : ids.length
-    toast.success(`Updated status for ${count} book${count === 1 ? '' : 's'}`)
+    toast.success(i18n.global.t('book.feedback.statusUpdated', { count }))
   }
 
   async function handleBulkSetRating(rating: number | null) {
@@ -293,7 +315,7 @@ export function useBookBulkActions(
       body: JSON.stringify({ ...getSelectionPayload(), rating }),
     })
     if (!res.ok) {
-      toast.error('Failed to update rating')
+      toast.error(i18n.global.t('book.feedback.ratingFailed'))
       return
     }
     const editableIds = books
@@ -309,8 +331,10 @@ export function useBookBulkActions(
     }))
     const count = querySelection?.value ? querySelection.value.total : editableIds.length
     const baseLabel =
-      rating === null ? `Cleared rating for ${count} book${count === 1 ? '' : 's'}` : `Rated ${count} book${count === 1 ? '' : 's'} ${rating}/5`
-    const label = skippedCount > 0 ? `${baseLabel} (${skippedCount} locked skipped)` : baseLabel
+      rating === null
+        ? i18n.global.t('book.feedback.ratingCleared', { count })
+        : i18n.global.t('book.feedback.ratedBooks', { count, rating: rating ?? 0 })
+    const label = skippedCount > 0 ? i18n.global.t('book.feedback.skippedLocked', { message: baseLabel, count: skippedCount }) : baseLabel
     toast.success(label)
   }
 
@@ -330,7 +354,7 @@ export function useBookBulkActions(
       body: JSON.stringify({ ...getSelectionPayload(), field, value }),
     })
     if (!res.ok) {
-      toast.error(`Failed to update ${field}`)
+      toast.error(i18n.global.t('book.feedback.fieldFailed', { field: BULK_EDITABLE_FIELD_LABELS[field] }))
       return
     }
     const editableIds = books
@@ -366,10 +390,10 @@ export function useBookBulkActions(
     })
     const count = querySelection?.value ? querySelection.value.total : editableIds.length
     if (skippedCount > 0) {
-      toast.success(`Updated ${field} for ${count} book${count === 1 ? '' : 's'} (${skippedCount} locked skipped)`)
+      toast.success(i18n.global.t('book.feedback.fieldUpdatedWithLocks', { field: BULK_EDITABLE_FIELD_LABELS[field], count, skippedCount }))
       return
     }
-    toast.success(`Updated ${field} for ${count} book${count === 1 ? '' : 's'}`)
+    toast.success(i18n.global.t('book.feedback.fieldUpdated', { field: BULK_EDITABLE_FIELD_LABELS[field], count }))
   }
 
   async function handleBulkSetMetadataLock(locked: boolean) {
@@ -381,7 +405,7 @@ export function useBookBulkActions(
       body: JSON.stringify({ ...getSelectionPayload(), locked }),
     })
     if (!res.ok) {
-      toast.error(`Failed to ${locked ? 'lock' : 'unlock'} metadata`)
+      toast.error(locked ? i18n.global.t('book.feedback.lockFailed') : i18n.global.t('book.feedback.unlockFailed'))
       return
     }
     updateSelectedBooks(ids, (book) => ({
@@ -390,7 +414,7 @@ export function useBookBulkActions(
       lockedFields: locked ? [...BOOK_METADATA_LOCK_FIELDS] : [],
     }))
     const count = querySelection?.value ? querySelection.value.total : ids.length
-    toast.success(`${locked ? 'Locked' : 'Unlocked'} metadata for ${count} book${count === 1 ? '' : 's'}`)
+    toast.success(locked ? i18n.global.t('book.feedback.lockedBooks', { count }) : i18n.global.t('book.feedback.unlockedBooks', { count }))
   }
 
   async function handleDeleteSelected() {
@@ -403,11 +427,11 @@ export function useBookBulkActions(
       body: JSON.stringify(getSelectionPayload()),
     })
     if (!res.ok) {
-      toast.error('Failed to delete books')
+      toast.error(i18n.global.t('book.feedback.deleteBooksFailed'))
       return
     }
     onDeleted(ids)
-    toast.success(`Deleted ${count} book${count === 1 ? '' : 's'}`)
+    toast.success(i18n.global.t('book.feedback.deletedBooks', { count }))
   }
 
   return {

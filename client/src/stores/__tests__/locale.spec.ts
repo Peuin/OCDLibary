@@ -46,6 +46,8 @@ describe('locale store', () => {
     expect(matchSupportedLocale(['ru-RU', 'en-GB'])).toBe('ru')
     expect(matchSupportedLocale(['sk-SK', 'en-GB'])).toBe('sk')
     expect(matchSupportedLocale(['uk-UA', 'en-GB'])).toBe('uk')
+    expect(matchSupportedLocale(['vi-VN'])).toBe('vi')
+    expect(matchSupportedLocale(['vi'])).toBe('vi')
     expect(matchSupportedLocale(['cs-CZ', 'en-GB'])).toBe('cs')
     expect(matchSupportedLocale(['da-DK', 'en-GB'])).toBe('da')
     expect(matchSupportedLocale(['fi-FI', 'en-GB'])).toBe('fi')

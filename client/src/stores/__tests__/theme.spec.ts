@@ -47,6 +47,28 @@ describe('useThemeStore', () => {
     document.documentElement.classList.remove('dark')
   })
 
+  it('moves the old blue default to carmel once', () => {
+    stubColorScheme(createColorSchemeQuery(false).query)
+    localStorage.setItem('accent', JSON.stringify('blue'))
+    setActivePinia(createPinia())
+
+    expect(useThemeStore().accent).toBe('carmel')
+    expect(document.documentElement.classList.contains('accent-carmel')).toBe(true)
+
+    localStorage.setItem('accent', JSON.stringify('blue'))
+    setActivePinia(createPinia())
+
+    expect(useThemeStore().accent).toBe('blue')
+  })
+
+  it('keeps a non-default accent chosen before the migration', () => {
+    stubColorScheme(createColorSchemeQuery(false).query)
+    localStorage.setItem('accent', JSON.stringify('mint'))
+    setActivePinia(createPinia())
+
+    expect(useThemeStore().accent).toBe('mint')
+  })
+
   it.each([
     { systemDark: false, expected: 'light', hasDarkClass: false },
     { systemDark: true, expected: 'dark', hasDarkClass: true },
