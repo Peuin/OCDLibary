@@ -72,6 +72,12 @@ export const useThemeStore = defineStore('theme', () => {
   const theme = ref<Theme>(THEME_IDS.includes(storedTheme) ? storedTheme : 'system')
   const resolvedTheme = computed<ResolvedTheme>(() => (theme.value === 'system' ? systemTheme.value : theme.value))
 
+  // Blue was the old default and was written to storage on every first visit, so a stored blue
+  // is not a real choice. Move it to the current default once, then respect whatever is picked.
+  if (storage.get<string>('accentDefault', '') !== DEFAULT_ACCENT) {
+    if (storage.get<string>('accent', 'blue') === 'blue') storage.set('accent', DEFAULT_ACCENT)
+    storage.set('accentDefault', DEFAULT_ACCENT)
+  }
   const storedAccent = storage.get<Accent>('accent', DEFAULT_ACCENT)
   const accent = ref<Accent>(ACCENT_IDS.includes(storedAccent) ? storedAccent : DEFAULT_ACCENT)
 

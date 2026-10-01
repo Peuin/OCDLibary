@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import {
   MetadataProviderKey,
   type BookDetail,
@@ -27,27 +28,28 @@ export function metadataRefreshEmptyMessage(diagnostics: MetadataFetchDiagnostic
     case 'no_active_providers':
       return noActiveProvidersMessage(diagnostics)
     case 'providers_throttled':
-      return 'No metadata fetched: active providers are temporarily in cooldown. Try again later.'
+      return i18n.global.t('book.feedback.providersCooldown')
     case 'no_candidates':
-      return appendUnreferencedProviderMessage(`No metadata found from active providers for ${bookSearchLabel(book)}.`, diagnostics)
+      return appendUnreferencedProviderMessage(i18n.global.t('book.feedback.noMetadataForBook', { book: bookSearchLabel(book) }), diagnostics)
     case 'no_resolved_fields':
-      return 'Metadata providers responded, but Field Rules did not produce any fields to apply. Check fill/overwrite rules, genre blocklist, or selected providers.'
+      return i18n.global.t('book.feedback.noResolvedFields')
     default:
-      return 'No new metadata found.'
+      return i18n.global.t('book.feedback.noNewMetadata')
   }
 }
 
 export function metadataRefreshAppliedMessage(diagnostics: MetadataFetchDiagnostics, updatedCount: number): string {
-  const fieldText = `${updatedCount} field${updatedCount === 1 ? '' : 's'}`
   const matchedProviders = formatProviderList(diagnostics.candidateProviders)
-  const message = matchedProviders ? `Auto-filled ${fieldText}. Matched ${matchedProviders}.` : `Auto-filled ${fieldText}.`
+  const message = matchedProviders
+    ? i18n.global.t('book.feedback.autoFilledMatched', { count: updatedCount, providers: matchedProviders })
+    : i18n.global.t('book.feedback.autoFilled', { count: updatedCount })
   return appendUnreferencedProviderMessage(message, diagnostics)
 }
 
 function appendUnreferencedProviderMessage(message: string, diagnostics: MetadataFetchDiagnostics): string {
   const providers = formatProviderList(diagnostics.enabledUnreferencedProviders)
   if (!providers) return message
-  return `${message} Not queried because they are not selected in Field Rules: ${providers}.`
+  return i18n.global.t('book.feedback.providersNotQueried', { message, providers })
 }
 
 function noActiveProvidersMessage(diagnostics: MetadataFetchDiagnostics): string {
@@ -55,18 +57,18 @@ function noActiveProvidersMessage(diagnostics: MetadataFetchDiagnostics): string
   const enabledUnreferenced = formatProviderList(diagnostics.enabledUnreferencedProviders)
 
   if (disabled && enabledUnreferenced) {
-    return `No metadata fetched: Field Rules only use disabled providers (${disabled}). Enable them or add ${enabledUnreferenced} to Field Rules.`
+    return i18n.global.t('book.feedback.disabledAndUnreferenced', { disabled, enabledUnreferenced })
   }
 
   if (disabled) {
-    return `No metadata fetched: Field Rules only use disabled providers (${disabled}). Enable at least one provider in Metadata settings.`
+    return i18n.global.t('book.feedback.disabledProviders', { disabled })
   }
 
   if (enabledUnreferenced) {
-    return `No metadata fetched: no enabled providers are selected in Field Rules. Add ${enabledUnreferenced} to Field Rules.`
+    return i18n.global.t('book.feedback.unreferencedProviders', { enabledUnreferenced })
   }
 
-  return 'No metadata fetched: no active metadata providers are configured. Enable a provider in Metadata settings.'
+  return i18n.global.t('book.feedback.noActiveProviders')
 }
 
 function bookSearchLabel(book: BookDetail): string {
@@ -74,10 +76,10 @@ function bookSearchLabel(book: BookDetail): string {
   const authors = book.authors.map((author) => author.name.trim()).filter(Boolean)
   const authorText = formatTextList(authors)
 
-  if (title && authorText) return `"${title}" by ${authorText}`
+  if (title && authorText) return i18n.global.t('book.feedback.bookByAuthors', { title, authors: authorText })
   if (title) return `"${title}"`
-  if (authorText) return `books by ${authorText}`
-  return 'this book'
+  if (authorText) return i18n.global.t('book.feedback.booksByAuthors', { authors: authorText })
+  return i18n.global.t('book.feedback.thisBook')
 }
 
 function formatProviderList(providers: MetadataProviderKeyType[]): string {
@@ -85,8 +87,5 @@ function formatProviderList(providers: MetadataProviderKeyType[]): string {
 }
 
 function formatTextList(items: string[]): string {
-  if (items.length === 0) return ''
-  if (items.length === 1) return items[0]!
-  if (items.length === 2) return `${items[0]!} or ${items[1]!}`
-  return `${items.slice(0, -1).join(', ')}, or ${items[items.length - 1]!}`
+  return new Intl.ListFormat(i18n.global.locale.value, { style: 'long', type: 'disjunction' }).format(items)
 }

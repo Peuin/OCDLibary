@@ -1,0 +1,1 @@
+{"version":3,"file":"network-profile.d.ts","sourceRoot":"","sources":["../src/network-profile.ts"],"names":[],"mappings":"AAAA;;;;;;;GAOG;AACH,MAAM,WAAW,cAAc;IAC7B;;;OAGG;IACH,SAAS,CAAC,EAAE,MAAM,EAAE,CAAC;IACrB;;;;OAIG;IACH,QAAQ,CAAC,EAAE,MAAM,CAAC;CACnB;AAED,2EAA2E;AAC3E,wBAAgB,iBAAiB,CAAC,OAAO,EAAE,cAAc,GAAG,IAAI,GAAG,SAAS,GAAG,OAAO,CAErF"}

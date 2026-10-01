@@ -1,3 +1,4 @@
+import { useI18n } from 'vue-i18n'
 import { ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
@@ -6,6 +7,7 @@ import type { ProviderConfigurations, ProviderConnectionTestResult, ProviderStat
 import { stripBearerPrefix } from '../lib/provider-token'
 
 export function useProviderConfig() {
+  const { t } = useI18n()
   const config = ref<ProviderConfigurations | null>(null)
   const statuses = ref<ProviderStatus[]>([])
   const loading = ref(false)
@@ -58,10 +60,10 @@ export function useProviderConfig() {
       })
       if (res.ok) {
         await fetchConfig()
-        toast.success('Provider settings saved')
+        toast.success(t('settings.metadata.providers.toasts.saved'))
       } else {
         const data = await res.json().catch(() => null)
-        const message = typeof data?.message === 'string' ? data.message : 'Failed to save provider settings'
+        const message = typeof data?.message === 'string' ? data.message : t('settings.metadata.providers.toasts.saveFailed')
         toast.error(message)
       }
     } finally {
@@ -80,7 +82,7 @@ export function useProviderConfig() {
       })
       const data = (await res.json().catch(() => null)) as ProviderConnectionTestResult | { message?: string } | null
       if (!res.ok) {
-        const message = typeof data?.message === 'string' ? data.message : 'Provider test failed'
+        const message = typeof data?.message === 'string' ? data.message : t('settings.metadata.providers.toasts.testFailed')
         throw new Error(message)
       }
       const result = data as ProviderConnectionTestResult
@@ -93,7 +95,7 @@ export function useProviderConfig() {
       return result
     } catch (error) {
       clearPassingSignature(key)
-      const message = error instanceof Error ? error.message : 'Provider test failed'
+      const message = error instanceof Error ? error.message : t('settings.metadata.providers.toasts.testFailed')
       toast.error(message)
       return null
     } finally {

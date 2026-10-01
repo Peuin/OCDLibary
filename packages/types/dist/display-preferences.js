@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BOOK_THUMBNAIL_CLICK_ACTION = exports.CARD_INFO_MODES = exports.SERIES_CARD_COVER_MODES = exports.BOOK_DETAIL_COVER_TINTS = exports.BOOK_COVER_DISPLAY_MODES = exports.BOOK_SHADOW_STRENGTHS = exports.BOOK_SPINE_OVERLAYS = exports.TABLE_DENSITIES = exports.AUTHOR_COVER_SHAPES = exports.BOOK_VIEW_MODES = exports.COVER_SIZE_SCOPES = exports.GRID_CARD_LABEL_FIELDS = exports.CARD_OVERLAY_KEYS = void 0;
+exports.CARD_OVERLAY_KEYS = ["progress-bar", "format", "rating", "read-status", "lock-status", "series-position"];
+exports.GRID_CARD_LABEL_FIELDS = ["hidden", "book-title", "series-title", "series-title-position", "author"];
+exports.COVER_SIZE_SCOPES = ["per-view", "synced"];
+exports.BOOK_VIEW_MODES = ["grid", "list", "table"];
+exports.AUTHOR_COVER_SHAPES = ["square", "circle"];
+exports.TABLE_DENSITIES = ["compact", "comfortable", "roomy"];
+exports.BOOK_SPINE_OVERLAYS = ["off", "subtle", "strong"];
+exports.BOOK_SHADOW_STRENGTHS = ["default", "strong"];
+exports.BOOK_COVER_DISPLAY_MODES = ["blurred-fit", "fill-crop", "natural-bottom"];
+exports.BOOK_DETAIL_COVER_TINTS = ["off", "single", "duotone"];
+exports.SERIES_CARD_COVER_MODES = ["stack", "mosaic", "first-volume", "latest-volume", "first-unread"];
+exports.CARD_INFO_MODES = ["hover-overlay", "below-cover", "off"];
+exports.BOOK_THUMBNAIL_CLICK_ACTION = ["reader", "details"];

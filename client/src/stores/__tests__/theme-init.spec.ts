@@ -50,13 +50,32 @@ describe('theme-init', () => {
 
   it('supports legacy unquoted preferences and parses other stored appearance values', () => {
     localStorage.setItem('theme', 'dark')
-    localStorage.setItem('accent', JSON.stringify('blue'))
+    localStorage.setItem('accent', JSON.stringify('mint'))
     localStorage.setItem('radius', JSON.stringify('rounded'))
 
     runThemeInit(false)
 
     expect(document.documentElement.classList.contains('dark')).toBe(true)
-    expect(document.documentElement.classList.contains('accent-blue')).toBe(true)
+    expect(document.documentElement.classList.contains('accent-mint')).toBe(true)
     expect(document.documentElement.classList.contains('radius-rounded')).toBe(true)
+  })
+
+  it('applies carmel before mount when nothing or the old blue default is stored', () => {
+    runThemeInit(false)
+    expect(document.documentElement.classList.contains('accent-carmel')).toBe(true)
+
+    document.documentElement.className = ''
+    localStorage.setItem('accent', JSON.stringify('blue'))
+    runThemeInit(false)
+    expect(document.documentElement.classList.contains('accent-carmel')).toBe(true)
+  })
+
+  it('keeps blue once the carmel default has been applied', () => {
+    localStorage.setItem('accent', JSON.stringify('blue'))
+    localStorage.setItem('accentDefault', JSON.stringify('carmel'))
+
+    runThemeInit(false)
+
+    expect(document.documentElement.classList.contains('accent-blue')).toBe(true)
   })
 })

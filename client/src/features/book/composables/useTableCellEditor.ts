@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
@@ -34,11 +35,10 @@ async function getApiErrorMessage(response: Response): Promise<string> {
 }
 
 function getToastErrorMessage(err: unknown): string {
-  if (!(err instanceof Error) || !err.message) return 'Failed to save - change reverted'
+  if (!(err instanceof Error) || !err.message) return i18n.global.t('book.feedback.saveReverted')
   if (err.message.startsWith('Metadata fields are locked:')) return err.message
-  if (err.message.includes('is not enabled for this book'))
-    return 'This field is not available for this book - enable it for the library in Settings first'
-  if (/^HTTP \d+$/.test(err.message)) return 'Failed to save - change reverted'
+  if (err.message.includes('is not enabled for this book')) return i18n.global.t('book.feedback.fieldUnavailable')
+  if (/^HTTP \d+$/.test(err.message)) return i18n.global.t('book.feedback.saveReverted')
   return err.message
 }
 
@@ -104,7 +104,7 @@ export function useTableCellEditor() {
       } else if (isCustomColumnId(columnId)) {
         const fieldId = parseCustomFieldId(columnId)
         if (fieldId === null) {
-          toast.error(`Cannot save: invalid custom field ID in "${columnId}"`)
+          toast.error(i18n.global.t('book.feedback.invalidFieldId', { field: columnId }))
           if (activeCellKey.value === sourceCellKey) cancelCellIfActive(bookId, columnId)
           return
         }
@@ -130,7 +130,7 @@ export function useTableCellEditor() {
         }
         const metaKey = METADATA_FIELD_MAP[columnId as ColumnId]
         if (!metaKey) {
-          toast.error(`Cannot save: unsupported field "${columnId}"`)
+          toast.error(i18n.global.t('book.feedback.unsupportedField', { field: columnId }))
           if (activeCellKey.value === sourceCellKey) cancelCellIfActive(bookId, columnId)
           return
         }

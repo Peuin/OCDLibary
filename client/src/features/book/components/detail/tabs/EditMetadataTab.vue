@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { i18n } from '@/i18n'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -735,7 +736,7 @@ async function autoFill() {
   const result = await previewRefresh(props.book.id)
   if (formDisabled.value) return
   if (!result) {
-    toast.error('Auto-fill failed')
+    toast.error(i18n.global.t('book.feedback.autoFillFailed'))
     return
   }
 
@@ -1007,7 +1008,7 @@ function handleCoverChanged(source: 'extracted' | 'custom' | null) {
         class="flex-none"
         :result="
           writeAndRenameResult ?? {
-            write: { status: 'failed', fieldsWritten: [], durationMs: 0, reason: writeAndRenameError ?? 'Unknown error' },
+            write: { status: 'failed', fieldsWritten: [], durationMs: 0, reason: writeAndRenameError ?? t('book.feedback.unknownError') },
             rename: { status: 'skipped', durationMs: 0, reason: 'not attempted' },
             libraryAutoWriteEnabled: true,
             libraryAutoRenameEnabled: true,

@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { ref } from 'vue'
 
 export type BookRefreshFeedbackState = 'refreshing' | 'success' | 'failed'
@@ -100,7 +101,7 @@ export function useBookRefreshFeedback() {
     scheduleEntryClear(bookId, updatedAt, 7000)
   }
 
-  function markFailed(bookId: number, message = 'Metadata refresh failed') {
+  function markFailed(bookId: number, message = i18n.global.t('book.tableView.metadataRefreshFailed')) {
     clearTimer(bookId)
     clearFlashTimer(bookId)
     const updatedAt = Date.now()
@@ -113,7 +114,7 @@ export function useBookRefreshFeedback() {
     scheduleEntryClear(bookId, updatedAt, 10000)
   }
 
-  function markFailedMany(bookIds: number[], message = 'Metadata refresh failed') {
+  function markFailedMany(bookIds: number[], message = i18n.global.t('book.tableView.metadataRefreshFailed')) {
     for (const bookId of bookIds) {
       markFailed(bookId, message)
     }

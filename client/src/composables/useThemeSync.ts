@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { ACCENT_IDS, BACKGROUND_IDS, RADIUS_IDS, SURFACE_OPACITY_MAX, SURFACE_OPACITY_MIN, THEME_IDS, type ThemePreferences } from '@bookorbit/types'
 import { watch } from 'vue'
 import { toast } from 'vue-sonner'
@@ -124,10 +125,10 @@ export async function saveToServer(prefs: ThemePreferences): Promise<void> {
     })
 
     if (!res.ok) {
-      toast.error('Failed to save theme preferences')
+      toast.error(i18n.global.t('settings.appearance.storage.errors.saveTheme'))
     }
   } catch {
-    toast.error('Failed to save theme preferences')
+    toast.error(i18n.global.t('settings.appearance.storage.errors.saveTheme'))
   }
 }
 

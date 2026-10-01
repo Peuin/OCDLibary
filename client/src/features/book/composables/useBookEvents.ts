@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { toast } from 'vue-sonner'
 import { getCurrentInstance, onUnmounted } from 'vue'
 import type { BookMissingEvent, BookMovedEvent, BookProgressChangedEvent, BookRestoredEvent, BookTransferredEvent } from '@bookorbit/types'
@@ -25,7 +26,7 @@ function flushMissingToast() {
   const count = pendingMissingCount
   pendingMissingCount = 0
   missingToastTimer = null
-  toast.warning(count === 1 ? '1 book is no longer available on disk.' : `${count} books are no longer available on disk.`)
+  toast.warning(i18n.global.t('book.feedback.missing', { count }))
 }
 
 function flushRestoredToast() {
@@ -33,7 +34,7 @@ function flushRestoredToast() {
   const count = pendingRestoredCount
   pendingRestoredCount = 0
   restoredToastTimer = null
-  toast.success(count === 1 ? '1 book was restored on disk.' : `${count} books were restored on disk.`)
+  toast.success(i18n.global.t('book.feedback.restored', { count }))
 }
 
 function flushMovedToast() {
@@ -41,7 +42,7 @@ function flushMovedToast() {
   const count = pendingMovedCount
   pendingMovedCount = 0
   movedToastTimer = null
-  toast.info(count === 1 ? '1 book was moved to a new location.' : `${count} books were moved to new locations.`)
+  toast.info(i18n.global.t('book.feedback.moved', { count }))
 }
 
 let initialized = false

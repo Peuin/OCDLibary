@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { computed, ref, watch, type Ref } from 'vue'
 import type { ReadingAttempt, ReadingAttemptListResponse, ReadingAttemptOutcome, UserBookStatus } from '@bookorbit/types'
 import { api } from '@/lib/api'
@@ -42,7 +43,7 @@ export function useReadingAttempts(bookIdRef: Ref<number>) {
       attempts.value = data.items
       total.value = data.total
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : 'Failed to load reading history'
+      error.value = cause instanceof Error ? cause.message : i18n.global.t('book.feedback.loadReadingHistoryFailed')
     } finally {
       loading.value = false
     }
@@ -63,7 +64,7 @@ export function useReadingAttempts(bookIdRef: Ref<number>) {
       await load()
       return true
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : 'Failed to save reading attempt'
+      error.value = cause instanceof Error ? cause.message : i18n.global.t('book.feedback.saveAttemptFailed')
       return false
     } finally {
       saving.value = false
@@ -85,7 +86,7 @@ export function useReadingAttempts(bookIdRef: Ref<number>) {
       await load()
       return readStatus
     } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : 'Failed to start reread'
+      error.value = cause instanceof Error ? cause.message : i18n.global.t('book.feedback.startRereadFailed')
       return null
     } finally {
       saving.value = false
@@ -97,7 +98,7 @@ export function useReadingAttempts(bookIdRef: Ref<number>) {
     error.value = null
     const res = await api(`/api/v1/books/${bookId}/reading-attempts/${attemptId}`, { method: 'DELETE' })
     if (!res.ok) {
-      error.value = 'Failed to delete reading attempt'
+      error.value = i18n.global.t('book.feedback.deleteAttemptFailed')
       return false
     }
     await load()

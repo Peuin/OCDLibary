@@ -1,0 +1,56 @@
+export declare const CARD_OVERLAY_KEYS: readonly ["progress-bar", "format", "rating", "read-status", "lock-status", "series-position"];
+export type CardOverlayKey = (typeof CARD_OVERLAY_KEYS)[number];
+export declare const GRID_CARD_LABEL_FIELDS: readonly ["hidden", "book-title", "series-title", "series-title-position", "author"];
+export type GridCardLabelField = (typeof GRID_CARD_LABEL_FIELDS)[number];
+export declare const COVER_SIZE_SCOPES: readonly ["per-view", "synced"];
+export type CoverSizeScope = (typeof COVER_SIZE_SCOPES)[number];
+export declare const BOOK_VIEW_MODES: readonly ["grid", "list", "table"];
+export type BookViewMode = (typeof BOOK_VIEW_MODES)[number];
+export declare const AUTHOR_COVER_SHAPES: readonly ["square", "circle"];
+export type AuthorCoverShape = (typeof AUTHOR_COVER_SHAPES)[number];
+export declare const TABLE_DENSITIES: readonly ["compact", "comfortable", "roomy"];
+export type TableDensity = (typeof TABLE_DENSITIES)[number];
+export declare const BOOK_SPINE_OVERLAYS: readonly ["off", "subtle", "strong"];
+export type BookSpineOverlay = (typeof BOOK_SPINE_OVERLAYS)[number];
+export declare const BOOK_SHADOW_STRENGTHS: readonly ["default", "strong"];
+export type BookShadowStrength = (typeof BOOK_SHADOW_STRENGTHS)[number];
+export declare const BOOK_COVER_DISPLAY_MODES: readonly ["blurred-fit", "fill-crop", "natural-bottom"];
+export type BookCoverDisplayMode = (typeof BOOK_COVER_DISPLAY_MODES)[number];
+export declare const BOOK_DETAIL_COVER_TINTS: readonly ["off", "single", "duotone"];
+export type BookDetailCoverTint = (typeof BOOK_DETAIL_COVER_TINTS)[number];
+export declare const SERIES_CARD_COVER_MODES: readonly ["stack", "mosaic", "first-volume", "latest-volume", "first-unread"];
+export type SeriesCardCoverMode = (typeof SERIES_CARD_COVER_MODES)[number];
+export declare const CARD_INFO_MODES: readonly ["hover-overlay", "below-cover", "off"];
+export type CardInfoMode = (typeof CARD_INFO_MODES)[number];
+export declare const BOOK_THUMBNAIL_CLICK_ACTION: readonly ["reader", "details"];
+export type BookThumbnailClickAction = (typeof BOOK_THUMBNAIL_CLICK_ACTION)[number];
+export interface DisplayPreferences {
+    portraitCoverSize: number;
+    squareCoverSize: number;
+    coverSizeScope: CoverSizeScope;
+    gridGap: number;
+    portraitGridGap: number;
+    squareGridGap: number;
+    viewMode: BookViewMode;
+    cardOverlays: CardOverlayKey[];
+    showJumpRails: boolean;
+    smartScopeFilterExpanded: boolean;
+    authorCoverSize: number;
+    authorCoverShape: AuthorCoverShape;
+    authorRowDensity: TableDensity;
+    /** Stand a book's cover in for a missing author portrait. Off: monogram instead. */
+    authorCoverFallback: boolean;
+    tableZebraStriping: boolean;
+    tableDensity: TableDensity;
+    bookSpineOverlay: BookSpineOverlay;
+    showSpineOnComics: boolean;
+    bookShadowStrength: BookShadowStrength;
+    bookCoverDisplayMode: BookCoverDisplayMode;
+    bookDetailCoverTint: BookDetailCoverTint;
+    seriesCardCoverMode: SeriesCardCoverMode;
+    gridCardPrimaryLabel: GridCardLabelField;
+    gridCardSecondaryLabel: GridCardLabelField;
+    cardInfoMode: CardInfoMode;
+    thumbnailClickAction: BookThumbnailClickAction;
+}
+//# sourceMappingURL=display-preferences.d.ts.map

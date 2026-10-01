@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { computed, ref, watch, type Ref } from 'vue'
 import type { BookDetail } from '@bookorbit/types'
 import { api } from '@/lib/api'
@@ -68,7 +69,7 @@ export function usePersonalNote(book: Ref<BookDetail>) {
       editing.value = false
       return updated
     } catch {
-      error.value = 'Failed to save personal review.'
+      error.value = i18n.global.t('book.feedback.saveReviewFailed')
       return null
     } finally {
       saving.value = false

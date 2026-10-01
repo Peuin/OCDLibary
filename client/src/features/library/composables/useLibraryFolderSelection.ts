@@ -1,3 +1,4 @@
+import { useI18n } from 'vue-i18n'
 import { ref } from 'vue'
 import { consolidateFolderPaths, coveringFolderPath, normalizeFolderPath } from './folder-paths'
 
@@ -8,6 +9,7 @@ interface FolderSelectionOptions {
 }
 
 export function useLibraryFolderSelection(options: FolderSelectionOptions) {
+  const { t } = useI18n()
   const pickerOpen = ref(false)
   const manualEntryOpen = ref(false)
   const manualPath = ref('')
@@ -50,23 +52,23 @@ export function useLibraryFolderSelection(options: FolderSelectionOptions) {
   function addManualFolder() {
     const path = normalizeFolderPath(manualPath.value)
     if (!manualPath.value.trim()) {
-      manualError.value = 'Enter a server folder path.'
+      manualError.value = t('library.creator.folders.errors.pathRequired')
       return
     }
     if (!path.startsWith('/')) {
-      manualError.value = 'Enter an absolute server path beginning with /.'
+      manualError.value = t('library.creator.folders.errors.absolutePathRequired')
       return
     }
 
     const existing = options.folders().map(normalizeFolderPath)
     if (existing.includes(path)) {
-      manualError.value = 'That folder has already been added.'
+      manualError.value = t('library.creator.folders.errors.alreadyAdded')
       return
     }
 
     const coveringPath = coveringFolderPath(path, existing)
     if (coveringPath) {
-      manualError.value = `That folder is already covered by ${coveringPath}.`
+      manualError.value = t('library.creator.folders.errors.coveredBy', { path: coveringPath })
       return
     }
 

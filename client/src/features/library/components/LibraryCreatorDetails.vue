@@ -51,7 +51,7 @@ function updateCoverAspectRatio(event: Event) {
 <template>
   <div class="px-6 py-6 flex flex-col gap-7 h-full min-h-0">
     <div>
-      <p class="mb-3 text-[11px] font-semibold uppercase tracking-widest text-foreground">Library type</p>
+      <p class="mb-3 text-[11px] font-semibold uppercase tracking-widest text-foreground">{{ t('library.creator.details.libraryType') }}</p>
       <div class="grid gap-3" :class="APP_FEATURES.podcasts ? 'grid-cols-2' : 'grid-cols-1'">
         <button
           type="button"
@@ -60,8 +60,8 @@ function updateCoverAspectRatio(event: Event) {
           :disabled="typeLocked"
           @click="selectBooksType"
         >
-          <span class="block text-sm font-medium">Books</span>
-          <span class="mt-1 block text-xs text-muted-foreground">Ebooks, comics, and audiobooks</span>
+          <span class="block text-sm font-medium">{{ t('library.creator.details.books') }}</span>
+          <span class="mt-1 block text-xs text-muted-foreground">{{ t('library.creator.details.booksHint') }}</span>
         </button>
         <button
           v-if="APP_FEATURES.podcasts"
@@ -71,14 +71,14 @@ function updateCoverAspectRatio(event: Event) {
           :disabled="typeLocked"
           @click="selectPodcastsType"
         >
-          <span class="block text-sm font-medium">Podcasts</span>
-          <span class="mt-1 block text-xs text-muted-foreground">RSS feeds and managed episode storage</span>
+          <span class="block text-sm font-medium">{{ t('library.creator.details.podcasts') }}</span>
+          <span class="mt-1 block text-xs text-muted-foreground">{{ t('library.creator.details.podcastsHint') }}</span>
         </button>
       </div>
     </div>
     <div>
       <label for="library-name" class="mb-3 block text-[11px] font-semibold uppercase tracking-widest text-foreground">
-        {{ type === 'podcasts' ? 'Podcast library name' : t('library.creator.details.libraryName') }}
+        {{ type === 'podcasts' ? t('library.creator.details.podcastName') : t('library.creator.details.libraryName') }}
       </label>
       <div class="flex items-center gap-3">
         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/20">
@@ -88,7 +88,7 @@ function updateCoverAspectRatio(event: Event) {
           id="library-name"
           type="text"
           :value="name"
-          :placeholder="type === 'podcasts' ? 'My Podcasts' : t('library.creator.details.namePlaceholder')"
+          :placeholder="type === 'podcasts' ? t('library.creator.details.podcastNamePlaceholder') : t('library.creator.details.namePlaceholder')"
           maxlength="255"
           class="flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           autocomplete="off"

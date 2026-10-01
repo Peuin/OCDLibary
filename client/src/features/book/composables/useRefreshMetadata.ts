@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { ref } from 'vue'
 import { api } from '@/lib/api'
 import type { BookDetail, BookMetadataRefreshPreviewFields, BookMetadataRefreshPreviewResponse } from '@bookorbit/types'
@@ -41,10 +42,10 @@ export function useRefreshMetadata() {
     const updated = await refreshAndSave(bookId)
     if (updated) {
       bumpVersion(bookId)
-      toast.success('Metadata refreshed')
+      toast.success(i18n.global.t('book.feedback.metadataRefreshed'))
       return updated
     } else {
-      toast.error('Metadata refresh failed')
+      toast.error(i18n.global.t('book.tableView.metadataRefreshFailed'))
       return null
     }
   }

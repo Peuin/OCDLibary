@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { onUnmounted, ref, type Ref } from 'vue'
 import { api } from '@/lib/api'
 import { useCoverVersions } from './useCoverVersions'
@@ -57,7 +58,7 @@ export function useCoverEditor(bookId: Ref<number>) {
       clearPending()
       return true
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Upload failed'
+      error.value = e instanceof Error ? e.message : i18n.global.t('book.feedback.uploadFailed')
       return false
     } finally {
       uploading.value = false
@@ -74,7 +75,7 @@ export function useCoverEditor(bookId: Ref<number>) {
       bumpVersion(bookId.value)
       return data.coverSource as 'extracted' | null
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Revert failed'
+      error.value = e instanceof Error ? e.message : i18n.global.t('book.feedback.revertFailed')
       return false
     } finally {
       uploading.value = false

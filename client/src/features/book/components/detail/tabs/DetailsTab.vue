@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { i18n } from '@/i18n'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDate as formatLocaleDate } from '@/i18n/formatters'
@@ -942,8 +943,8 @@ function handleEditionReset(format: string) {
 function formatKoboDeviceNames(snapshots: BookKoboState['snapshots']): string {
   const names = snapshots.map((snapshot) => snapshot.deviceName)
   if (names.length === 1) return names.join('')
-  if (names.length === 2) return names.join(' and ')
-  return `${snapshots.length} devices`
+  if (names.length === 2) return new Intl.ListFormat(i18n.global.locale.value, { type: 'conjunction' }).format(names)
+  return i18n.global.t('book.feedback.devices', { count: snapshots.length })
 }
 
 const resetHeldDevices = computed(() => (canViewKoreader.value ? (koreaderBookProgress.value?.heldByReset ?? []) : []))
@@ -976,15 +977,24 @@ const koboAnomaly = computed(() => {
   const snapshots = koboState.value?.snapshots ?? []
   const pendingDelete = snapshots.filter((snapshot) => snapshot.pendingDelete)
   if (pendingDelete.length > 0) {
-    return { label: `Pending delete on ${formatKoboDeviceNames(pendingDelete)}`, tooltip: 'Kobo will remove it on the next sync.' }
+    return {
+      label: i18n.global.t('book.feedback.pendingDeviceDelete', { devices: formatKoboDeviceNames(pendingDelete) }),
+      tooltip: i18n.global.t('book.feedback.koboRemoveNext'),
+    }
   }
   const removedByDevice = snapshots.filter((snapshot) => snapshot.removedByDevice)
   if (removedByDevice.length > 0) {
-    return { label: `Removed on ${formatKoboDeviceNames(removedByDevice)}`, tooltip: 'Kobo reported this book removed.' }
+    return {
+      label: i18n.global.t('book.feedback.removedOnDevices', { devices: formatKoboDeviceNames(removedByDevice) }),
+      tooltip: i18n.global.t('book.feedback.koboRemoved'),
+    }
   }
   const unsynced = snapshots.filter((snapshot) => snapshot.synced === false)
   if (unsynced.length > 0) {
-    return { label: `Not synced on ${formatKoboDeviceNames(unsynced)}`, tooltip: 'Queued for the next Kobo sync.' }
+    return {
+      label: i18n.global.t('book.feedback.notSyncedOnDevices', { devices: formatKoboDeviceNames(unsynced) }),
+      tooltip: i18n.global.t('book.feedback.koboQueued'),
+    }
   }
   return null
 })
@@ -1971,7 +1981,7 @@ watch(
                 @click="savePersonalNote"
               >
                 <Check class="size-3.5" />
-                {{ personalNoteSaving ? 'Saving...' : 'Save' }}
+                {{ personalNoteSaving ? t('book.detail.addSession.saving') : t('common.save') }}
               </button>
             </div>
           </div>

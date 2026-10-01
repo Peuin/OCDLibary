@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import type { BookCard, BookMetadataLockField, CustomMetadataFieldSummary, CustomMetadataFieldType, SortField } from '@bookorbit/types'
 import { customSortField } from '@bookorbit/types'
 import { readingDateToDateKey } from '@/features/book/lib/reading-date'
@@ -139,7 +140,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'title',
-    header: 'Title',
+    get header() {
+      return i18n.global.t('settings.metadata.fields.title')
+    },
     cellType: 'text',
     isEditable: true,
     sortField: 'title',
@@ -152,7 +155,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'authors',
-    header: 'Authors',
+    get header() {
+      return i18n.global.t('settings.metadata.fields.authors')
+    },
     cellType: 'chips',
     isEditable: true,
     sortField: 'author',
@@ -165,7 +170,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'seriesName',
-    header: 'Series',
+    get header() {
+      return i18n.global.t('settings.metadata.fieldRules.groups.series')
+    },
     cellType: 'text',
     isEditable: true,
     sortField: 'series',
@@ -191,7 +198,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'publishedDate',
-    header: 'Published',
+    get header() {
+      return i18n.global.t('book.detail.details.published')
+    },
     cellType: 'date',
     isEditable: false,
     sortField: 'publishedDate',
@@ -204,7 +213,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'publishedYear',
-    header: 'Year',
+    get header() {
+      return i18n.global.t('book.detail.editMetadata.yearLabel')
+    },
     cellType: 'number',
     isEditable: true,
     sortField: 'publishedYear',
@@ -217,7 +228,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'language',
-    header: 'Language',
+    get header() {
+      return i18n.global.t('settings.appearance.language.title')
+    },
     cellType: 'text',
     isEditable: true,
     sortField: 'language',
@@ -230,7 +243,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'rating',
-    header: 'Rating',
+    get header() {
+      return i18n.global.t('settings.appearance.bookCovers.overlays.rating.label')
+    },
     cellType: 'rating',
     isEditable: true,
     sortField: 'rating',
@@ -243,7 +258,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'metadataScore',
-    header: 'Metadata Score',
+    get header() {
+      return i18n.global.t('book.sort.fields.metadataScore')
+    },
     cellType: 'number',
     isEditable: false,
     sortField: 'metadataScore',
@@ -255,7 +272,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'genres',
-    header: 'Genres',
+    get header() {
+      return i18n.global.t('settings.admin.authorEnrichment.fields.genres')
+    },
     cellType: 'chips',
     isEditable: true,
     sortField: null,
@@ -268,7 +287,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'tags',
-    header: 'Tags',
+    get header() {
+      return i18n.global.t('settings.metadata.fields.tags')
+    },
     cellType: 'chips',
     isEditable: true,
     sortField: null,
@@ -281,7 +302,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'subtitle',
-    header: 'Subtitle',
+    get header() {
+      return i18n.global.t('settings.metadata.fields.subtitle')
+    },
     cellType: 'text',
     isEditable: true,
     sortField: null,
@@ -294,7 +317,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'publisher',
-    header: 'Publisher',
+    get header() {
+      return i18n.global.t('settings.metadata.fields.publisher')
+    },
     cellType: 'text',
     isEditable: true,
     sortField: 'publisher',
@@ -307,7 +332,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'pageCount',
-    header: 'Pages',
+    get header() {
+      return i18n.global.t('book.detail.details.pages')
+    },
     cellType: 'number',
     isEditable: true,
     sortField: 'pageCount',
@@ -332,7 +359,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'narrators',
-    header: 'Narrators',
+    get header() {
+      return i18n.global.t('settings.metadata.fields.narrators')
+    },
     cellType: 'chips',
     isEditable: true,
     sortField: null,
@@ -345,7 +374,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'readingProgress',
-    header: 'Progress',
+    get header() {
+      return i18n.global.t('settings.admin.migration.progress')
+    },
     cellType: 'progress',
     isEditable: false,
     sortField: 'readProgress',
@@ -357,7 +388,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'finishedAt',
-    header: 'Date Read',
+    get header() {
+      return i18n.global.t('book.feedback.fieldDateRead')
+    },
     cellType: 'date',
     isEditable: false,
     sortField: 'finishedAt',
@@ -369,7 +402,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'readStatus',
-    header: 'Status',
+    get header() {
+      return i18n.global.t('settings.magicLinks.columns.status')
+    },
     cellType: 'readStatus',
     isEditable: true,
     sortField: 'readStatus',
@@ -381,7 +416,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'format',
-    header: 'Format',
+    get header() {
+      return i18n.global.t('book.sort.fields.format')
+    },
     cellType: 'format',
     isEditable: false,
     sortField: 'format',
@@ -392,7 +429,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'fileSize',
-    header: 'File Size',
+    get header() {
+      return i18n.global.t('book.sort.fields.fileSize')
+    },
     cellType: 'text',
     isEditable: false,
     sortField: 'fileSize',
@@ -404,7 +443,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'updatedAt',
-    header: 'Updated',
+    get header() {
+      return i18n.global.t('settings.reader.kobo.activity.outcome.updated')
+    },
     cellType: 'date',
     isEditable: false,
     sortField: 'updatedAt',
@@ -416,7 +457,9 @@ export const COLUMN_DEFS: ColumnDef[] = [
   },
   {
     id: 'addedAt',
-    header: 'Added',
+    get header() {
+      return i18n.global.t('settings.admin.libraries.detail.added')
+    },
     cellType: 'date',
     isEditable: false,
     sortField: 'addedAt',

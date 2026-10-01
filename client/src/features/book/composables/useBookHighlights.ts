@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { computed, nextTick, ref, watch, type Ref } from 'vue'
 import type { AnnotationItem, AnnotationListResponse, AnnotationStats } from '@bookorbit/types'
 import { api } from '@/lib/api'
@@ -100,7 +101,7 @@ export function useBookHighlights(bookIdRef: Ref<number>) {
       stats.value = data.stats
       loadedPages.value = 1
     } catch (e) {
-      if (seq === fetchSeq) error.value = e instanceof Error ? e.message : 'Failed to load highlights'
+      if (seq === fetchSeq) error.value = e instanceof Error ? e.message : i18n.global.t('book.feedback.loadHighlightsFailed')
     } finally {
       if (seq === fetchSeq) loading.value = false
     }
@@ -124,7 +125,7 @@ export function useBookHighlights(bookIdRef: Ref<number>) {
       stats.value = data.stats
       loadedPages.value += 1
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to load highlights'
+      error.value = e instanceof Error ? e.message : i18n.global.t('book.feedback.loadHighlightsFailed')
     } finally {
       loadingMore.value = false
     }
@@ -211,7 +212,7 @@ export function useBookHighlights(bookIdRef: Ref<number>) {
     } catch (e) {
       items.value = prev
       total.value = prevTotal
-      error.value = e instanceof Error ? e.message : 'Failed to delete highlight'
+      error.value = e instanceof Error ? e.message : i18n.global.t('book.feedback.deleteHighlightFailed')
     }
   }
 
@@ -236,7 +237,7 @@ export function useBookHighlights(bookIdRef: Ref<number>) {
     } catch (e) {
       items.value = prev
       total.value = prevTotal
-      error.value = e instanceof Error ? e.message : 'Failed to move highlights to trash'
+      error.value = e instanceof Error ? e.message : i18n.global.t('book.feedback.trashHighlightsFailed')
       return 0
     }
   }
@@ -258,7 +259,7 @@ export function useBookHighlights(bookIdRef: Ref<number>) {
       return body.affected
     } catch (e) {
       items.value = prev
-      error.value = e instanceof Error ? e.message : 'Failed to update selected highlights'
+      error.value = e instanceof Error ? e.message : i18n.global.t('book.feedback.updateHighlightsFailed')
       return 0
     }
   }

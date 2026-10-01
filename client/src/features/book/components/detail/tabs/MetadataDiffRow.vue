@@ -303,7 +303,7 @@ watch(
         class="min-w-0 rounded-lg px-3 py-2 transition-all duration-200"
         :class="!field.hasDiff ? 'bg-muted/30 opacity-50' : field.isPicked ? 'bg-muted/30 opacity-40' : 'bg-background ring-1 ring-border'"
       >
-        <p class="text-[10px] font-medium text-muted-foreground mb-0.5 sm:hidden">Current</p>
+        <p class="text-[10px] font-medium text-muted-foreground mb-0.5 sm:hidden">{{ t('book.detail.editMetadata.diffPanel.current') }}</p>
         <p
           class="wrap-break-word leading-snug text-sm w-full"
           :class="[!field.currentDisplay ? 'text-muted-foreground italic' : 'text-foreground', currentTextClass]"
@@ -386,7 +386,7 @@ watch(
           !field.hasDiff ? 'bg-muted/30 opacity-50' : field.isPicked && field.pickedFromActive ? 'bg-primary/8 ring-1 ring-primary/20' : 'bg-muted/40'
         "
       >
-        <p class="text-[10px] font-medium text-muted-foreground mb-0.5 sm:hidden">New</p>
+        <p class="text-[10px] font-medium text-muted-foreground mb-0.5 sm:hidden">{{ t('book.feedback.newValue') }}</p>
         <a
           v-if="field.key === 'sourceUrl' && field.candidateDisplay"
           :href="field.candidateDisplay"

@@ -54,15 +54,15 @@ const {
 const prescanByPath = computed(() => new Map(props.prescanResult?.paths.map((result) => [result.path, result]) ?? []))
 
 const validationSummary = computed(() => {
-  const itemLabel = props.libraryType === 'podcasts' ? 'podcast episode files' : 'book files'
-  if (props.prescanLoading) return `Checking accessibility and counting matching ${itemLabel}...`
-  if (!props.prescanResult) return `Verify access and estimate matching ${itemLabel}.`
+  const itemLabel = t(props.libraryType === 'podcasts' ? 'library.creator.folders.podcastFiles' : 'library.creator.folders.bookFiles')
+  if (props.prescanLoading) return t('library.creator.folders.checkingSummary', { itemLabel })
+  if (!props.prescanResult) return t('library.creator.folders.verifySummary', { itemLabel })
   const accessibleCount = props.prescanResult.paths.filter((path) => path.accessible).length
   const inaccessibleCount = props.prescanResult.paths.length - accessibleCount
-  const files = `${props.prescanResult.totalFiles.toLocaleString()} matching file${props.prescanResult.totalFiles === 1 ? '' : 's'}`
+  const files = t('library.creator.folders.matchingFiles', { count: props.prescanResult.totalFiles })
   return inaccessibleCount > 0
-    ? `${files}. ${inaccessibleCount} folder${inaccessibleCount === 1 ? '' : 's'} could not be accessed.`
-    : `${files} across ${accessibleCount} folder${accessibleCount === 1 ? '' : 's'}.`
+    ? t('library.creator.folders.inaccessibleSummary', { files, count: inaccessibleCount })
+    : t('library.creator.folders.accessibleSummary', { files, count: accessibleCount })
 })
 
 function prescanStatusFor(path: string): PrescanPathResult | null {
@@ -70,12 +70,12 @@ function prescanStatusFor(path: string): PrescanPathResult | null {
 }
 
 function statusLabel(path: string): string {
-  if (props.prescanLoading) return 'Checking'
+  if (props.prescanLoading) return t('library.creator.folders.checking')
   const status = prescanStatusFor(path)
-  if (!status) return 'Not checked'
-  if (!status.accessible) return 'Not accessible'
-  if (status.overlapLibrary) return 'Overlaps another library'
-  return `Accessible · ${status.fileCount.toLocaleString()} file${status.fileCount === 1 ? '' : 's'}`
+  if (!status) return t('library.creator.folders.unchecked')
+  if (!status.accessible) return t('library.creator.folders.inaccessible')
+  if (status.overlapLibrary) return t('library.creator.folders.overlap')
+  return t('library.creator.folders.accessibleFiles', { count: status.fileCount })
 }
 
 function statusClass(path: string): string {
@@ -88,7 +88,7 @@ function statusClass(path: string): string {
 
 function statusTitle(path: string): string | undefined {
   const overlapLibrary = prescanStatusFor(path)?.overlapLibrary
-  return overlapLibrary ? `Also used by “${overlapLibrary}”` : undefined
+  return overlapLibrary ? t('library.creator.folders.overlapTitle', { library: overlapLibrary }) : undefined
 }
 
 function handlePrescan() {
@@ -115,7 +115,7 @@ function addBrowsedFolders(paths: string[]) {
         <span class="block text-sm font-semibold text-foreground">{{ t('library.creator.folders.browseTitle') }}</span>
         <span class="mt-1 block text-sm text-muted-foreground">
           {{
-            libraryType === 'podcasts' ? 'Choose where downloaded podcast episodes will be stored.' : t('library.creator.folders.browseDescription')
+            libraryType === 'podcasts' ? t('library.creator.folders.podcastBrowseDescription') : t('library.creator.folders.browseDescription')
           }}
         </span>
       </span>
@@ -125,7 +125,7 @@ function addBrowsedFolders(paths: string[]) {
       <div class="mb-3 flex items-center justify-between gap-3">
         <div class="flex items-center gap-2">
           <h4 id="selected-folders-title" class="text-sm font-semibold text-foreground">
-            {{ libraryType === 'podcasts' ? 'Storage folder' : t('library.creator.folders.selectedTitle') }}
+            {{ libraryType === 'podcasts' ? t('library.creator.folders.storageFolder') : t('library.creator.folders.selectedTitle') }}
           </h4>
           <span class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{{ folders.length }}</span>
         </div>
@@ -220,7 +220,7 @@ function addBrowsedFolders(paths: string[]) {
           @click="handlePrescan"
         >
           <RefreshCw :size="16" :class="prescanLoading ? 'animate-spin' : ''" />
-          {{ prescanLoading ? 'Checking...' : prescanResult ? 'Check again' : 'Check folders' }}
+          {{ prescanLoading ? t('library.creator.folders.checkingButton') : prescanResult ? t('library.creator.folders.checkAgain') : t('library.creator.folders.checkFolders') }}
         </button>
       </div>
     </div>

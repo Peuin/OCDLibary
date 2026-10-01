@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import type { Rule, StaticRuleField, TableViewType } from '@bookorbit/types'
 
 type QuickFilterField = Exclude<StaticRuleField, 'communityRating' | 'communityRatingCount'>
@@ -29,15 +30,15 @@ export function useTableQuickFilters(viewType: TableViewType) {
 
     if (colId === 'format') {
       return [
-        { key: 'present', label: 'Filter to present files' },
-        { key: 'missing', label: 'Filter to missing files' },
+        { key: 'present', label: i18n.global.t('book.feedback.filterPresent') },
+        { key: 'missing', label: i18n.global.t('book.feedback.filterMissing') },
       ]
     }
 
     if (colId === 'cover') {
       return [
-        { key: 'present', label: 'Filter to books with covers' },
-        { key: 'missing', label: 'Filter to books missing covers' },
+        { key: 'present', label: i18n.global.t('book.feedback.filterCovered') },
+        { key: 'missing', label: i18n.global.t('book.feedback.filterNoCover') },
       ]
     }
 
@@ -61,8 +62,8 @@ export function useTableQuickFilters(viewType: TableViewType) {
       ].includes(colId)
     ) {
       return [
-        { key: 'present', label: 'Filter to rows with values' },
-        { key: 'missing', label: 'Filter to empty rows' },
+        { key: 'present', label: i18n.global.t('book.feedback.filterValues') },
+        { key: 'missing', label: i18n.global.t('book.feedback.filterEmpty') },
       ]
     }
 

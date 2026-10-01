@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { computed, reactive, ref, toValue, type MaybeRefOrGetter } from 'vue'
 import type {
   BookCommunityRating,
@@ -132,25 +133,110 @@ export function mergeGenreLists(existing: readonly string[], incoming: readonly 
 }
 
 export const FIELD_DEFS: { key: DiffFieldKey; label: string }[] = [
-  { key: 'coverUrl', label: 'Cover' },
-  { key: 'title', label: 'Title' },
-  { key: 'subtitle', label: 'Subtitle' },
-  { key: 'authors', label: 'Authors' },
-  { key: 'description', label: 'Description' },
-  { key: 'publisher', label: 'Publisher' },
-  { key: 'publishedDate', label: 'Published' },
-  { key: 'language', label: 'Language' },
-  { key: 'pageCount', label: 'Page Count' },
-  { key: 'communityRating', label: 'Community Rating' },
-  { key: 'seriesName', label: 'Series' },
-  { key: 'seriesIndex', label: 'Series Index' },
+  {
+    key: 'coverUrl',
+    get label() {
+      return i18n.global.t('settings.metadata.fields.cover')
+    },
+  },
+  {
+    key: 'title',
+    get label() {
+      return i18n.global.t('settings.metadata.fields.title')
+    },
+  },
+  {
+    key: 'subtitle',
+    get label() {
+      return i18n.global.t('settings.metadata.fields.subtitle')
+    },
+  },
+  {
+    key: 'authors',
+    get label() {
+      return i18n.global.t('settings.metadata.fields.authors')
+    },
+  },
+  {
+    key: 'description',
+    get label() {
+      return i18n.global.t('settings.metadata.fields.description')
+    },
+  },
+  {
+    key: 'publisher',
+    get label() {
+      return i18n.global.t('settings.metadata.fields.publisher')
+    },
+  },
+  {
+    key: 'publishedDate',
+    get label() {
+      return i18n.global.t('book.detail.details.published')
+    },
+  },
+  {
+    key: 'language',
+    get label() {
+      return i18n.global.t('settings.appearance.language.title')
+    },
+  },
+  {
+    key: 'pageCount',
+    get label() {
+      return i18n.global.t('book.sort.fields.pageCount')
+    },
+  },
+  {
+    key: 'communityRating',
+    get label() {
+      return i18n.global.t('book.filter.fields.communityRating')
+    },
+  },
+  {
+    key: 'seriesName',
+    get label() {
+      return i18n.global.t('settings.metadata.fieldRules.groups.series')
+    },
+  },
+  {
+    key: 'seriesIndex',
+    get label() {
+      return i18n.global.t('book.filter.fields.seriesIndex')
+    },
+  },
   { key: 'isbn13', label: 'ISBN-13' },
   { key: 'isbn10', label: 'ISBN-10' },
-  { key: 'genres', label: 'Genres' },
-  { key: 'narrators', label: 'Narrators' },
-  { key: 'durationSeconds', label: 'Duration (seconds)' },
-  { key: 'abridged', label: 'Abridged' },
-  { key: 'hardcoverEditionId', label: 'Hardcover Edition ID' },
+  {
+    key: 'genres',
+    get label() {
+      return i18n.global.t('settings.admin.authorEnrichment.fields.genres')
+    },
+  },
+  {
+    key: 'narrators',
+    get label() {
+      return i18n.global.t('settings.metadata.fields.narrators')
+    },
+  },
+  {
+    key: 'durationSeconds',
+    get label() {
+      return i18n.global.t('book.feedback.fieldDurationseconds')
+    },
+  },
+  {
+    key: 'abridged',
+    get label() {
+      return i18n.global.t('settings.metadata.fields.abridged')
+    },
+  },
+  {
+    key: 'hardcoverEditionId',
+    get label() {
+      return i18n.global.t('book.feedback.fieldHardcoverEditionID')
+    },
+  },
 ]
 
 export interface ComicFieldDef {
@@ -160,17 +246,83 @@ export interface ComicFieldDef {
 }
 
 export const COMIC_FIELD_DEFS: ComicFieldDef[] = [
-  { key: 'comicIssueNumber', label: 'Issue Number', comicKey: 'issueNumber' },
-  { key: 'comicVolumeName', label: 'Volume', comicKey: 'volumeName' },
-  { key: 'comicPencillers', label: 'Pencillers', comicKey: 'pencillers' },
-  { key: 'comicInkers', label: 'Inkers', comicKey: 'inkers' },
-  { key: 'comicColorists', label: 'Colorists', comicKey: 'colorists' },
-  { key: 'comicLetterers', label: 'Letterers', comicKey: 'letterers' },
-  { key: 'comicCoverArtists', label: 'Cover Artists', comicKey: 'coverArtists' },
-  { key: 'comicCharacters', label: 'Characters', comicKey: 'characters' },
-  { key: 'comicTeams', label: 'Teams', comicKey: 'teams' },
-  { key: 'comicLocations', label: 'Locations', comicKey: 'locations' },
-  { key: 'comicStoryArcs', label: 'Story Arcs', comicKey: 'storyArcs' },
+  {
+    key: 'comicIssueNumber',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicIssueNumberLabel')
+    },
+    comicKey: 'issueNumber',
+  },
+  {
+    key: 'comicVolumeName',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicVolumeLabel')
+    },
+    comicKey: 'volumeName',
+  },
+  {
+    key: 'comicPencillers',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicPencillersLabel')
+    },
+    comicKey: 'pencillers',
+  },
+  {
+    key: 'comicInkers',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicInkersLabel')
+    },
+    comicKey: 'inkers',
+  },
+  {
+    key: 'comicColorists',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicColoristsLabel')
+    },
+    comicKey: 'colorists',
+  },
+  {
+    key: 'comicLetterers',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicLetterersLabel')
+    },
+    comicKey: 'letterers',
+  },
+  {
+    key: 'comicCoverArtists',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicCoverArtistsLabel')
+    },
+    comicKey: 'coverArtists',
+  },
+  {
+    key: 'comicCharacters',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicCharactersLabel')
+    },
+    comicKey: 'characters',
+  },
+  {
+    key: 'comicTeams',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicTeamsLabel')
+    },
+    comicKey: 'teams',
+  },
+  {
+    key: 'comicLocations',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicLocationsLabel')
+    },
+    comicKey: 'locations',
+  },
+  {
+    key: 'comicStoryArcs',
+    get label() {
+      return i18n.global.t('book.detail.editMetadata.comicStoryArcsLabel')
+    },
+    comicKey: 'storyArcs',
+  },
 ]
 
 export const COMIC_KEY_MAP: Record<ComicDiffFieldKey, keyof ComicMetadataFields> = Object.fromEntries(
@@ -427,7 +579,7 @@ export function useMetadataDiff(
 
       rows.push({
         key: providerIdKey,
-        label: PROVIDER_ID_LABEL[ap] ?? 'Provider ID',
+        label: PROVIDER_ID_LABEL[ap] ?? i18n.global.t('book.feedback.fieldProviderID'),
         bookValue: existingProviderId ?? '',
         currentDisplay: pickedFromActive ? pickedDisplay : (existingProviderId ?? ''),
         candidateDisplay: activeProviderIdVal,
@@ -446,7 +598,9 @@ export function useMetadataDiff(
     if (activeCandidate?.sourceUrl) {
       rows.push({
         key: 'sourceUrl',
-        label: 'Source URL',
+        get label() {
+          return i18n.global.t('book.feedback.fieldSourceURL')
+        },
         bookValue: '',
         currentDisplay: '',
         candidateDisplay: activeCandidate.sourceUrl,

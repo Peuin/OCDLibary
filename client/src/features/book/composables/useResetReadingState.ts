@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { ref, type Ref } from 'vue'
 import type { ResetBookReadingStateResponse } from '@bookorbit/types'
 import { api } from '@/lib/api'
@@ -10,7 +11,7 @@ async function getErrorMessage(response: Response): Promise<string> {
   } catch {
     // Use the generic fallback when the response has no JSON error body.
   }
-  return 'Failed to reset reading state'
+  return i18n.global.t('book.feedback.resetReadingFailed')
 }
 
 export function useResetReadingState(bookId: Ref<number>) {
@@ -45,7 +46,7 @@ export function useResetReadingState(bookId: Ref<number>) {
       open.value = false
       return result
     } catch (caught) {
-      error.value = caught instanceof Error ? caught.message : 'Failed to reset reading state'
+      error.value = caught instanceof Error ? caught.message : i18n.global.t('book.feedback.resetReadingFailed')
       return null
     } finally {
       resetting.value = false

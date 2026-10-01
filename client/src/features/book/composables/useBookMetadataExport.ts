@@ -1,3 +1,4 @@
+import { i18n } from '@/i18n'
 import { ref } from 'vue'
 import type { GroupRule, SortSpec } from '@bookorbit/types'
 import { api } from '@/lib/api'
@@ -98,7 +99,7 @@ export function useBookMetadataExport() {
       body: JSON.stringify(toPayload(request)),
     })
     if (!response.ok) {
-      const message = await readErrorMessage(response, 'Failed to prepare metadata export')
+      const message = await readErrorMessage(response, i18n.global.t('book.feedback.prepareExportFailed'))
       throw new Error(message)
     }
     return (await response.json()) as MetadataExportPreflight
@@ -114,7 +115,7 @@ export function useBookMetadataExport() {
         body: JSON.stringify(payload),
       })
       if (!response.ok) {
-        const message = await readErrorMessage(response, 'Failed to export metadata')
+        const message = await readErrorMessage(response, i18n.global.t('book.feedback.exportFailed'))
         throw new Error(message)
       }
       const blob = await response.blob()
