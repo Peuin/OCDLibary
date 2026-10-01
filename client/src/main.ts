@@ -3,7 +3,7 @@ import './lib/echarts'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { DEFAULT_LOCALE } from '@bookorbit/types'
+import { INITIAL_LOCALE } from '@bookorbit/types'
 
 import App from './App.vue'
 import router from './router'
@@ -57,7 +57,7 @@ try {
 }
 
 if (needsSetup.value === true) {
-  await localeStore.setLocale(DEFAULT_LOCALE)
+  await localeStore.setLocale(INITIAL_LOCALE)
 }
 
 const { init } = useAuth()

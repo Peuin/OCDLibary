@@ -1,5 +1,6 @@
 {
   "common": {
+    "appName": "Thư viện Cát Minh",
     "resetSortAria": "Đặt lại thứ tự sắp xếp mặc định",
     "save": "Lưu",
     "cancel": "Hủy",

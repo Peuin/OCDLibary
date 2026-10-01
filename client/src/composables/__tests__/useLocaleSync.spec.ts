@@ -53,6 +53,7 @@ describe('useLocaleSync', () => {
     vi.useFakeTimers()
     user.value = null
     localeStore = createLocaleStore()
+    localStorage.clear()
   })
 
   afterEach(() => {
@@ -68,6 +69,27 @@ describe('useLocaleSync', () => {
 
     expect(localeStore.locale).toBe('nl')
     expect(apiMock).toHaveBeenCalledWith('/api/v1/user-preferences/locale')
+  })
+
+  it('replaces the old English server default with the current locale once', async () => {
+    user.value = { id: 7 } as AuthUser
+    localeStore.locale = 'vi'
+    apiMock.mockResolvedValueOnce(mockJsonResponse({ settings: { locale: 'en' } })).mockResolvedValueOnce(mockJsonResponse({}, true))
+
+    const { hydrateLocalePreference } = await import('../useLocaleSync')
+    await hydrateLocalePreference()
+
+    expect(localeStore.locale).toBe('vi')
+    expect(apiMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/v1/user-preferences/locale',
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ settings: { locale: 'vi' } }) }),
+    )
+
+    apiMock.mockResolvedValueOnce(mockJsonResponse({ settings: { locale: 'en' } }))
+    await hydrateLocalePreference()
+
+    expect(localeStore.locale).toBe('en')
   })
 
   it('seeds the current locale when the account has no preference', async () => {

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LOCALE_DIRECTIONS = exports.LOCALE_LABELS = exports.DEFAULT_LOCALE = exports.SUPPORTED_LOCALES = void 0;
+exports.LOCALE_DIRECTIONS = exports.LOCALE_LABELS = exports.INITIAL_LOCALE = exports.DEFAULT_LOCALE = exports.SUPPORTED_LOCALES = void 0;
 exports.isSupportedLocale = isSupportedLocale;
 exports.SUPPORTED_LOCALES = [
     "en",
@@ -31,6 +31,8 @@ exports.SUPPORTED_LOCALES = [
     "zh-Hant",
 ];
 exports.DEFAULT_LOCALE = "en";
+/** The language a new visitor sees. DEFAULT_LOCALE stays English because it is the source catalog and fallback. */
+exports.INITIAL_LOCALE = "vi";
 /** Native display names for each supported locale, shown in the language picker. */
 exports.LOCALE_LABELS = {
     en: "English",

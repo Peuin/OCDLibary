@@ -78,9 +78,18 @@ describe('locale store', () => {
     expect(detectInitialLocale()).toBe('nl')
   })
 
-  it('defaults to English when no stored locale exists', async () => {
+  it('defaults to Vietnamese when no stored locale exists', async () => {
     const { detectInitialLocale } = await import('../locale')
 
+    expect(detectInitialLocale()).toBe('vi')
+  })
+
+  it('moves the old English default to Vietnamese once', async () => {
+    storedValues.set('locale', 'en')
+    const { detectInitialLocale } = await import('../locale')
+
+    expect(detectInitialLocale()).toBe('vi')
+    expect(storedValues.get('localeDefault')).toBe('vi')
     expect(detectInitialLocale()).toBe('en')
   })
 
@@ -90,7 +99,7 @@ describe('locale store', () => {
     const store = useLocaleStore()
 
     await expect(store.setLocale('nl')).rejects.toThrow('chunk failed')
-    expect(store.locale).toBe('en')
+    expect(store.locale).toBe('vi')
     expect(storedValues.has('locale')).toBe(false)
 
     await store.setLocale('nl')

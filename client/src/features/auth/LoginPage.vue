@@ -10,6 +10,7 @@ import { useOidc } from './composables/useOidc'
 import { useSetupStatus } from './composables/useSetupStatus'
 import { useLoginOptions } from './composables/useLoginOptions'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import AppLogo from '@/components/AppLogo.vue'
 import PublicLegalNotices from '@/components/legal/PublicLegalNotices.vue'
 
 const { t } = useI18n()
@@ -256,7 +257,8 @@ async function handleOidcLogin(provider: OidcProviderPublic) {
 
     <div class="login-card relative z-10 w-full max-w-sm rounded-2xl p-8">
       <div class="text-center mb-8 animate-fade-up">
-        <h1 class="text-2xl font-serif font-semibold text-foreground">Book<span class="text-primary"> Orbit</span></h1>
+        <AppLogo class="mx-auto mb-3 h-20 w-20" />
+        <h1 class="text-2xl font-serif font-semibold text-primary">{{ t('common.appName') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">{{ t('auth.login.subtitle') }}</p>
       </div>
 

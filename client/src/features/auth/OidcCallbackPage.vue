@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import type { OidcCallbackResponse } from '@bookorbit/types'
 import { OidcErrorCode } from '@bookorbit/types'
 import { setAccessToken } from '@/lib/api'
+import AppLogo from '@/components/AppLogo.vue'
 import PublicLegalNotices from '@/components/legal/PublicLegalNotices.vue'
 import { useAuth } from './composables/useAuth'
 import { useOidc, OidcLoginError } from './composables/useOidc'
@@ -85,7 +86,8 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen flex flex-col items-center justify-center gap-3 bg-background px-4">
     <div class="w-full max-w-sm text-center">
-      <h1 class="text-2xl font-serif font-semibold text-foreground mb-6">Book<span class="text-primary"> Orbit</span></h1>
+      <AppLogo class="mx-auto mb-3 h-20 w-20" />
+      <h1 class="text-2xl font-serif font-semibold text-primary mb-6">{{ t('common.appName') }}</h1>
 
       <div v-if="!error" class="space-y-3">
         <div class="flex justify-center">

@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES, isSupportedLocale, type Locale } from '@bookorbit/types'
+import { DEFAULT_LOCALE, INITIAL_LOCALE, SUPPORTED_LOCALES, isSupportedLocale, type Locale } from '@bookorbit/types'
 import { storage } from '@/services/storage'
 import { activateI18nLocale, loadLocaleMessages } from '@/i18n'
 
 const STORAGE_KEY = 'locale'
+export const LOCALE_DEFAULT_MARKER_KEY = 'localeDefault'
 
 function canonicalizeLocale(value: string): string | null {
   try {
@@ -47,9 +48,15 @@ export function matchSupportedLocale(candidates: readonly string[]): Locale | nu
 
 export function detectInitialLocale(): Locale {
   const stored = storage.get<string>(STORAGE_KEY, '')
+  // English was written to storage on every first visit, so a stored English is not a real
+  // choice. Move it to the initial locale once, then respect whatever is picked.
+  if (storage.get<string>(LOCALE_DEFAULT_MARKER_KEY, '') !== INITIAL_LOCALE) {
+    storage.set(LOCALE_DEFAULT_MARKER_KEY, INITIAL_LOCALE)
+    if (!stored || stored === DEFAULT_LOCALE) return INITIAL_LOCALE
+  }
   if (isSupportedLocale(stored)) return stored
 
-  return DEFAULT_LOCALE
+  return INITIAL_LOCALE
 }
 
 export const useLocaleStore = defineStore('locale', () => {

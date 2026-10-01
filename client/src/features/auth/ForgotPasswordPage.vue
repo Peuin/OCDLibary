@@ -5,6 +5,7 @@ import { Moon, Sun, Wallpaper } from '@lucide/vue'
 import { ACCENT_OPTIONS, ACCENT_ROWS, RADIUS_OPTIONS, BACKGROUND_OPTIONS, useThemeStore } from '@/stores/theme'
 import { api } from '@/lib/api'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import AppLogo from '@/components/AppLogo.vue'
 import PublicLegalNotices from '@/components/legal/PublicLegalNotices.vue'
 
 const { t } = useI18n()
@@ -203,7 +204,8 @@ async function handleSubmit() {
 
     <div class="login-card relative z-10 w-full max-w-sm rounded-2xl p-8">
       <div class="text-center mb-8">
-        <h1 class="text-2xl font-serif font-semibold text-foreground">Book<span class="text-primary"> Orbit</span></h1>
+        <AppLogo class="mx-auto mb-3 h-20 w-20" />
+        <h1 class="text-2xl font-serif font-semibold text-primary">{{ t('common.appName') }}</h1>
         <p class="text-sm text-muted-foreground mt-1">{{ t('auth.forgotPassword.subtitle') }}</p>
       </div>
 

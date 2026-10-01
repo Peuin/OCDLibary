@@ -1,4 +1,5 @@
 import type { TtsCurrentBook } from '../lib/tts-state'
+import { APP_TITLE } from '@/lib/page-title'
 
 export function useTtsMediaSession() {
   function setMetadata(book: TtsCurrentBook) {
@@ -7,7 +8,7 @@ export function useTtsMediaSession() {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: book.title,
       artist: book.author ?? '',
-      album: 'BookOrbit',
+      album: APP_TITLE,
       artwork,
     })
   }

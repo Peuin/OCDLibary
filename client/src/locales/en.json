@@ -1,5 +1,6 @@
 {
   "common": {
+    "appName": "OCD Library",
     "resetSortAria": "Reset sort to default",
     "save": "Save",
     "cancel": "Cancel",

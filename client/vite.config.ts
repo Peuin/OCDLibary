@@ -27,7 +27,6 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: [
         'favicon.ico',
-        'pwa-icon-source.svg',
         'apple-touch-icon-180x180.png',
         'pwa-64x64.png',
         'pwa-192x192.png',
@@ -35,10 +34,10 @@ export default defineConfig({
         'maskable-icon-512x512.png',
       ],
       manifest: {
-        name: 'BookOrbit',
-        short_name: 'BookOrbit',
+        name: 'OCD Library',
+        short_name: 'OCD Library',
         description: 'Your personal book library and reading space',
-        theme_color: '#1e1e18',
+        theme_color: '#905127',
         background_color: '#fafaf8',
         display: 'standalone',
         start_url: '/',

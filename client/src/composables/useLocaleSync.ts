@@ -1,10 +1,13 @@
-import { isSupportedLocale, type Locale, type LocalePreferences } from '@bookorbit/types'
+import { DEFAULT_LOCALE, INITIAL_LOCALE, isSupportedLocale, type Locale, type LocalePreferences } from '@bookorbit/types'
 import { watch } from 'vue'
 import { toast } from 'vue-sonner'
 import { i18n } from '@/i18n'
 import { useAuth } from '@/features/auth/composables/useAuth'
 import { api, getAccessToken } from '@/lib/api'
+import { storage } from '@/services/storage'
 import { useLocaleStore } from '@/stores/locale'
+
+const SERVER_DEFAULT_MARKER_KEY = 'localeServerDefault'
 
 let initialized = false
 let isApplyingServerPrefs = false
@@ -58,6 +61,16 @@ export async function hydrateLocalePreference(): Promise<void> {
     if (locale === null) {
       await seedLocaleToServer(getCurrentPrefs())
       return
+    }
+
+    // English was seeded to the server for every account before Vietnamese became the initial
+    // locale, so it is replaced once by what this browser shows rather than applied.
+    if (storage.get<string>(SERVER_DEFAULT_MARKER_KEY, '') !== INITIAL_LOCALE) {
+      storage.set(SERVER_DEFAULT_MARKER_KEY, INITIAL_LOCALE)
+      if (locale === DEFAULT_LOCALE) {
+        await seedLocaleToServer(getCurrentPrefs())
+        return
+      }
     }
 
     const store = useLocaleStore()

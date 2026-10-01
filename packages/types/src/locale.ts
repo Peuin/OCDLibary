@@ -30,6 +30,9 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = "en";
 
+/** The language a new visitor sees. DEFAULT_LOCALE stays English because it is the source catalog and fallback. */
+export const INITIAL_LOCALE: Locale = "vi";
+
 /** Native display names for each supported locale, shown in the language picker. */
 export const LOCALE_LABELS: Record<Locale, string> = {
   en: "English",
