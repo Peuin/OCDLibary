@@ -13,7 +13,7 @@ const themeStore = useThemeStore()
 const backgroundGroups = computed<{ label: string; ids: string[] }[]>(() => [
   {
     label: t('settings.appearance.theme.backgroundGroups.fundamental'),
-    ids: ['none', 'dots', 'cross', 'millimeter'],
+    ids: ['none', 'carmel', 'dots', 'cross', 'millimeter'],
   },
   {
     label: t('settings.appearance.theme.backgroundGroups.structural'),

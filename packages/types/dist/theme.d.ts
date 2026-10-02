@@ -6,7 +6,7 @@ export declare const ACCENT_IDS: readonly ["carmel", "grey", "scarlet", "vermili
 export type Accent = (typeof ACCENT_IDS)[number];
 export declare const RADIUS_IDS: readonly ["sharp", "default", "rounded", "pill"];
 export type Radius = (typeof RADIUS_IDS)[number];
-export declare const BACKGROUND_IDS: readonly ["none", "dots", "cross", "millimeter", "blueprint", "brushed", "scanlines", "carbon", "vinyl", "perforated", "aurora", "horizon", "glow", "mesh", "elevation", "prism", "spectrum", "spectrum-x", "spectrum-plus", "eclipse"];
+export declare const BACKGROUND_IDS: readonly ["none", "carmel", "dots", "cross", "millimeter", "blueprint", "brushed", "scanlines", "carbon", "vinyl", "perforated", "aurora", "horizon", "glow", "mesh", "elevation", "prism", "spectrum", "spectrum-x", "spectrum-plus", "eclipse"];
 export type Background = (typeof BACKGROUND_IDS)[number];
 /** Shell surface translucency, in percent. The floor keeps the sidebar and header
  *  readable over the busiest background patterns. */

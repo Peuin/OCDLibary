@@ -54,7 +54,12 @@ async function flushBatch(): Promise<void> {
   }
 }
 
-function requestScroller(type: BookScrollerType, limit: number, smartScopeId?: number): Promise<DashboardScrollerBatchResult> {
+function requestScroller(
+  type: BookScrollerType,
+  limit: number,
+  smartScopeId?: number,
+  featuredShelfId?: number,
+): Promise<DashboardScrollerBatchResult> {
   return new Promise((resolve, reject) => {
     requestSequence += 1
     pendingRequests.push({
@@ -63,6 +68,7 @@ function requestScroller(type: BookScrollerType, limit: number, smartScopeId?: n
         type,
         limit,
         ...(type === 'smart-scope' && smartScopeId ? { smartScopeId } : {}),
+        ...(type === 'featured-shelf' && featuredShelfId ? { featuredShelfId } : {}),
       },
       resolve,
       reject,
@@ -71,7 +77,7 @@ function requestScroller(type: BookScrollerType, limit: number, smartScopeId?: n
   })
 }
 
-export function useDashboardScroller(type: BookScrollerType, limit = 20, smartScopeId?: number) {
+export function useDashboardScroller(type: BookScrollerType, limit = 20, smartScopeId?: number, featuredShelfId?: number) {
   const books = ref<BookCard[]>([])
   const loading = ref(true)
   const error = ref(false)
@@ -80,7 +86,7 @@ export function useDashboardScroller(type: BookScrollerType, limit = 20, smartSc
     loading.value = true
     error.value = false
     try {
-      const result = await requestScroller(type, limit, smartScopeId)
+      const result = await requestScroller(type, limit, smartScopeId, featuredShelfId)
       books.value = result.books
       error.value = result.failed
     } catch {

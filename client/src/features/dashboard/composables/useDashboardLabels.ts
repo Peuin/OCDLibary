@@ -32,6 +32,7 @@ const SHELF_NAME_KEYS: Record<ScrollerType, ShelfNameKey> = {
   'up-next-in-series': 'upNextInSeries',
   random: 'random',
   'smart-scope': 'smartScope',
+  'featured-shelf': 'featuredShelf',
 }
 
 export function useDashboardLabels() {
@@ -49,6 +50,8 @@ export function useDashboardLabels() {
   // untranslated. Every other shelf resolves from its type: the persisted `label` predates
   // localization and holds a fixed English string that would survive a language change.
   function shelfTitle(scroller: ScrollerConfig): string {
+    // A featured shelf carries the title its administrator gave it, which is content like a scope name.
+    if (scroller.type === 'featured-shelf') return scroller.label.trim() || shelfTypeName('featured-shelf')
     if (scroller.type !== 'smart-scope') return shelfTypeName(scroller.type)
     const smartScopeName = scroller.smartScopeId ? scroller.label.trim() : ''
     return smartScopeName || shelfTypeName('smart-scope')

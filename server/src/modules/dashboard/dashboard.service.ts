@@ -6,8 +6,10 @@ import { mapWithConcurrency } from '../../common/utils/batch.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { BookReadService } from '../book/book-read.service';
 import { assembleBookCards } from '../book/utils/assemble-book-cards';
+import { CollectionService } from '../collection/collection.service';
 import { SmartScopeService } from '../smart-scope/smart-scope.service';
 import { LibraryService } from '../library/library.service';
+import { DashboardFeaturedShelfService } from './dashboard-featured-shelf.service';
 import { DashboardRepository } from './dashboard.repository';
 import { resolveDashboardLibraryIds } from './dashboard-library-scope';
 import { DASHBOARD_SCROLLER_MAX_LIMIT, type DashboardScrollerBatchDto, type DashboardScrollerBatchItemDto } from './dto/dashboard-scroller-batch.dto';
@@ -24,6 +26,8 @@ export class DashboardService {
     private readonly bookReadService: BookReadService,
     private readonly libraryService: LibraryService,
     private readonly smartScopeService: SmartScopeService,
+    private readonly collectionService: CollectionService,
+    private readonly featuredShelfService: DashboardFeaturedShelfService,
   ) {}
 
   private async loadCardsByIds(bookIds: number[], userId: number): Promise<BookCard[]> {
@@ -102,6 +106,8 @@ export class DashboardService {
     if (item.type === ScrollerType.SMART_SCOPE) {
       const smartScopeId = this.assertSmartScopeId(item.smartScopeId);
       bookIds = await this.smartScopeService.executeSmartScopeBookIds(smartScopeId, user, item.limit, accessibleLibraryIds);
+    } else if (item.type === ScrollerType.FEATURED_SHELF) {
+      bookIds = await this.findFeaturedShelfBookIds(item.featuredShelfId, user, item.limit, accessibleLibraryIds);
     } else {
       bookIds = await this.findScrollerBookIdsForLibraries(item.type, user, item.limit, accessibleLibraryIds);
     }
@@ -124,6 +130,10 @@ export class DashboardService {
       return { books: result.items, total: result.total };
     }
 
+    if (type === ScrollerType.FEATURED_SHELF) {
+      throw new BadRequestException('Featured shelves are served through the scroller batch endpoint');
+    }
+
     // Resolved once and handed to both halves. The selection and the count have to agree about
     // which libraries are in play, and asking twice invites them to disagree.
     const accessibleLibraryIds = resolveDashboardLibraryIds(await this.libraryService.findAccessibleLibraryIds(user), user);
@@ -139,7 +149,11 @@ export class DashboardService {
    * recursive CTE in full, and `random` would anti-join the whole library to size a pool it only
    * ever samples. Neither shelf is asked, and neither guesses.
    */
-  private async countScroller(type: Exclude<ScrollerType, 'smart-scope'>, user: RequestUser, accessibleLibraryIds: number[]): Promise<number | null> {
+  private async countScroller(
+    type: Exclude<ScrollerType, 'smart-scope' | 'featured-shelf'>,
+    user: RequestUser,
+    accessibleLibraryIds: number[],
+  ): Promise<number | null> {
     if (accessibleLibraryIds.length === 0) return 0;
 
     const contentFilters = user.isSuperuser ? undefined : user.contentFilters;
@@ -162,7 +176,7 @@ export class DashboardService {
 
   // Book-id selection without web card assembly lets other clients shape the
   // same rows. Smart scopes stay separate because they have their own access path.
-  async getScrollerBookIds(type: Exclude<ScrollerType, 'smart-scope'>, user: RequestUser, limit: number): Promise<number[]> {
+  async getScrollerBookIds(type: Exclude<ScrollerType, 'smart-scope' | 'featured-shelf'>, user: RequestUser, limit: number): Promise<number[]> {
     return this.findScrollerBookIds(type, user, Math.min(Math.max(1, limit), DASHBOARD_SCROLLER_MAX_LIMIT));
   }
 
@@ -182,6 +196,16 @@ export class DashboardService {
     return result.items.map((item) => item.id);
   }
 
+  private async findFeaturedShelfBookIds(
+    featuredShelfId: number | undefined,
+    user: RequestUser,
+    limit: number,
+    accessibleLibraryIds: number[],
+  ): Promise<number[]> {
+    const collectionId = await this.featuredShelfService.resolveCollectionId(featuredShelfId);
+    return this.collectionService.getShelfBookIds(collectionId, user, limit, accessibleLibraryIds);
+  }
+
   private assertSmartScopeId(smartScopeId?: number): number {
     if (!smartScopeId || smartScopeId <= 0) {
       throw new BadRequestException('smartScopeId is required and must be a positive integer when scroller type is smartScope');
@@ -189,13 +213,17 @@ export class DashboardService {
     return smartScopeId;
   }
 
-  private async findScrollerBookIds(type: Exclude<ScrollerType, 'smart-scope'>, user: RequestUser, clampedLimit: number): Promise<number[]> {
+  private async findScrollerBookIds(
+    type: Exclude<ScrollerType, 'smart-scope' | 'featured-shelf'>,
+    user: RequestUser,
+    clampedLimit: number,
+  ): Promise<number[]> {
     const accessibleLibraryIds = resolveDashboardLibraryIds(await this.libraryService.findAccessibleLibraryIds(user), user);
     return this.findScrollerBookIdsForLibraries(type, user, clampedLimit, accessibleLibraryIds);
   }
 
   private async findScrollerBookIdsForLibraries(
-    type: Exclude<ScrollerType, 'smart-scope'>,
+    type: Exclude<ScrollerType, 'smart-scope' | 'featured-shelf'>,
     user: RequestUser,
     clampedLimit: number,
     accessibleLibraryIds: number[],

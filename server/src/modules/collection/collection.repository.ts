@@ -251,6 +251,33 @@ export class CollectionRepository {
     };
   }
 
+  async findFirstBookIds(collectionId: number, libraryIds: number[], limit: number, extraWhere?: SQL): Promise<number[]> {
+    if (libraryIds.length === 0) return [];
+    const rows = await this.db
+      .select({ bookId: collectionBooks.bookId })
+      .from(collectionBooks)
+      .innerJoin(books, eq(books.id, collectionBooks.bookId))
+      .innerJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
+      .where(and(eq(collectionBooks.collectionId, collectionId), inArray(books.libraryId, libraryIds), ...(extraWhere ? [extraWhere] : [])))
+      .orderBy(collectionBooks.position)
+      .limit(limit);
+    return rows.map((row) => row.bookId);
+  }
+
+  async findSummariesByIds(ids: number[]) {
+    if (ids.length === 0) return [];
+    return await this.db
+      .select({
+        id: collections.id,
+        userId: collections.userId,
+        name: collections.name,
+        mediaType: collections.mediaType,
+        isPublic: collections.isPublic,
+      })
+      .from(collections)
+      .where(inArray(collections.id, ids));
+  }
+
   async findAllBookIds(collectionId: number, libraryIds: number[], extraWhere?: SQL): Promise<number[]> {
     if (libraryIds.length === 0) return [];
     const rows = await this.db

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AuthBackground from './components/AuthBackground.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -127,7 +128,10 @@ async function handleOidcLogin(provider: OidcProviderPublic) {
 </script>
 
 <template>
-  <div class="login-bg min-h-screen flex flex-col items-center justify-center gap-3 px-4 overflow-hidden">
+  <div
+    class="login-bg isolate min-h-screen flex flex-col items-center justify-center gap-3 px-4 py-10 overflow-hidden lg:items-end lg:pe-[clamp(3rem,9vw,10rem)]"
+  >
+    <AuthBackground />
     <!-- Compact theme picker -->
     <div class="fixed top-5 right-5 z-20 flex items-center gap-1.5">
       <!-- Dark / light toggle -->
@@ -388,8 +392,8 @@ async function handleOidcLogin(provider: OidcProviderPublic) {
 }
 
 .login-card {
-  background: color-mix(in oklch, var(--card) 72%, transparent);
-  border: 1px solid color-mix(in oklch, var(--border) 55%, transparent);
+  background: color-mix(in oklch, var(--card) 78%, transparent);
+  border: 1px solid color-mix(in oklch, var(--primary) 22%, transparent);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   box-shadow: var(--elevation-xl);

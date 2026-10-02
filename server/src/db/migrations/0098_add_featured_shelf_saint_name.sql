@@ -1,0 +1,1 @@
+ALTER TABLE "dashboard_featured_shelves" ADD COLUMN "saint_name" text;

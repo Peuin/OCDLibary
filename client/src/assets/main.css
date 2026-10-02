@@ -187,6 +187,19 @@
   background-size: 100% 4px;
 }
 
+.pattern-carmel::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url('./backgrounds/carmel-light.jpg') center / cover no-repeat;
+}
+
+.dark .pattern-carmel::before {
+  background-image: url('./backgrounds/carmel-dark.jpg');
+}
+
 .pattern-vinyl::before {
   content: '';
   position: fixed;

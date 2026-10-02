@@ -74,6 +74,7 @@ exports.ACCENT_IDS = [
 exports.RADIUS_IDS = ["sharp", "default", "rounded", "pill"];
 exports.BACKGROUND_IDS = [
     "none",
+    "carmel",
     "dots",
     "cross",
     "millimeter",

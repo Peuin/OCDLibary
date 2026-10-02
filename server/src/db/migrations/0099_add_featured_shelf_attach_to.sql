@@ -1,0 +1,2 @@
+ALTER TABLE "dashboard_featured_shelves" ADD COLUMN "attach_to" varchar(40);--> statement-breakpoint
+CREATE UNIQUE INDEX "dashboard_featured_shelves_attach_to_uidx" ON "dashboard_featured_shelves" USING btree ("attach_to");

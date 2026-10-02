@@ -69,6 +69,7 @@ const SHELF_KEY_BY_TYPE: Record<ScrollerType, string> = {
   'up-next-in-series': 'upNextInSeries',
   random: 'random',
   'smart-scope': 'smartScope',
+  'featured-shelf': 'featuredShelf',
 }
 
 function smartScopeShelf(overrides: Partial<ScrollerConfig> = {}): ScrollerConfig {
@@ -192,10 +193,27 @@ describe('useDashboardLabels', () => {
       const { shelfTitle, shelfTypeName } = mountComposable()
 
       for (const type of SCROLLER_TYPES) {
-        if (type === 'smart-scope') continue
+        if (type === 'smart-scope' || type === 'featured-shelf') continue
         const stored: ScrollerConfig = { id: '1', type, label: 'Stale Stored Label', enabled: true, order: 1, limit: 20, rows: 1 }
         expect(shelfTitle(stored), `shelf title for ${type}`).toBe(shelfTypeName(type))
       }
+    })
+
+    it('titles a featured shelf with the name its administrator gave it', () => {
+      const { shelfTitle, shelfTypeName } = mountComposable()
+      const featured: ScrollerConfig = {
+        id: 'featured-3',
+        type: 'featured-shelf',
+        label: 'Linh đạo Cát Minh',
+        enabled: true,
+        order: 1,
+        limit: 20,
+        rows: 1,
+        featuredShelfId: 3,
+      }
+
+      expect(shelfTitle(featured)).toBe('Linh đạo Cát Minh')
+      expect(shelfTitle({ ...featured, label: '  ' })).toBe(shelfTypeName('featured-shelf'))
     })
 
     it('keeps the user-authored smart scope name untranslated', async () => {

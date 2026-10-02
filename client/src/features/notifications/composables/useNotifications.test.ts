@@ -190,7 +190,7 @@ describe('useNotifications', () => {
       expect(mockShowAchievementToast).toHaveBeenCalledWith('From meta', 'legendary')
     })
 
-    it('falls back to "New achievement" when both message and meta name are empty', async () => {
+    it('passes an empty name so the toast supplies its localized fallback', async () => {
       const handler = await getNotificationNewHandler()
       handler(
         makeNotification({
@@ -199,7 +199,7 @@ describe('useNotifications', () => {
           meta: { rarity: 'common', achievementName: '' },
         }),
       )
-      expect(mockShowAchievementToast).toHaveBeenCalledWith('New achievement', 'common')
+      expect(mockShowAchievementToast).toHaveBeenCalledWith('', 'common')
     })
 
     it('uses whitespace-trimmed message (empty after trim uses meta)', async () => {

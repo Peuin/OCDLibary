@@ -1,5 +1,6 @@
 import type { AchievementRarity } from '@bookorbit/types'
 import { toast } from 'vue-sonner'
+import { i18n } from '@/i18n'
 
 const RARITY_EMOJI: Record<AchievementRarity, string> = {
   common: '⭐',
@@ -27,10 +28,10 @@ let batchTimer: ReturnType<typeof setTimeout> | null = null
 let confettiActive = false
 
 export function showAchievementToast(name: string, rarity: AchievementRarity): void {
-  const achievementName = name.trim() || 'New achievement'
+  const achievementName = name.trim() || i18n.global.t('achievements.newAchievement')
 
   toast.success(`${RARITY_EMOJI[rarity]} ${achievementName}`, {
-    description: 'Achievement Unlocked!',
+    description: i18n.global.t('achievements.unlocked'),
     duration: rarity === 'epic' || rarity === 'legendary' ? 6000 : 4000,
   })
 

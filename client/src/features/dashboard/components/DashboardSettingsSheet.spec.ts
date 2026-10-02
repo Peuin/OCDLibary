@@ -14,10 +14,11 @@ import pt from '@/locales/pt.json'
 const PT_WIDGET_NAMES = { ...en.dashboard.settings.widgetNames, ...pt.dashboard.settings.widgetNames }
 const PT_SHELF_NAMES = { ...en.dashboard.settings.shelfNames, ...pt.dashboard.settings.shelfNames }
 const ENABLED_EN_SHELF_NAMES = Object.entries(en.dashboard.settings.shelfNames)
-  .filter(([key]) => key !== 'continuePodcasts')
+  // Podcasts are off in this build, and featured shelves are pinned by an administrator rather than picked.
+  .filter(([key]) => key !== 'continuePodcasts' && key !== 'featuredShelf')
   .map(([, label]) => label)
 const ENABLED_PT_SHELF_NAMES = Object.entries(PT_SHELF_NAMES)
-  .filter(([key]) => key !== 'continuePodcasts')
+  .filter(([key]) => key !== 'continuePodcasts' && key !== 'featuredShelf')
   .map(([, label]) => label)
 
 type UseSmartScopesMock = () => {
@@ -219,13 +220,14 @@ describe('DashboardSettingsSheet', () => {
     const wideButton = wrapper.findAll('button').find((button) => button.text().includes(en.dashboard.settings.shelfLayout.wide))
     const twoColumnButton = wrapper.findAll('button').find((button) => button.text().includes(en.dashboard.settings.shelfLayout.twoColumns))
 
-    expect(wideButton?.attributes('aria-pressed')).toBe('true')
-    expect(twoColumnButton?.attributes('aria-pressed')).toBe('false')
-
-    await twoColumnButton?.trigger('click')
-
+    // Two columns is the default layout.
     expect(wideButton?.attributes('aria-pressed')).toBe('false')
     expect(twoColumnButton?.attributes('aria-pressed')).toBe('true')
+
+    await wideButton?.trigger('click')
+
+    expect(wideButton?.attributes('aria-pressed')).toBe('true')
+    expect(twoColumnButton?.attributes('aria-pressed')).toBe('false')
   })
 
   it('translates the shelf selector when the locale changes', async () => {

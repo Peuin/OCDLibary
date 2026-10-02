@@ -9,10 +9,13 @@ export const SCROLLER_TYPE = {
   UP_NEXT_IN_SERIES: "up-next-in-series",
   RANDOM: "random",
   SMART_SCOPE: "smart-scope",
+  FEATURED_SHELF: "featured-shelf",
 } as const;
 
 export type ScrollerType = (typeof SCROLLER_TYPE)[keyof typeof SCROLLER_TYPE];
-export const SCROLLER_TYPES = Object.values(SCROLLER_TYPE) as ReadonlyArray<ScrollerType>;
+export const SCROLLER_TYPES = Object.values(
+  SCROLLER_TYPE,
+) as ReadonlyArray<ScrollerType>;
 
 /**
  * Shelves whose rows are books, which is every shelf `GET /dashboard/scrollers/:type` can serve.
@@ -27,15 +30,23 @@ export const BOOK_SCROLLER_TYPE = {
   UP_NEXT_IN_SERIES: SCROLLER_TYPE.UP_NEXT_IN_SERIES,
   RANDOM: SCROLLER_TYPE.RANDOM,
   SMART_SCOPE: SCROLLER_TYPE.SMART_SCOPE,
+  FEATURED_SHELF: SCROLLER_TYPE.FEATURED_SHELF,
 } as const;
 
-export type BookScrollerType = (typeof BOOK_SCROLLER_TYPE)[keyof typeof BOOK_SCROLLER_TYPE];
-export const BOOK_SCROLLER_TYPES = Object.values(BOOK_SCROLLER_TYPE) as ReadonlyArray<BookScrollerType>;
+export type BookScrollerType =
+  (typeof BOOK_SCROLLER_TYPE)[keyof typeof BOOK_SCROLLER_TYPE];
+export const BOOK_SCROLLER_TYPES = Object.values(
+  BOOK_SCROLLER_TYPE,
+) as ReadonlyArray<BookScrollerType>;
 
-export const PODCAST_SCROLLER_TYPES = [SCROLLER_TYPE.CONTINUE_PODCASTS] as const;
+export const PODCAST_SCROLLER_TYPES = [
+  SCROLLER_TYPE.CONTINUE_PODCASTS,
+] as const;
 export type PodcastScrollerType = (typeof PODCAST_SCROLLER_TYPES)[number];
 
-export function isPodcastScrollerType(type: ScrollerType): type is PodcastScrollerType {
+export function isPodcastScrollerType(
+  type: ScrollerType,
+): type is PodcastScrollerType {
   return (PODCAST_SCROLLER_TYPES as ReadonlyArray<ScrollerType>).includes(type);
 }
 
@@ -75,6 +86,7 @@ export interface DashboardScrollerBatchItem {
   type: BookScrollerType;
   limit: number;
   smartScopeId?: number;
+  featuredShelfId?: number;
 }
 
 export interface DashboardScrollerBatchRequest {
@@ -101,6 +113,73 @@ export interface ScrollerConfig {
   limit: number;
   rows: number;
   smartScopeId?: number;
+  featuredShelfId?: number;
+}
+
+export const DASHBOARD_SHELF_LAYOUTS = ["wide", "two-columns"] as const;
+export type DashboardShelfLayoutValue =
+  (typeof DASHBOARD_SHELF_LAYOUTS)[number];
+
+/** Shelves an administrator pins for every user, each backed by one public book collection. */
+export const DASHBOARD_FEATURED_SHELF_MAX = 8;
+export const DASHBOARD_FEATURED_SHELF_TITLE_MAX = 80;
+export const DASHBOARD_FEATURED_SHELF_SAINT_NAME_MAX = 120;
+
+/** Built-in book shelves a featured entry can decorate with its saint card instead of adding its own shelf. */
+export const DASHBOARD_ATTACHABLE_SHELF_TYPES = [
+  SCROLLER_TYPE.RECENTLY_ADDED,
+  SCROLLER_TYPE.RANDOM,
+  SCROLLER_TYPE.CONTINUE_READING,
+  SCROLLER_TYPE.CONTINUE_LISTENING,
+  SCROLLER_TYPE.WANT_TO_READ,
+  SCROLLER_TYPE.UP_NEXT_IN_SERIES,
+] as const;
+export type DashboardAttachableShelfType = (typeof DASHBOARD_ATTACHABLE_SHELF_TYPES)[number];
+export const DASHBOARD_FEATURED_SHELF_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+export interface DashboardFeaturedShelf {
+  id: number;
+  title: string;
+  collectionId: number;
+  collectionName: string;
+  /** Name shown under the portrait at the head of the shelf, or null for a plain shelf. */
+  saintName: string | null;
+  /** The built-in shelf this entry decorates, or null when it is a shelf of its own. */
+  attachTo: DashboardAttachableShelfType | null;
+  /** Versioned URL of the shelf portrait (3:4), or null when none was attached. */
+  imageUrl: string | null;
+  displayOrder: number;
+}
+
+export interface CreateDashboardFeaturedShelfRequest {
+  collectionId: number;
+  title?: string;
+  saintName?: string;
+  attachTo?: DashboardAttachableShelfType | null;
+}
+
+export interface UpdateDashboardFeaturedShelfRequest {
+  collectionId?: number;
+  title?: string;
+  /** An empty string clears the name. */
+  saintName?: string;
+  /** null turns the entry back into a shelf of its own. */
+  attachTo?: DashboardAttachableShelfType | null;
+}
+
+export interface ReorderDashboardFeaturedShelvesRequest {
+  ids: number[];
+}
+
+/** The shelf arrangement an administrator saved for users who have not customized their own. */
+export interface DashboardDefaultLayout {
+  scrollers: ScrollerConfig[];
+  shelfLayout: DashboardShelfLayoutValue;
+}
+
+export interface DashboardSharedConfig {
+  featuredShelves: DashboardFeaturedShelf[];
+  defaultLayout: DashboardDefaultLayout | null;
 }
 
 export const WIDGET_TYPE = {
@@ -119,7 +198,9 @@ export const WIDGET_TYPE = {
 } as const;
 
 export type WidgetType = (typeof WIDGET_TYPE)[keyof typeof WIDGET_TYPE];
-export const WIDGET_TYPES = Object.values(WIDGET_TYPE) as ReadonlyArray<WidgetType>;
+export const WIDGET_TYPES = Object.values(
+  WIDGET_TYPE,
+) as ReadonlyArray<WidgetType>;
 
 export interface WidgetConfig {
   id: string;
@@ -191,7 +272,13 @@ export interface HighlightOfTheDayWidgetData {
   createdAt: string;
 }
 
-export type ChallengeType = "short-read" | "genre-explorer" | "finish-oldest" | "streak-builder" | "new-author" | "page-milestone";
+export type ChallengeType =
+  | "short-read"
+  | "genre-explorer"
+  | "finish-oldest"
+  | "streak-builder"
+  | "new-author"
+  | "page-milestone";
 
 export interface MonthlyChallengeWidgetData {
   challengeType: ChallengeType;

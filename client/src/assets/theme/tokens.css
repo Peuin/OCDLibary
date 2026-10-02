@@ -59,6 +59,9 @@
 
   --star-highlight: oklch(0.76 0.18 90);
 
+  /* Gilt frame around saint portraits on featured dashboard shelves. */
+  --saint-frame-gold: oklch(0.8 0.1 80);
+
   /* Android brand green, darkened in light mode so the mark still separates from the sidebar. */
   --android-highlight: oklch(0.72 0.16 154);
 
@@ -325,6 +328,8 @@
   --info: oklch(0.72 0.12 255);
 
   --star-highlight: oklch(0.84 0.17 95);
+
+  --saint-frame-gold: oklch(0.72 0.09 78);
 
   --android-highlight: oklch(0.82 0.17 154);
 

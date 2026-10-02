@@ -680,6 +680,27 @@
       "when": 1790119788880,
       "tag": "0096_add_android_reading_session_source",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1790873992711,
+      "tag": "0097_add_dashboard_featured_shelves",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1790957304593,
+      "tag": "0098_add_featured_shelf_saint_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1790957662513,
+      "tag": "0099_add_featured_shelf_attach_to",
+      "breakpoints": true
     }
   ]
 }

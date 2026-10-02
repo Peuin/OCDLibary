@@ -60,14 +60,81 @@ describe('useDashboardConfig', () => {
       ['random', 'Discover Something New', true, 2],
       ['continue-reading', 'Continue Reading', true, 3],
       ['continue-listening', 'Continue Listening', true, 4],
-      ['want-to-read', 'Want to Read', false, 6],
-      ['up-next-in-series', 'Up Next in Series', false, 7],
+      ['want-to-read', 'Want to Read', true, 6],
+      ['up-next-in-series', 'Up Next in Series', true, 7],
     ])
 
     addScroller('smart-scope')
 
     expect(scrollers.value).toHaveLength(7)
     expect(DEFAULT_SCROLLERS).toHaveLength(6)
+  })
+
+  it('puts new featured shelves first and drops ones that are gone', async () => {
+    const { reconcileFeaturedShelves } = await import('../useDashboardConfig')
+    const list = [
+      { id: '1', type: 'recently-added' as const, label: 'Recently Added', enabled: true, order: 1, limit: 20, rows: 1 },
+      { id: 'featured-9', type: 'featured-shelf' as const, label: 'Old', enabled: false, order: 2, limit: 20, rows: 2, featuredShelfId: 9 },
+      { id: 'featured-8', type: 'featured-shelf' as const, label: 'Removed', enabled: true, order: 3, limit: 20, rows: 1, featuredShelfId: 8 },
+    ]
+    const shelf = (id: number, title: string) => ({
+      id,
+      title,
+      collectionId: id,
+      collectionName: title,
+      saintName: null,
+      attachTo: null,
+      imageUrl: null,
+      displayOrder: id,
+    })
+
+    const next = reconcileFeaturedShelves(list, { featuredShelves: [shelf(9, 'Renamed'), shelf(10, 'New')], defaultLayout: null })
+
+    expect(next.map((scroller) => [scroller.id, scroller.label, scroller.enabled, scroller.order])).toEqual([
+      ['featured-10', 'New', true, 1],
+      ['1', 'Recently Added', true, 2],
+      ['featured-9', 'Renamed', false, 3],
+    ])
+  })
+
+  it('keeps entries attached to a built-in shelf out of the shelf list', async () => {
+    const { reconcileFeaturedShelves } = await import('../useDashboardConfig')
+    const list = [{ id: '1', type: 'recently-added' as const, label: 'Recently Added', enabled: true, order: 1, limit: 20, rows: 1 }]
+
+    const next = reconcileFeaturedShelves(list, {
+      featuredShelves: [
+        {
+          id: 4,
+          title: 'Saint',
+          collectionId: 4,
+          collectionName: 'Saint',
+          saintName: 'St. Teresa',
+          attachTo: 'recently-added',
+          imageUrl: null,
+          displayOrder: 1,
+        },
+      ],
+      defaultLayout: null,
+    })
+
+    expect(next.map((scroller) => scroller.id)).toEqual(['1'])
+  })
+
+  it('follows the administrator default until the user saves their own', async () => {
+    const { useDashboardConfig } = await import('../useDashboardConfig')
+    const { scrollers, shelfLayout, applySharedConfig } = useDashboardConfig()
+
+    applySharedConfig({
+      featuredShelves: [],
+      defaultLayout: {
+        shelfLayout: 'wide',
+        scrollers: [{ id: '1', type: 'random', label: 'Discover Something New', enabled: true, order: 1, limit: 20, rows: 2 }],
+      },
+    })
+
+    expect(scrollers.value.map((scroller) => [scroller.type, scroller.rows])).toEqual([['random', 2]])
+    expect(shelfLayout.value).toBe('wide')
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
   })
 
   it('prunes shelves that reference deleted smart scopes', async () => {
@@ -132,7 +199,7 @@ describe('useDashboardConfig', () => {
       { id: '1', type: 'recently-added', label: 'Recently Added', enabled: true, order: 1, limit: 20, rows: 1 },
       { id: '17', type: 'smart-scope', label: 'Smart Scope', enabled: true, order: 2, limit: 20, rows: 1, smartScopeId: 23 },
     ])
-    expect(storedConfig()).toEqual({ scrollers: scrollers.value, shelfLayout: 'wide' })
+    expect(storedConfig()).toEqual({ scrollers: scrollers.value, shelfLayout: 'two-columns' })
 
     reset()
 

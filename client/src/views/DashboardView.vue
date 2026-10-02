@@ -15,6 +15,7 @@ import DashboardWelcome from '@/features/dashboard/components/DashboardWelcome.v
 import DashboardWidgetRow from '@/features/dashboard/components/DashboardWidgetRow.vue'
 import { SHELF_LAYOUT, useDashboardConfig } from '@/features/dashboard/composables/useDashboardConfig'
 import { useDashboardLabels } from '@/features/dashboard/composables/useDashboardLabels'
+import { useDashboardSharedConfig } from '@/features/dashboard/composables/useDashboardSharedConfig'
 import { useOnboardingTour } from '@/features/onboarding/composables/useOnboardingTour'
 import { useSmartScopes } from '@/features/smart-scope/composables/useSmartScopes'
 
@@ -22,7 +23,8 @@ const { t } = useI18n()
 const { hasPermission } = usePermissions()
 const { user } = useAuth()
 const { libraries, loading: librariesLoading, loaded: librariesLoaded, error: librariesError, fetchLibraries } = useLibraries()
-const { scrollers, shelfLayout, pruneDeletedSmartScopeScrollers } = useDashboardConfig()
+const { scrollers, shelfLayout, pruneDeletedSmartScopeScrollers, applySharedConfig } = useDashboardConfig()
+const { featuredShelves, defaultLayout, load: loadSharedConfig, featuredShelfById, featuredShelfAttachedTo } = useDashboardSharedConfig()
 const { shelfTitle } = useDashboardLabels()
 const { maybeStartTour } = useOnboardingTour()
 const { smartScopes, loaded: smartScopesLoaded, fetchSmartScopes } = useSmartScopes()
@@ -40,14 +42,39 @@ const enabledScrollers = computed(() =>
 // endpoints, so the split resolves here rather than as a type check in the template.
 type DashboardShelf =
   | { kind: 'podcast'; key: string; title: string; limit: number }
-  | { kind: 'book'; key: string; title: string; limit: number; rows: number; type: BookScrollerType; smartScopeId?: number }
+  | {
+      kind: 'book'
+      key: string
+      title: string
+      limit: number
+      rows: number
+      type: BookScrollerType
+      smartScopeId?: number
+      featuredShelfId?: number
+      featured?: { saintName: string | null; imageUrl: string | null; collectionId: number } | null
+    }
+
+function featuredDetails(type: BookScrollerType, featuredShelfId: number | undefined) {
+  const shelf = type === 'featured-shelf' ? featuredShelfById(featuredShelfId) : featuredShelfAttachedTo(type)
+  return shelf ? { saintName: shelf.saintName, imageUrl: shelf.imageUrl, collectionId: shelf.collectionId } : null
+}
 
 const shelves = computed<DashboardShelf[]>(() =>
   enabledScrollers.value.map((scroller) => {
-    const key = `${scroller.id}-${scroller.type}-${scroller.smartScopeId ?? 0}-${scroller.rows}`
+    const key = `${scroller.id}-${scroller.type}-${scroller.smartScopeId ?? 0}-${scroller.featuredShelfId ?? 0}-${scroller.rows}`
     const title = shelfTitle(scroller)
     if (isPodcastScrollerType(scroller.type)) return { kind: 'podcast', key, title, limit: scroller.limit }
-    return { kind: 'book', key, title, limit: scroller.limit, rows: scroller.rows, type: scroller.type, smartScopeId: scroller.smartScopeId }
+    return {
+      kind: 'book',
+      key,
+      title,
+      limit: scroller.limit,
+      rows: scroller.rows,
+      type: scroller.type,
+      smartScopeId: scroller.smartScopeId,
+      featuredShelfId: scroller.featuredShelfId,
+      featured: featuredDetails(scroller.type, scroller.featuredShelfId),
+    }
   }),
 )
 
@@ -89,9 +116,15 @@ function handleDashboardSettingsSaved() {
   dashboardRevision.value += 1
 }
 
+async function refreshSharedConfig() {
+  await loadSharedConfig()
+  applySharedConfig({ featuredShelves: featuredShelves.value, defaultLayout: defaultLayout.value })
+}
+
 onMounted(() => {
   void fetchLibraries()
   void fetchSmartScopes()
+  void refreshSharedConfig()
   greetingTimer = window.setInterval(() => {
     now.value = new Date()
   }, 60_000)
@@ -174,6 +207,8 @@ onUnmounted(() => {
                 :limit="shelf.limit"
                 :rows="shelf.rows"
                 :smartScope-id="shelf.smartScopeId"
+                :featured-shelf-id="shelf.featuredShelfId"
+                :featured="shelf.featured"
                 class="min-w-0 animate-fade-up"
                 :style="{ animationDelay: `${index * 100}ms` }"
               />
@@ -187,6 +222,6 @@ onUnmounted(() => {
       </div>
     </main>
 
-    <DashboardSettingsSheet v-model:open="settingsOpen" @saved="handleDashboardSettingsSaved" />
+    <DashboardSettingsSheet v-model:open="settingsOpen" @saved="handleDashboardSettingsSaved" @shared-changed="refreshSharedConfig" />
   </div>
 </template>

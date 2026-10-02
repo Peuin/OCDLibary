@@ -220,8 +220,8 @@
           "demoRestricted": "Tài khoản giới hạn dùng thử không thể đổi chế độ lưu giao diện",
           "update": "Không thể cập nhật chế độ lưu",
           "generic": "Đã xảy ra lỗi khi cập nhật chế độ lưu",
-          "saveDisplay": "Save Display",
-          "saveTheme": "Save Theme"
+          "saveDisplay": "Lưu hiển thị",
+          "saveTheme": "Lưu giao diện"
         }
       },
       "bookCovers": {
@@ -652,7 +652,7 @@
         "sharedAccount": "Tài khoản dùng chung",
         "selectAccount": "Chọn tài khoản dùng chung",
         "label": "Nhãn",
-        "labelPlaceholder": "Ví dụ: Liên kết dùng thử cho hội nghị",
+        "labelPlaceholder": "Ví dụ: Liên kết cho nhóm tĩnh tâm",
         "expiresAt": "Hết hạn lúc",
         "optional": "(không bắt buộc)",
         "create": "Tạo",
@@ -698,7 +698,7 @@
         "enableProvider": "Bật nhà cung cấp",
         "enableProviderHint": "Hiển thị nhà cung cấp này trên trang đăng nhập.",
         "identity": "Danh tính nhà cung cấp",
-        "slug": "Slug",
+        "slug": "Định danh",
         "slugHint": "Mã định danh duy nhất (chữ thường, dấu gạch ngang). Không thể đổi về sau.",
         "displayName": "Tên hiển thị",
         "displayNameHint": "Hiển thị trên nút đăng nhập.",
@@ -739,8 +739,8 @@
       "test": {
         "connected": "Đã kết nối - {issuer}",
         "connectionFailed": "Kết nối thất bại",
-        "privateIssuerAddress": "URL bên cấp phân giải thành địa chỉ mạng riêng hoặc cục bộ nên máy chủ từ chối kết nối. Đặt OIDC_ALLOW_LOCAL_ISSUERS=true trên máy chủ BookOrbit để cho phép.",
-        "tlsCertificateUntrusted": "BookOrbit không thể xác minh chứng chỉ TLS của nhà cung cấp OIDC. Nếu nhà cung cấp dùng tổ chức chứng thực riêng, hãy gắn bộ chứng chỉ CA định dạng PEM, đặt NODE_EXTRA_CA_CERTS thành đường dẫn bộ chứng chỉ trong container rồi khởi động lại BookOrbit.",
+        "privateIssuerAddress": "URL bên cấp phân giải thành địa chỉ mạng riêng hoặc cục bộ nên máy chủ từ chối kết nối. Đặt OIDC_ALLOW_LOCAL_ISSUERS=true trên máy chủ Thư viện Cát Minh để cho phép.",
+        "tlsCertificateUntrusted": "Thư viện Cát Minh không thể xác minh chứng chỉ TLS của nhà cung cấp OIDC. Nếu nhà cung cấp dùng tổ chức chứng thực riêng, hãy gắn bộ chứng chỉ CA định dạng PEM, đặt NODE_EXTRA_CA_CERTS thành đường dẫn bộ chứng chỉ trong container rồi khởi động lại Thư viện Cát Minh.",
         "hide": "Ẩn",
         "details": "Chi tiết",
         "supported": "được hỗ trợ",
@@ -748,7 +748,7 @@
       },
       "groupMappings": {
         "title": "Ánh xạ nhóm",
-        "description": "Ánh xạ thuộc tính nhóm OIDC sang quyền BookOrbit. Đồng bộ mỗi lần đăng nhập.",
+        "description": "Ánh xạ thuộc tính nhóm OIDC sang quyền Thư viện Cát Minh. Đồng bộ mỗi lần đăng nhập.",
         "noPermission": "Không có quyền",
         "empty": "Chưa cấu hình ánh xạ nhóm nào.",
         "addMapping": "Thêm ánh xạ",
@@ -982,7 +982,7 @@
         "targetUser": "Người dùng đích",
         "doNotImport": "Không nhập người dùng này",
         "noSourceUsersLoaded": "Chưa tải người dùng nguồn nào.",
-        "noActiveTargetUsers": "Không tìm thấy người dùng đích đang hoạt động. Tạo hoặc bật lại người dùng BookOrbit trước khi ánh xạ.",
+        "noActiveTargetUsers": "Không tìm thấy người dùng đích đang hoạt động. Tạo hoặc bật lại người dùng Thư viện Cát Minh trước khi ánh xạ.",
         "pathPrefixMappings": "Ánh xạ tiền tố đường dẫn",
         "addMapping": "Thêm ánh xạ",
         "pathMappingsHelp1": "Ánh xạ đường dẫn chuyển đường dẫn tệp nguồn sang đường dẫn đích để đối chiếu sách theo vị trí tệp. Ví dụ, nếu thư viện Booklore lưu tệp tại",
@@ -1272,7 +1272,7 @@
         "confirmReset": "Xác nhận đặt lại",
         "resetDialog": {
           "title": "Đặt lại mọi trọng số về mặc định?",
-          "description": "Cả 24 trường sẽ trở về trọng số mặc định của BookOrbit. Chỉ lưu khi bạn chọn Lưu và chấm lại điểm."
+          "description": "Cả 24 trường sẽ trở về trọng số mặc định của Thư viện Cát Minh. Chỉ lưu khi bạn chọn Lưu và chấm lại điểm."
         },
         "reset": "Đặt lại",
         "recalculate": "Tính lại",
@@ -1689,9 +1689,9 @@
           "aladin": "Aladin cần khóa TTB trước khi bật"
         },
         "toasts": {
-          "saved": "Saved",
-          "saveFailed": "Save Failed",
-          "testFailed": "Test Failed"
+          "saved": "Đã lưu",
+          "saveFailed": "Lưu thất bại",
+          "testFailed": "Kiểm tra thất bại"
         }
       },
       "fieldRules": {
@@ -1944,18 +1944,18 @@
         "noLibraries": "Chưa có thư viện nào.",
         "allLibraries": "Mọi thư viện",
         "toasts": {
-          "loadFailed": "Load Failed",
-          "created": "Created",
-          "createFailed": "Create Failed",
-          "saved": "Saved",
-          "saveFailed": "Save Failed",
-          "archived": "Archived",
-          "archiveFailed": "Archive Failed",
-          "restored": "Restored",
-          "restoreFailed": "Restore Failed",
-          "deleted": "Deleted",
-          "deleteFailed": "Delete Failed",
-          "reorderFailed": "Reorder Failed"
+          "loadFailed": "Tải thất bại",
+          "created": "Đã tạo",
+          "createFailed": "Tạo thất bại",
+          "saved": "Đã lưu",
+          "saveFailed": "Lưu thất bại",
+          "archived": "Đã lưu trữ",
+          "archiveFailed": "Lưu trữ thất bại",
+          "restored": "Đã khôi phục",
+          "restoreFailed": "Khôi phục thất bại",
+          "deleted": "Đã xóa",
+          "deleteFailed": "Xóa thất bại",
+          "reorderFailed": "Sắp xếp lại thất bại"
         }
       },
       "tabs": {
@@ -2469,13 +2469,13 @@
         "syncUrlCopyFailed": "Không thể sao chép URL đồng bộ",
         "syncPreferences": "Tùy chọn đồng bộ",
         "twoWaySync": "Đồng bộ tiến độ hai chiều",
-        "twoWaySyncHint": "Đồng bộ vị trí đọc giữa BookOrbit và Kobo. Cần gửi dạng KEPUB để có vị trí chính xác và khôi phục trang đáng tin cậy.",
-        "syncHighlights": "Đồng bộ đánh dấu BookOrbit sang Kobo",
-        "syncHighlightsHint": "Gửi đánh dấu tạo trong BookOrbit hoặc KOReader sang Kobo. Đánh dấu Kobo vẫn được nhập vào BookOrbit khi tắt tùy chọn này. Chú thích liên kết đồng bộ sửa và xóa hai chiều. Cần gửi dạng KEPUB; sách trên Kobo phải là KEPUB tải từ BookOrbit.",
+        "twoWaySyncHint": "Đồng bộ vị trí đọc giữa Thư viện Cát Minh và Kobo. Cần gửi dạng KEPUB để có vị trí chính xác và khôi phục trang đáng tin cậy.",
+        "syncHighlights": "Đồng bộ đánh dấu Thư viện Cát Minh sang Kobo",
+        "syncHighlightsHint": "Gửi đánh dấu tạo trong Thư viện Cát Minh hoặc KOReader sang Kobo. Đánh dấu Kobo vẫn được nhập vào Thư viện Cát Minh khi tắt tùy chọn này. Chú thích liên kết đồng bộ sửa và xóa hai chiều. Cần gửi dạng KEPUB; sách trên Kobo phải là KEPUB tải từ Thư viện Cát Minh.",
         "storeSync": "Bao gồm sách cửa hàng Kobo",
-        "storeSyncHint": "Gửi thêm sách từ tài khoản Kobo, gồm Kobo Plus và sách đã mua, cùng thư viện BookOrbit. Nếu tắt, chỉ sách BookOrbit được gửi tới thiết bị. Sách cửa hàng tải trực tiếp từ Kobo và không thêm vào thư viện BookOrbit.",
+        "storeSyncHint": "Gửi thêm sách từ tài khoản Kobo, gồm Kobo Plus và sách đã mua, cùng Thư viện Cát Minh. Nếu tắt, chỉ sách trong Thư viện Cát Minh được gửi tới thiết bị. Sách cửa hàng tải trực tiếp từ Kobo và không thêm vào Thư viện Cát Minh.",
         "convertKepub": "Chuyển sang KEPUB",
-        "convertKepubHint": "Gửi EPUB đủ điều kiện dưới dạng KEPUB. Luôn bật khi đồng bộ tiến độ hoặc đánh dấu từ BookOrbit sang Kobo đang bật. Ở lần đồng bộ Kobo tiếp theo, sách bị ảnh hưởng được cung cấp lại dưới dạng KEPUB; xóa bản EPUB cũ nếu Kobo vẫn mở bản đó.",
+        "convertKepubHint": "Gửi EPUB đủ điều kiện dưới dạng KEPUB. Luôn bật khi đồng bộ tiến độ hoặc đánh dấu từ Thư viện Cát Minh sang Kobo đang bật. Ở lần đồng bộ Kobo tiếp theo, sách bị ảnh hưởng được cung cấp lại dưới dạng KEPUB; xóa bản EPUB cũ nếu Kobo vẫn mở bản đó.",
         "forceHyphenation": "Buộc ngắt từ",
         "forceHyphenationHint": "Đảm bảo căn đều văn bản nhất quán. Sẽ tạo lại KEPUB trong bộ nhớ đệm.",
         "progressThresholds": "Ngưỡng tiến độ",
@@ -2485,7 +2485,7 @@
         "markAsFinished": "Đánh dấu đã đọc xong",
         "markAsFinishedHint": "Ngưỡng tỷ lệ để đánh dấu sách \"Đã đọc xong\".",
         "kepubLimit": "Giới hạn chuyển đổi KEPUB",
-        "kepubLimitHint": "Sách vượt giới hạn được gửi dạng EPUB thường nên BookOrbit không đồng bộ vị trí đọc của chúng về Kobo.",
+        "kepubLimitHint": "Sách vượt giới hạn được gửi dạng EPUB thường nên Thư viện Cát Minh không đồng bộ vị trí đọc của chúng về Kobo.",
         "changesMustBeSaved": "Phải lưu thay đổi để có hiệu lực.",
         "saving": "Đang lưu...",
         "saveSyncSettings": "Lưu cài đặt đồng bộ",
@@ -2547,8 +2547,8 @@
           "readingPositionSynced": "Đã đồng bộ vị trí đọc",
           "labelWithTitle": "{label}: {title}",
           "updateCount": "{count, plural, other {# cập nhật}}",
-          "directionToKobo": "BookOrbit -> Kobo",
-          "directionToBookOrbit": "Kobo -> BookOrbit",
+          "directionToKobo": "Thư viện Cát Minh -> Kobo",
+          "directionToBookOrbit": "Kobo -> Thư viện Cát Minh",
           "twoWaySyncEnabled": "Đã bật đồng bộ hai chiều",
           "deviceProgressSaved": "Đã lưu tiến độ thiết bị",
           "summary": {
@@ -2580,7 +2580,7 @@
           "filterFailures": "Lỗi",
           "refresh": "Làm mới",
           "loadingActivity": "Đang tải hoạt động Kobo...",
-          "noActivityHint": "Hoạt động đồng bộ gần đây sẽ xuất hiện sau khi Kobo đã ghép nối liên hệ BookOrbit.",
+          "noActivityHint": "Hoạt động đồng bộ gần đây sẽ xuất hiện sau khi Kobo đã ghép nối liên hệ Thư viện Cát Minh.",
           "error": "Lỗi",
           "loading": "Đang tải...",
           "loadMore": "Tải thêm hoạt động"
@@ -2592,7 +2592,7 @@
         "nextSteps": {
           "title": "Bước tiếp theo",
           "step1": "1. Cấu hình Kobo để đồng bộ với URL đồng bộ ở trên.",
-          "step2": "2. Trong BookOrbit, mở bộ sưu tập từ thanh bên, nhấp biểu tượng Sửa rồi bật {syncToKobo}. Chỉ sách trong bộ sưu tập bật đồng bộ mới tải về thiết bị."
+          "step2": "2. Trong Thư viện Cát Minh, mở bộ sưu tập từ thanh bên, nhấp biểu tượng Sửa rồi bật {syncToKobo}. Chỉ sách trong bộ sưu tập bật đồng bộ mới tải về thiết bị."
         },
         "syncToKobo": "Đồng bộ sang Kobo",
         "tabs": {
@@ -2602,7 +2602,7 @@
       },
       "koreader": {
         "title": "Đồng bộ KOReader",
-        "subtitle": "Duyệt danh mục BookOrbit trong KOReader và đồng bộ tiến độ, hoạt động đọc, đánh dấu và thay đổi chú thích.",
+        "subtitle": "Duyệt danh mục Thư viện Cát Minh trong KOReader và đồng bộ tiến độ, hoạt động đọc, đánh dấu và thay đổi chú thích.",
         "tabs": {
           "sync": "Cài đặt đồng bộ",
           "fileNaming": "Đặt tên tệp"
@@ -2617,7 +2617,7 @@
           "saveAccount": "Lưu mặc định tài khoản",
           "deviceTitle": "Ghi đè thiết bị KOReader",
           "deviceDescription": "Tùy chỉnh đường dẫn mặc định, bộ sách và sách lẻ theo ý muốn. Dòng riêng thiết bị để trống sẽ kế thừa mặc định thiết bị, vốn có thể kế thừa mẫu KOReader mặc định của tài khoản.",
-          "noDevices": "Thiết bị xuất hiện ở đây sau khi đồng bộ với BookOrbit.",
+          "noDevices": "Thiết bị xuất hiện ở đây sau khi đồng bộ với Thư viện Cát Minh.",
           "customOrganization": "Tổ chức tùy chỉnh",
           "usingAccountDefault": "Dùng mặc định tài khoản",
           "deviceDefaultHelp": "Dự phòng cho thiết bị này. Giữ giống mặc định tài khoản để tự động kế thừa thay đổi sau này.",
@@ -2656,7 +2656,7 @@
         "notConfiguredHint": "Tạo một bộ thông tin xác thực đồng bộ, rồi dùng với plugin BookOrbit KOReader để duyệt, tải xuống, đồng bộ tiến độ, sự kiện đọc, đánh dấu và xóa.",
         "createCredentials": "Tạo thông tin xác thực",
         "createFormTitle": "Tạo thông tin xác thực đồng bộ KOReader",
-        "createFormHint": "Thông tin này xác thực thiết bị KOReader của bạn với BookOrbit.",
+        "createFormHint": "Thông tin này xác thực thiết bị KOReader của bạn với Thư viện Cát Minh.",
         "username": "Tên đăng nhập",
         "usernamePlaceholder": "Ví dụ: maydocsach",
         "password": "Mật khẩu",
@@ -2664,7 +2664,7 @@
         "changeCredentials": {
           "action": "Đổi thông tin xác thực",
           "title": "Đổi thông tin xác thực KOReader",
-          "description": "Mỗi tài khoản BookOrbit có một bộ thông tin xác thực KOReader. Đổi tại đây mà không xóa dữ liệu đã đồng bộ.",
+          "description": "Mỗi tài khoản Thư viện Cát Minh có một bộ thông tin xác thực KOReader. Đổi tại đây mà không xóa dữ liệu đã đồng bộ.",
           "newPassword": "Mật khẩu mới",
           "usernameInvalid": "Tên đăng nhập phải có từ 3 đến 100 ký tự.",
           "passwordPlaceholder": "Để trống để giữ mật khẩu hiện tại",
@@ -2685,7 +2685,7 @@
         "status": "Trạng thái KOReader",
         "refresh": "Làm mới",
         "progressSync": "Đồng bộ tiến độ",
-        "progressSyncHint": "Cho phép thiết bị KOReader đồng bộ tiến độ, hoạt động đọc, đánh dấu và xóa chú thích với BookOrbit.",
+        "progressSyncHint": "Cho phép thiết bị KOReader đồng bộ tiến độ, hoạt động đọc, đánh dấu và xóa chú thích với Thư viện Cát Minh.",
         "lastSync": "Lần đồng bộ gần nhất",
         "syncedBooks": "Sách đã đồng bộ",
         "bookCount": "{count, plural, =0 {không có sách} other {# sách}}",
@@ -2737,7 +2737,7 @@
         "stockStep2": "Đặt máy chủ đồng bộ tùy chỉnh thành URL ở trên.",
         "stockStep2InlineUrl": "Đặt máy chủ đồng bộ tùy chỉnh thành URL sau:",
         "stockStep3": "Nhập tên đăng nhập và mật khẩu đã tạo rồi nhấn Đăng nhập.",
-        "locationNote": "BookOrbit lưu vị trí EPUB tương thích KOReader từ trình đọc web. Khôi phục sẽ đưa bạn gần đúng vị trí đó, dù vị trí dòng chính xác có thể khác theo trình đọc và bố cục EPUB.",
+        "locationNote": "Thư viện Cát Minh lưu vị trí EPUB tương thích KOReader từ trình đọc web. Khôi phục sẽ đưa bạn gần đúng vị trí đó, dù vị trí dòng chính xác có thể khác theo trình đọc và bố cục EPUB.",
         "dangerZone": "Vùng nguy hiểm",
         "deleteCredentials": "Xóa thông tin xác thực KOReader",
         "deleteCredentialsHint": "Xóa thông tin xác thực đồng bộ và ngắt kết nối mọi thiết bị. Dữ liệu tiến độ được giữ lại.",
@@ -2778,7 +2778,7 @@
           "unknownFile": "Tệp KOReader không xác định {hash}",
           "unknownAuthor": "Tác giả không xác định",
           "noTitleOrAuthor": "Không có thông tin tiêu đề hoặc tác giả",
-          "bookNumber": "Sách BookOrbit #{id}",
+          "bookNumber": "Sách trong Thư viện Cát Minh #{id}",
           "toast": {
             "unmatchedRefreshed": "Đã làm mới sách chưa khớp",
             "unmatchedRefreshFailed": "Không thể làm mới sách chưa khớp",
@@ -2797,8 +2797,8 @@
           "modal": {
             "linkTitle": "Liên kết sách KOReader",
             "changeTitle": "Đổi liên kết KOReader",
-            "bookOrbitBook": "Sách BookOrbit",
-            "searchPlaceholder": "Tìm trong thư viện BookOrbit",
+            "bookOrbitBook": "Sách trong Thư viện Cát Minh",
+            "searchPlaceholder": "Tìm trong Thư viện Cát Minh",
             "minChars": "Nhập ít nhất 2 ký tự.",
             "searching": "Đang tìm...",
             "noBooksFound": "Không tìm thấy sách.",
@@ -2808,14 +2808,14 @@
             "loadMore": "Tải thêm",
             "confirmTitle": "Xác nhận liên kết KOReader",
             "koreader": "KOReader",
-            "bookOrbit": "BookOrbit",
+            "bookOrbit": "Thư viện Cát Minh",
             "bookId": "ID sách: {id}",
-            "syncedStatsNote": "Thống kê đã đồng bộ vẫn giữ trên sách BookOrbit hiện tại.",
+            "syncedStatsNote": "Thống kê đã đồng bộ vẫn giữ trên sách trong Thư viện Cát Minh hiện tại.",
             "chooseDifferent": "Chọn sách khác",
             "saving": "Đang lưu...",
             "confirmLink": "Xác nhận liên kết",
             "unlinkTitle": "Hủy liên kết sách KOReader?",
-            "unlinkBody": "Các lần đồng bộ sau cho mã băm này sẽ không còn khớp với {title} cho đến khi liên kết lại. Thống kê đã đồng bộ vẫn giữ trên sách BookOrbit hiện tại.",
+            "unlinkBody": "Các lần đồng bộ sau cho mã băm này sẽ không còn khớp với {title} cho đến khi liên kết lại. Thống kê đã đồng bộ vẫn giữ trên sách trong Thư viện Cát Minh hiện tại.",
             "unlinking": "Đang hủy liên kết..."
           },
           "dismiss": "Bỏ qua",
@@ -2823,15 +2823,15 @@
           "dismissing": "Đang bỏ qua...",
           "unlinking": "Đang hủy liên kết...",
           "unlinkConfirmTitle": "Hủy liên kết sách KOReader?",
-          "unlinkConfirmBody": "Các lần đồng bộ sau cho mã băm này sẽ không còn khớp với {title} cho đến khi liên kết lại. Thống kê đã đồng bộ vẫn giữ trên sách BookOrbit hiện tại.",
+          "unlinkConfirmBody": "Các lần đồng bộ sau cho mã băm này sẽ không còn khớp với {title} cho đến khi liên kết lại. Thống kê đã đồng bộ vẫn giữ trên sách trong Thư viện Cát Minh hiện tại.",
           "dismissConfirmTitle": "Bỏ qua {title}?",
           "dismissConfirmBody": "Thao tác này xóa sách khỏi danh sách chưa khớp. Nếu thiết bị báo lại mã băm này, sách sẽ xuất hiện lại như mục mới.",
           "dismissAllConfirmTitle": "{count, plural, =0 {không có sách chưa khớp} other {Bỏ qua cả # sách chưa khớp?}}",
           "dismissAllConfirmBody": "Thao tác này xóa toàn bộ danh sách sách chưa khớp, không chỉ trang hiện tại. Nếu thiết bị báo lại một trong các mã băm này, sách sẽ xuất hiện lại như mục mới.",
           "changeLinkTitle": "Đổi liên kết KOReader",
           "linkBookTitle": "Liên kết sách KOReader",
-          "bookOrbitBook": "Sách BookOrbit",
-          "searchLibraryPlaceholder": "Tìm trong thư viện BookOrbit",
+          "bookOrbitBook": "Sách trong Thư viện Cát Minh",
+          "searchLibraryPlaceholder": "Tìm trong Thư viện Cát Minh",
           "enterMinChars": "Nhập ít nhất 2 ký tự.",
           "searching": "Đang tìm...",
           "noBooksFound": "Không tìm thấy sách.",
@@ -2842,7 +2842,7 @@
           "loadingMore": "Đang tải...",
           "confirmLinkTitle": "Xác nhận liên kết KOReader",
           "bookId": "ID sách: {id}",
-          "syncedStatsNote": "Thống kê đã đồng bộ vẫn giữ trên sách BookOrbit hiện tại.",
+          "syncedStatsNote": "Thống kê đã đồng bộ vẫn giữ trên sách trong Thư viện Cát Minh hiện tại.",
           "chooseDifferent": "Chọn sách khác",
           "saving": "Đang lưu...",
           "confirmLink": "Xác nhận liên kết"
@@ -2952,7 +2952,7 @@
         "deleteClient": "Xóa {name}",
         "clientsEmpty": {
           "title": "Chưa có ứng dụng tải xuống",
-          "body": "Tải HTTP trực tiếp không cần ứng dụng. Kết nối ứng dụng để BookOrbit tải thêm bản phát hành qua torrent hoặc Usenet.",
+          "body": "Tải HTTP trực tiếp không cần ứng dụng. Kết nối ứng dụng để Thư viện Cát Minh tải thêm bản phát hành qua torrent hoặc Usenet.",
           "note": "Hỗ trợ qBittorrent, Transmission, Deluge, NZBGet và SABnzbd."
         },
         "summary": "{type} - danh mục {category}, ưu tiên {priority}",
@@ -2991,7 +2991,7 @@
           "passwordWillClear": "Mật khẩu đã lưu sẽ bị xóa khi bạn lưu",
           "apiKeyWillClear": "Khóa API đã lưu sẽ bị xóa khi bạn lưu",
           "category": "Danh mục",
-          "categoryHint": "Gắn thẻ cho lượt tải do BookOrbit thêm để chỉ xử lý các mục của mình.",
+          "categoryHint": "Gắn thẻ cho lượt tải do Thư viện Cát Minh thêm để chỉ xử lý các mục của mình.",
           "priority": "Ưu tiên",
           "enabled": "Đã bật",
           "useHardlinks": "Dùng liên kết cứng",
@@ -3003,12 +3003,12 @@
         },
         "mappings": {
           "title": "Ánh xạ đường dẫn",
-          "hint": "Chuyển đường dẫn ứng dụng báo về thành đường dẫn BookOrbit mở được. Cần khi hai ứng dụng chạy trong container riêng.",
+          "hint": "Chuyển đường dẫn ứng dụng báo về thành đường dẫn Thư viện Cát Minh mở được. Cần khi hai ứng dụng chạy trong container riêng.",
           "add": "Thêm ánh xạ",
           "remove": "Xóa ánh xạ",
           "remotePath": "Đường dẫn ứng dụng",
-          "localPath": "Đường dẫn BookOrbit",
-          "brief": "Bắt buộc. Khai báo thư mục BookOrbit được phép nhập; khi ứng dụng thấy cùng tệp tại cùng đường dẫn, ánh xạ thư mục tải xuống với chính nó.",
+          "localPath": "Đường dẫn Thư viện Cát Minh",
+          "brief": "Bắt buộc. Khai báo thư mục Thư viện Cát Minh được phép nhập; khi ứng dụng thấy cùng tệp tại cùng đường dẫn, ánh xạ thư mục tải xuống với chính nó.",
           "identityExample": "Cùng hệ thống tệp? Dùng cùng đường dẫn ở hai phía, ví dụ /downloads bên trái và /downloads bên phải."
         },
         "hardlink": {
@@ -3017,16 +3017,16 @@
           "works": "Liên kết cứng hoạt động ở đây: nhập sẽ không tốn gấp đôi dung lượng.",
           "unavailable": "Không dùng được liên kết cứng ở đây: nhập sẽ sao chép và tốn gấp đôi dung lượng.",
           "link_refused": "Hệ thống tệp từ chối liên kết ({code}): nhập sẽ sao chép và tốn gấp đôi dung lượng.",
-          "download_dir_unwritable": "BookOrbit không ghi được vào thư mục tải xuống ({code}) nên không thể kiểm tra liên kết cứng.",
-          "localMissing": "BookOrbit không thấy đường dẫn đó.",
+          "download_dir_unwritable": "Thư viện Cát Minh không ghi được vào thư mục tải xuống ({code}) nên không thể kiểm tra liên kết cứng.",
+          "localMissing": "Thư viện Cát Minh không thấy đường dẫn đó.",
           "dockMissing": "Không đọc được thư mục Book Dock."
         },
         "reconciliation": {
           "action": "Đối soát",
-          "clean": "Mọi mục thuộc sở hữu trong ứng dụng đều khớp với lượt tải BookOrbit còn lưu.",
-          "unsupported": "Ứng dụng này không thể liệt kê mục theo dấu sở hữu BookOrbit. Với Deluge, bật plugin Label; với Transmission, cấu hình thư mục danh mục.",
+          "clean": "Mọi mục thuộc sở hữu trong ứng dụng đều khớp với lượt tải Thư viện Cát Minh còn lưu.",
+          "unsupported": "Ứng dụng này không thể liệt kê mục theo dấu sở hữu Thư viện Cát Minh. Với Deluge, bật plugin Label; với Transmission, cấu hình thư mục danh mục.",
           "truncated": "Ứng dụng trả về hơn 1.000 mục thuộc sở hữu. Xử lý các mục đang hiển thị rồi đối soát lại.",
-          "orphan": "Không có lượt tải BookOrbit còn lưu sở hữu mục này trong ứng dụng.",
+          "orphan": "Không có lượt tải Thư viện Cát Minh còn lưu sở hữu mục này trong ứng dụng.",
           "failedAttempt": "Ứng dụng vẫn giữ mục này nhưng lượt tải cho \"{title}\" được đánh dấu thất bại.",
           "missing": "Lượt tải {status} này không còn trong ứng dụng tải xuống.",
           "adopt": "Gắn vào {title}",
@@ -3035,7 +3035,7 @@
           "removed": "Đã xóa mục mồ côi trong ứng dụng",
           "removeTitle": "Xóa mục mồ côi này khỏi ứng dụng?",
           "removeDescription": "{name} bị xóa khỏi ứng dụng tải xuống. Các tệp đã tải được giữ lại.",
-          "notOrphan": "Mục đó vẫn gắn với một lượt tải BookOrbit.",
+          "notOrphan": "Mục đó vẫn gắn với một lượt tải Thư viện Cát Minh.",
           "notAdoptable": "Mục trong ứng dụng hoặc lượt tải thất bại đã thay đổi và không thể gắn nữa. Hãy đối soát lại."
         },
         "errors": {
@@ -3051,8 +3051,8 @@
           "encryptionKeyChanged": "Không đọc được thông tin xác thực ứng dụng đã lưu. BOOK_REQUEST_ENCRYPTION_KEY có thể đã thay đổi từ lúc lưu.",
           "pathNotAbsolute": "Ánh xạ phải dùng đường dẫn tuyệt đối ở cả hai phía",
           "nameRequired": "Đặt tên cho ứng dụng này.",
-          "urlRequired": "Nhập địa chỉ để BookOrbit kết nối ứng dụng này.",
-          "mappingRequired": "Thêm ít nhất một ánh xạ đường dẫn để BookOrbit biết thư mục được phép nhập.",
+          "urlRequired": "Nhập địa chỉ để Thư viện Cát Minh kết nối ứng dụng này.",
+          "mappingRequired": "Thêm ít nhất một ánh xạ đường dẫn để Thư viện Cát Minh biết thư mục được phép nhập.",
           "apiKeyRequired": "Nhập khóa API SABnzbd từ Config > General."
         },
         "encryptionKeyMissing": "Chưa đặt BOOK_REQUEST_ENCRYPTION_KEY nên không thể lưu thông tin xác thực ứng dụng. Tạo bằng: openssl rand -hex 32",
@@ -3068,14 +3068,14 @@
           "loading": "Đang tải bộ lập chỉ mục...",
           "empty": {
             "title": "Chưa có nguồn",
-            "body": "BookOrbit không kèm nguồn riêng nên tìm kiếm yêu cầu không có kết quả cho đến khi bạn thêm nguồn. Chọn thiết lập phù hợp với các bộ lập chỉ mục của bạn.",
-            "bodyOneWay": "BookOrbit không kèm nguồn riêng nên tìm kiếm yêu cầu không có kết quả cho đến khi bạn thêm nguồn.",
+            "body": "Thư viện Cát Minh không kèm nguồn riêng nên tìm kiếm yêu cầu không có kết quả cho đến khi bạn thêm nguồn. Chọn thiết lập phù hợp với các bộ lập chỉ mục của bạn.",
+            "bodyOneWay": "Thư viện Cát Minh không kèm nguồn riêng nên tìm kiếm yêu cầu không có kết quả cho đến khi bạn thêm nguồn.",
             "responsibility": "Bạn chịu trách nhiệm về nội dung được lập chỉ mục bởi nguồn bạn thêm.",
             "prowlarrTitle": "Kết nối Prowlarr",
             "prowlarrBody": "Quản lý nhiều bộ lập chỉ mục torrent và Usenet qua một kết nối.",
             "recommended": "Đề xuất",
             "pluginTitle": "Cài plugin",
-            "pluginBody": "Một tệp giúp BookOrbit tìm kiếm trên trang cụ thể. Bạn cung cấp tệp rồi điền cài đặt.",
+            "pluginBody": "Một tệp giúp Thư viện Cát Minh tìm kiếm trên trang cụ thể. Bạn cung cấp tệp rồi điền cài đặt.",
             "torznabTitle": "Thêm bộ lập chỉ mục Torznab",
             "torznabBody": "Trỏ tới nguồn cấp Prowlarr, Jackett hoặc NZBHydra bạn đang chạy. Mỗi nguồn cấp một cấu hình.",
             "builtInTitle": "Thêm bộ lập chỉ mục",
@@ -3100,7 +3100,7 @@
           "pluginFailed": "Plugin trong \"{directory}\" không tải được: {reason}",
           "sources": {
             "title": "Nguồn",
-            "hint": "Mọi nơi BookOrbit có thể tìm kiếm, nhóm theo kết nối.",
+            "hint": "Mọi nơi Thư viện Cát Minh có thể tìm kiếm, nhóm theo kết nối.",
             "add": "Thêm nguồn",
             "prowlarr": "Kết nối Prowlarr",
             "prowlarrHint": "Quản lý nhiều bộ lập chỉ mục torrent và Usenet cùng nhau.",
@@ -3216,12 +3216,12 @@
             "credentialRequired": "Bộ lập chỉ mục đó cần thông tin xác thực trước khi dùng",
             "invalidSettings": "Một hoặc nhiều cài đặt nguồn không hợp lệ. Kiểm tra các lựa chọn.",
             "nameRequired": "Đặt tên cho bộ lập chỉ mục này.",
-            "urlRequired": "Nhập địa chỉ để BookOrbit tìm kiếm."
+            "urlRequired": "Nhập địa chỉ để Thư viện Cát Minh tìm kiếm."
           },
           "editName": "Sửa {name}",
           "editorDescription": "Cài đặt cho bộ lập chỉ mục này.",
           "chooseType": "Chọn loại bộ lập chỉ mục",
-          "chooseTypeHint": "Chọn nơi BookOrbit tìm kiếm. Biểu mẫu chỉ hỏi những thông tin nguồn đó cần.",
+          "chooseTypeHint": "Chọn nơi Thư viện Cát Minh tìm kiếm. Biểu mẫu chỉ hỏi những thông tin nguồn đó cần.",
           "builtIn": "Tích hợp sẵn",
           "plugin": "Plugin",
           "typeDescriptions": {
@@ -3230,7 +3230,7 @@
           },
           "plugins": {
             "title": "Plugin",
-            "hint": "Trang BookOrbit có thể tìm kiếm, được thêm bằng một tệp plugin.",
+            "hint": "Trang Thư viện Cát Minh có thể tìm kiếm, được thêm bằng một tệp plugin.",
             "directoryLink": "Duyệt plugin thư viện mở",
             "none": "Chưa cài plugin. Cài plugin để tìm trên trang mà giao thức tích hợp chưa hỗ trợ.",
             "install": "Cài plugin",
@@ -3242,7 +3242,7 @@
             "removeFailed": "Không thể xóa plugin đó.",
             "confirmRemove": "Xóa plugin {label}?",
             "replaces": "Thao tác này thay plugin {type} đã cài.",
-            "restartRequired": "Khởi động lại BookOrbit để thay đổi plugin có hiệu lực.",
+            "restartRequired": "Khởi động lại Thư viện Cát Minh để thay đổi plugin có hiệu lực.",
             "confirmInstall": "Cài plugin",
             "configure": "Thiết lập",
             "notSetUp": "Chưa thiết lập",
@@ -3289,11 +3289,11 @@
             "credential": "Thông tin xác thực",
             "credentialRequired": "Bắt buộc",
             "credentialNone": "Không có",
-            "trustWarning": "Plugin chạy bên trong BookOrbit với quyền truy cập cơ sở dữ liệu, tệp thư viện và khóa mã hóa. Chỉ cài từ nguồn bạn tin cậy và đọc mã trước.",
+            "trustWarning": "Plugin chạy bên trong Thư viện Cát Minh với quyền truy cập cơ sở dữ liệu, tệp thư viện và khóa mã hóa. Chỉ cài từ nguồn bạn tin cậy và đọc mã trước.",
             "sectionTitle": "Plugin",
             "removeUnusedWarning": "Plugin sẽ bị xóa vĩnh viễn khỏi máy chủ."
           },
-          "posture": "BookOrbit không cung cấp hay chứng thực nguồn lập chỉ mục. Mọi nguồn ở đây do bạn cấu hình và bạn chịu trách nhiệm về nội dung tìm kiếm, tải xuống qua đó."
+          "posture": "Thư viện Cát Minh không cung cấp hay chứng thực nguồn lập chỉ mục. Mọi nguồn ở đây do bạn cấu hình và bạn chịu trách nhiệm về nội dung tìm kiếm, tải xuống qua đó."
         },
         "managers": {
           "add": "Thêm Prowlarr",
@@ -3314,7 +3314,7 @@
           "toggleSource": "Tìm bằng {name}",
           "changeColor": "Đổi màu cho {name}",
           "sourceColor": "Màu nguồn",
-          "sourceColorHint": "Đánh dấu bản phát hành từ {name} trên toàn BookOrbit.",
+          "sourceColorHint": "Đánh dấu bản phát hành từ {name} trên toàn Thư viện Cát Minh.",
           "noSources": "Không tìm thấy bộ lập chỉ mục torrent hoặc Usenet tương thích. Đồng bộ sau khi thêm nguồn trong Prowlarr.",
           "unknown": "Không xác định",
           "editorDescription": "Cài đặt kết nối và đồng bộ nguồn cho Prowlarr.",
@@ -3330,9 +3330,9 @@
             "syncNew": "Bật nguồn mới phát hiện",
             "syncNewHint": "Bộ lập chỉ mục Prowlarr mới có thể tìm kiếm ngay. Nguồn bạn tắt ở đây vẫn tắt sau các lần đồng bộ sau.",
             "autoExpand": "Thử lại không lọc danh mục",
-            "autoExpandHint": "Khi bộ lập chỉ mục phản hồi thành công nhưng không có kết quả, thử lại một lần không dùng bộ lọc danh mục sách của BookOrbit.",
+            "autoExpandHint": "Khi bộ lập chỉ mục phản hồi thành công nhưng không có kết quả, thử lại một lần không dùng bộ lọc danh mục sách của Thư viện Cát Minh.",
             "inheritSeedLimits": "Dùng giới hạn seed Prowlarr",
-            "inheritSeedLimitsHint": "Áp dụng tỷ lệ và thời gian seed đã cấu hình của từng bộ lập chỉ mục torrent cho lượt tải sau khi không có ghi đè BookOrbit.",
+            "inheritSeedLimitsHint": "Áp dụng tỷ lệ và thời gian seed đã cấu hình của từng bộ lập chỉ mục torrent cho lượt tải sau khi không có ghi đè Thư viện Cát Minh.",
             "perIndexerTimeout": "Thời gian chờ bộ lập chỉ mục (giây)",
             "perIndexerTimeoutHint": "Thời gian tối đa cho một nguồn đã đồng bộ. Bộ lập chỉ mục chậm dùng FlareSolverr có thể cần lâu hơn.",
             "overallBudget": "Thời gian tối đa Prowlarr (giây)",
@@ -3380,12 +3380,12 @@
           "minScoreHint": "Bản phát hành dưới mức này không bao giờ tự tải. Điểm tối đa 100, chủ yếu dựa trên mức khớp tiêu đề và tác giả, sau đó là định dạng, kích thước tệp, người seed và ưu tiên nguồn. Nếu không bản nào đủ điểm, yêu cầu chờ người chọn thủ công và nêu lý do dừng.",
           "minScoreHintV2": "Bản phát hành dưới mức này không bao giờ tự tải. Điểm tối đa 100. Độ phù hợp của tiêu đề và tác giả đóng góp nhiều nhất, sau đó là định dạng và kích thước tệp hợp lý, cùng tình trạng mạng chia sẻ và freeleech nếu nguồn cung cấp. Nếu không bản nào đủ điểm, yêu cầu chờ người chọn thủ công và nêu lý do dừng.",
           "autoRetry": "Thử bản phát hành tiếp theo sau thất bại",
-          "autoRetryHint": "Khi tải tự động thất bại, thử bản tốt tiếp theo thay vì dừng. Áp dụng khi nguồn từ chối gửi tệp hoặc tải bị ngắt giữa chừng. Chỉ áp dụng cho bản BookOrbit tự chọn; bản người duyệt chọn thủ công giữ trạng thái thất bại và chờ họ xử lý.",
+          "autoRetryHint": "Khi tải tự động thất bại, thử bản tốt tiếp theo thay vì dừng. Áp dụng khi nguồn từ chối gửi tệp hoặc tải bị ngắt giữa chừng. Chỉ áp dụng cho bản Thư viện Cát Minh tự chọn; bản người duyệt chọn thủ công giữ trạng thái thất bại và chờ họ xử lý.",
           "maxAttempts": "Số lần thử mỗi yêu cầu",
-          "maxAttemptsHint": "Mỗi bản phát hành BookOrbit gửi tới ứng dụng tải cho yêu cầu này đều tính vào giới hạn: lượt tự động đầu tiên, lượt thử sau khi nguồn từ chối và lượt thử sau khi tải thất bại. Đặt 1 để dừng sau lượt đầu.",
+          "maxAttemptsHint": "Mỗi bản phát hành Thư viện Cát Minh gửi tới ứng dụng tải cho yêu cầu này đều tính vào giới hạn: lượt tự động đầu tiên, lượt thử sau khi nguồn từ chối và lượt thử sau khi tải thất bại. Đặt 1 để dừng sau lượt đầu.",
           "autoSearch": "Tiếp tục tìm yêu cầu chưa có kết quả",
           "autoSearchShort": "Yêu cầu đã duyệt chưa có bản khớp sẽ được tìm lại sau.",
-          "autoSearchHint": "Yêu cầu được tìm một lần khi duyệt. Nếu không có kết quả đủ tốt hoặc sách chưa phát hành, yêu cầu giữ trạng thái đã duyệt và không tìm lại. Bật để BookOrbit tự kiểm tra tiếp, kể cả bản phát hành được đăng tháng sau. Chỉ chạy khi tải tự động bật vì tìm mà không xử lý kết quả chỉ gây lưu lượng cho nguồn.",
+          "autoSearchHint": "Yêu cầu được tìm một lần khi duyệt. Nếu không có kết quả đủ tốt hoặc sách chưa phát hành, yêu cầu giữ trạng thái đã duyệt và không tìm lại. Bật để Thư viện Cát Minh tự kiểm tra tiếp, kể cả bản phát hành được đăng tháng sau. Chỉ chạy khi tải tự động bật vì tìm mà không xử lý kết quả chỉ gây lưu lượng cho nguồn.",
           "autoSearchEnabledToast": "Yêu cầu sẽ được tìm lại",
           "autoSearchDisabledToast": "Yêu cầu chỉ được tìm khi duyệt",
           "autoSearchInterval": "Tìm lại sau",
@@ -3446,8 +3446,8 @@
           "removeTorrentConditions": "Xóa điều kiện torrent",
           "channels": "Kênh",
           "anyChannels": "Bất kỳ",
-          "mono": "Mono",
-          "stereo": "Stereo",
+          "mono": "Đơn âm",
+          "stereo": "Âm thanh nổi",
           "maxSize": "MB tối đa",
           "languages": "Ngôn ngữ",
           "indexers": "Nguồn",
@@ -3477,13 +3477,13 @@
         "external": "Bên ngoài",
         "editorDescription": "Cài đặt cho ứng dụng tải xuống này.",
         "chooseClientType": "Chọn loại ứng dụng",
-        "chooseClientTypeHint": "Chọn chương trình BookOrbit giao việc tải xuống.",
+        "chooseClientTypeHint": "Chọn chương trình Thư viện Cát Minh giao việc tải xuống.",
         "clientTypeDescriptions": {
           "qbittorrent": "qBittorrent của bạn. Cần địa chỉ và tài khoản.",
           "transmission": "Transmission của bạn. Không có danh mục nên danh mục sẽ thành thư mục con trong thư mục tải xuống.",
           "deluge": "Deluge của bạn. Đăng nhập bằng mật khẩu giao diện web; danh mục cần bật plugin Label.",
-          "nzbget": "NZBGet của bạn. BookOrbit gửi tệp NZB qua API JSON-RPC.",
-          "sabnzbd": "SABnzbd của bạn. BookOrbit gửi tệp NZB bằng khóa API."
+          "nzbget": "NZBGet của bạn. Thư viện Cát Minh gửi tệp NZB qua API JSON-RPC.",
+          "sabnzbd": "SABnzbd của bạn. Thư viện Cát Minh gửi tệp NZB bằng khóa API."
         },
         "searchHealth": {
           "failingOnce": "Lần tìm gần nhất thất bại",
@@ -3523,7 +3523,7 @@
         "readerAudio": "Tốc độ phát, khoảng tua và hẹn giờ ngủ.",
         "readerFonts": "Phông có sẵn khi đọc.",
         "readerGeneral": "Mặc định dùng chung cho mọi chế độ đọc.",
-        "notifications": "Nội dung và nơi BookOrbit thông báo cho bạn.",
+        "notifications": "Nội dung và nơi Thư viện Cát Minh thông báo cho bạn.",
         "privacy": "Thông tin đọc, liên kết chia sẻ và mức hiển thị hoạt động.",
         "restrictions": "Xếp hạng độ tuổi và nội dung ẩn cho tài khoản này.",
         "libraries": "Đường dẫn quét, thư mục theo dõi và quy tắc tiếp nhận.",
@@ -3536,7 +3536,7 @@
         "hardcover": "Đồng bộ trạng thái đọc và nhận xét với Hardcover.",
         "users": "Tài khoản, vai trò, quyền và lời mời.",
         "accountActivity": "Hoạt động đọc và phiên theo người dùng.",
-        "magicLinks": "Liên kết chia sẻ và đăng nhập không mật khẩu.",
+        "magicLinks": "Liên kết đăng nhập và đăng nhập không mật khẩu.",
         "oidc": "Nhà cung cấp đăng nhập một lần, thuộc tính và cấp tài khoản.",
         "serverFonts": "Phông cài cho mọi người đọc trên máy chủ này.",
         "bookDock": "Thao tác nhanh hiển thị trên trang sách.",
@@ -3578,6 +3578,365 @@
       "earned": "Đã đạt ({count})",
       "inProgress": "Đang thực hiện ({count})",
       "locked": "Chưa mở khóa ({count})"
+    },
+    "newAchievement": "Thành tích mới",
+    "unlocked": "Đã mở khóa thành tích!",
+    "categories": {
+      "reading": "Đọc sách",
+      "library": "Thư viện",
+      "exploration": "Khám phá",
+      "dedication": "Bền đỗ",
+      "devices": "Thiết bị"
+    },
+    "items": {
+      "books_finished_1": {
+        "name": "Bước đầu đọc sách",
+        "description": "Đọc xong cuốn sách đầu tiên"
+      },
+      "books_finished_2": {
+        "name": "Người tìm sách",
+        "description": "Đọc xong 10 cuốn sách"
+      },
+      "books_finished_3": {
+        "name": "Người đọc bền bỉ",
+        "description": "Đọc xong 35 cuốn sách"
+      },
+      "books_finished_4": {
+        "name": "Quản thủ thư viện",
+        "description": "Đọc xong 100 cuốn sách"
+      },
+      "pages_read_1": {
+        "name": "Những trang đầu",
+        "description": "Đọc 500 trang"
+      },
+      "pages_read_2": {
+        "name": "Người dệt chương sách",
+        "description": "Đọc 5.000 trang"
+      },
+      "pages_read_3": {
+        "name": "Người chinh phục sách dày",
+        "description": "Đọc 25.000 trang"
+      },
+      "pages_read_4": {
+        "name": "Bộ từ điển sống",
+        "description": "Đọc 100.000 trang"
+      },
+      "hours_read_1": {
+        "name": "Giờ đọc đầu tiên",
+        "description": "Đọc tổng cộng 10 giờ"
+      },
+      "hours_read_2": {
+        "name": "Người đọc chuyên cần",
+        "description": "Đọc tổng cộng 100 giờ"
+      },
+      "hours_read_3": {
+        "name": "Người đọc lâu năm",
+        "description": "Đọc tổng cộng 500 giờ"
+      },
+      "hours_read_4": {
+        "name": "Học giả miệt mài",
+        "description": "Đọc tổng cộng 1.000 giờ"
+      },
+      "marathoner": {
+        "name": "Đọc liền một mạch",
+        "description": "Đọc liên tục từ 90 phút trở lên trong một phiên"
+      },
+      "all_nighter": {
+        "name": "Canh thức đêm khuya",
+        "description": "Đọc sách trong khoảng từ 1 giờ đến 4 giờ sáng"
+      },
+      "early_bird": {
+        "name": "Đọc trước kinh Sáng",
+        "description": "Bắt đầu một phiên đọc trong khoảng từ 5 giờ đến 7 giờ sáng"
+      },
+      "long_book_1": {
+        "name": "Cuốn sách dài",
+        "description": "Đọc xong một cuốn sách từ 300 trang trở lên"
+      },
+      "page_turner": {
+        "name": "Người mở lối",
+        "description": "Đọc xong một cuốn sách từ 500 trang trở lên"
+      },
+      "long_book_3": {
+        "name": "Hành trình dài",
+        "description": "Đọc xong một cuốn sách từ 750 trang trở lên"
+      },
+      "tome_tamer": {
+        "name": "Chinh phục đại tác phẩm",
+        "description": "Đọc xong một cuốn sách từ 1.000 trang trở lên"
+      },
+      "sprint": {
+        "name": "Đọc trong một ngày",
+        "description": "Đọc xong một cuốn sách trong một ngày"
+      },
+      "binge_reader": {
+        "name": "Tuần đọc sách say mê",
+        "description": "Đọc xong từ 3 cuốn sách trở lên trong một tuần"
+      },
+      "library_builder_1": {
+        "name": "Hạt giống tủ sách",
+        "description": "Có 50 cuốn sách trong thư viện"
+      },
+      "library_builder_2": {
+        "name": "Người xây tủ sách",
+        "description": "Có 250 cuốn sách trong thư viện"
+      },
+      "library_builder_3": {
+        "name": "Kho sách lớn",
+        "description": "Có 1.000 cuốn sách trong thư viện"
+      },
+      "library_builder_4": {
+        "name": "Thư viện đan viện",
+        "description": "Có 5.000 cuốn sách trong thư viện"
+      },
+      "annotator_1": {
+        "name": "Người ghi chép",
+        "description": "Tạo 10 chú thích"
+      },
+      "annotator_2": {
+        "name": "Người suy niệm chăm chỉ",
+        "description": "Tạo 50 chú thích"
+      },
+      "annotator_3": {
+        "name": "Người ghi chép dồi dào",
+        "description": "Tạo 200 chú thích"
+      },
+      "annotator_4": {
+        "name": "Bậc thầy chú giải",
+        "description": "Tạo 500 chú thích"
+      },
+      "multi_format": {
+        "name": "Đa định dạng",
+        "description": "Có sách thuộc từ 3 định dạng khác nhau trở lên"
+      },
+      "curator": {
+        "name": "Người tuyển chọn",
+        "description": "Tạo từ 10 bộ sưu tập trở lên"
+      },
+      "genre_explorer_1": {
+        "name": "Tò mò thể loại",
+        "description": "Đọc xong sách thuộc 5 thể loại khác nhau"
+      },
+      "genre_explorer_2": {
+        "name": "Khám phá thể loại",
+        "description": "Đọc xong sách thuộc 10 thể loại khác nhau"
+      },
+      "genre_explorer_3": {
+        "name": "Am tường thể loại",
+        "description": "Đọc xong sách thuộc 15 thể loại khác nhau"
+      },
+      "genre_explorer_4": {
+        "name": "Thông thạo mọi thể loại",
+        "description": "Đọc xong sách thuộc 20 thể loại khác nhau"
+      },
+      "polyglot_1": {
+        "name": "Song ngữ",
+        "description": "Đọc xong sách bằng 2 ngôn ngữ khác nhau"
+      },
+      "polyglot_2": {
+        "name": "Tam ngữ",
+        "description": "Đọc xong sách bằng 3 ngôn ngữ khác nhau"
+      },
+      "polyglot_3": {
+        "name": "Đa ngữ",
+        "description": "Đọc xong sách bằng 5 ngôn ngữ khác nhau"
+      },
+      "polyglot_4": {
+        "name": "Ơn Hiện Xuống",
+        "description": "Đọc xong sách bằng 7 ngôn ngữ khác nhau"
+      },
+      "old_soul": {
+        "name": "Tìm về các Giáo phụ",
+        "description": "Đọc xong một cuốn sách xuất bản trước năm 1900"
+      },
+      "new_release": {
+        "name": "Sách mới ra",
+        "description": "Đọc xong một cuốn sách xuất bản trong năm nay"
+      },
+      "century_span": {
+        "name": "Xuyên thế kỷ",
+        "description": "Đọc xong sách thuộc từ 3 thế kỷ khác nhau trở lên"
+      },
+      "author_deep_dive": {
+        "name": "Đồng hành cùng tác giả",
+        "description": "Đọc từ 5 cuốn sách trở lên của cùng một tác giả"
+      },
+      "streak_1": {
+        "name": "Khởi đầu tốt đẹp",
+        "description": "Đọc sách 7 ngày liên tiếp"
+      },
+      "streak_2": {
+        "name": "Thói quen tốt",
+        "description": "Đọc sách 30 ngày liên tiếp"
+      },
+      "streak_3": {
+        "name": "Bền đỗ",
+        "description": "Đọc sách 100 ngày liên tiếp"
+      },
+      "streak_4": {
+        "name": "Ngọn lửa trọn năm",
+        "description": "Đọc sách 365 ngày liên tiếp"
+      },
+      "year_round_reader": {
+        "name": "Đọc quanh năm",
+        "description": "Đọc sách trong cả 12 tháng của một năm"
+      },
+      "reborn": {
+        "name": "Khởi sự lại",
+        "description": "Đọc xong một cuốn sách đã bỏ dở hơn 6 tháng"
+      },
+      "comeback_kid": {
+        "name": "Người con trở về",
+        "description": "Đọc lại sau 30 ngày gián đoạn"
+      },
+      "bookmarked": {
+        "name": "Dấu ấn đầu tiên",
+        "description": "Tạo chú thích hoặc đánh dấu đầu tiên"
+      },
+      "new_year_reader": {
+        "name": "Đọc sách đầu năm",
+        "description": "Đọc sách vào ngày 1 tháng 1"
+      },
+      "monthly_reader_2": {
+        "name": "Tháng đọc sách",
+        "description": "Đọc xong 10 cuốn sách trong một tháng"
+      },
+      "slow_burn": {
+        "name": "Chậm mà thấm",
+        "description": "Mất hơn 90 ngày để đọc xong một cuốn sách"
+      },
+      "one_sitting": {
+        "name": "Một lần ngồi",
+        "description": "Đọc từ 90% cuốn sách trở lên trong một phiên đọc"
+      },
+      "decade_sampler": {
+        "name": "Qua nhiều thập niên",
+        "description": "Đọc xong sách xuất bản trong 5 thập niên khác nhau"
+      },
+      "short_story_fan": {
+        "name": "Yêu sách mỏng",
+        "description": "Đọc xong 5 cuốn sách dưới 100 trang"
+      },
+      "thick_and_thin": {
+        "name": "Dày và mỏng",
+        "description": "Đọc xong ít nhất một cuốn dưới 100 trang và một cuốn trên 800 trang"
+      },
+      "trilogy_master": {
+        "name": "Trọn bộ ba",
+        "description": "Đọc xong trọn một bộ sách 3 cuốn"
+      },
+      "genre_devotee": {
+        "name": "Gắn bó một thể loại",
+        "description": "Đọc xong 10 cuốn sách cùng một thể loại"
+      },
+      "seasonal_reader": {
+        "name": "Bốn mùa phụng vụ",
+        "description": "Đọc sách trong cả 4 mùa của một năm"
+      },
+      "perfect_month": {
+        "name": "Tháng trọn vẹn",
+        "description": "Đọc sách mỗi ngày trong một tháng"
+      },
+      "consistent_reader": {
+        "name": "Bền chí",
+        "description": "Đọc ít nhất 30 phút mỗi ngày trong 14 ngày liên tiếp"
+      },
+      "weekend_rhythm": {
+        "name": "Nhịp đọc cuối tuần",
+        "description": "Đọc sách 8 cuối tuần liên tiếp"
+      },
+      "weekend_warrior": {
+        "name": "Cuối tuần tĩnh tâm",
+        "description": "Đọc từ 5 giờ trở lên trong một cuối tuần"
+      },
+      "yearly_finisher_12": {
+        "name": "Trọn năm sách",
+        "description": "Đọc xong 12 cuốn sách trong một năm"
+      },
+      "note_keeper": {
+        "name": "Sổ tay suy niệm",
+        "description": "Tạo 25 chú thích có kèm ghi chú"
+      },
+      "deep_dive_session": {
+        "name": "Đào sâu",
+        "description": "Tạo 10 chú thích trong một ngày"
+      },
+      "first_series": {
+        "name": "Mở đầu bộ sách",
+        "description": "Đọc xong cuốn đầu tiên thuộc một bộ sách"
+      },
+      "category_sweeper": {
+        "name": "Toàn diện",
+        "description": "Đạt ít nhất một thành tích ở cả 4 nhóm"
+      },
+      "power_hour": {
+        "name": "Giờ đọc sung sức",
+        "description": "Đọc từ 75 trang trở lên trong một phiên đọc"
+      },
+      "speed_reader": {
+        "name": "Đọc nhanh",
+        "description": "Đọc từ 100 trang trở lên trong một ngày"
+      },
+      "old_friend": {
+        "name": "Bạn cũ",
+        "description": "Đọc xong một cuốn sách bạn đọc lại"
+      },
+      "dnf_self_aware": {
+        "name": "Biết dừng đúng lúc",
+        "description": "Đánh dấu một cuốn sách là bỏ dở"
+      },
+      "first_verdict": {
+        "name": "Nhận xét đầu tiên",
+        "description": "Đánh giá cuốn sách đầu tiên"
+      },
+      "critic_1": {
+        "name": "Người nhận xét mới",
+        "description": "Đánh giá 10 cuốn sách"
+      },
+      "critic_2": {
+        "name": "Người nhận xét dày dạn",
+        "description": "Đánh giá 50 cuốn sách"
+      },
+      "critic_3": {
+        "name": "Người nhận xét uy tín",
+        "description": "Đánh giá 200 cuốn sách"
+      },
+      "critic_4": {
+        "name": "Người nhận xét lão luyện",
+        "description": "Đánh giá 500 cuốn sách"
+      },
+      "standing_ovation": {
+        "name": "Hết lời khen ngợi",
+        "description": "Đánh giá một cuốn sách 5 sao"
+      },
+      "across_the_board": {
+        "name": "Đủ mọi mức sao",
+        "description": "Dùng cả năm mức sao ít nhất một lần"
+      },
+      "tough_crowd": {
+        "name": "Người đọc khó tính",
+        "description": "Đánh giá 10 cuốn sách từ 2 sao trở xuống"
+      },
+      "wordsmith": {
+        "name": "Ngòi bút suy tư",
+        "description": "Viết một ghi chú dài hơn 280 ký tự"
+      },
+      "box_of_crayons": {
+        "name": "Hộp bút màu",
+        "description": "Dùng đủ 5 màu đánh dấu"
+      },
+      "synced_up": {
+        "name": "Đã đồng bộ",
+        "description": "Đồng bộ tiến độ đọc từ Kobo hoặc KOReader lần đầu tiên"
+      },
+      "full_orbit": {
+        "name": "Đủ mọi nguồn",
+        "description": "Ghi nhận việc đọc từ ba nguồn đọc khác nhau"
+      },
+      "two_worlds": {
+        "name": "Hai nơi một sách",
+        "description": "Đọc cùng một cuốn sách từ hai nguồn trở lên"
+      }
     }
   },
   "adminFeature": {
@@ -3616,7 +3975,7 @@
         "local": "Nội bộ",
         "manual": "Quản trị viên tạo",
         "oidc": "OIDC / SSO",
-        "shared": "Liên kết chia sẻ"
+        "shared": "Liên kết đăng nhập"
       },
       "columns": {
         "user": "Người dùng",
@@ -3730,8 +4089,8 @@
         "restrictions": "hạn chế"
       },
       "sharedAccount": "Tài khoản chia sẻ",
-      "sharedAccountHint": "Không mật khẩu. Truy cập qua liên kết chia sẻ.",
-      "sharedAccountManageHint": "Quản lý liên kết đăng nhập từ Cài đặt - Liên kết chia sẻ.",
+      "sharedAccountHint": "Không mật khẩu. Truy cập qua liên kết đăng nhập.",
+      "sharedAccountManageHint": "Quản lý liên kết đăng nhập từ Cài đặt - Liên kết đăng nhập.",
       "username": "Tên đăng nhập",
       "fullName": "Họ tên",
       "email": "Email",
@@ -3839,7 +4198,7 @@
       "signInMethods": {
         "password": "Mật khẩu",
         "oidc": "Đăng nhập một lần",
-        "shared": "Liên kết chia sẻ"
+        "shared": "Liên kết đăng nhập"
       },
       "created": "Ngày tạo",
       "lockedUntil": "Khóa đến {time}",
@@ -4328,7 +4687,7 @@
       "Podcast": "Podcast",
       "PodcastEpisode": "Tập podcast",
       "Collection": "Bộ sưu tập",
-      "SmartScope": "Smart scope",
+      "SmartScope": "Bộ lọc thông minh",
       "BookDockFile": "Tệp Book Dock",
       "BookRequest": "Yêu cầu sách",
       "DownloadClient": "Trình tải xuống",
@@ -4347,7 +4706,7 @@
       "Language": "Ngôn ngữ",
       "Series": "Bộ sách",
       "OidcIdentity": "Danh tính OIDC",
-      "MagicLinkToken": "Liên kết chia sẻ",
+      "MagicLinkToken": "Liên kết đăng nhập",
       "ReadingInsightsProfile": "Hồ sơ thông tin đọc"
     },
     "actionLabels": {
@@ -4360,11 +4719,11 @@
       "AuthPasswordReset": "Đặt lại mật khẩu",
       "AuthPasswordAdminReset": "Đặt lại mật khẩu người dùng",
       "AuthSessionRevoke": "Thu hồi phiên",
-      "MagicLinkCreate": "Tạo liên kết chia sẻ",
-      "MagicLinkLogin": "Đăng nhập bằng liên kết chia sẻ",
-      "MagicLinkRevoke": "Thu hồi liên kết chia sẻ",
-      "MagicLinkActivate": "Kích hoạt liên kết chia sẻ",
-      "MagicLinkDeactivate": "Vô hiệu hóa liên kết chia sẻ",
+      "MagicLinkCreate": "Tạo liên kết đăng nhập",
+      "MagicLinkLogin": "Đăng nhập bằng liên kết đăng nhập",
+      "MagicLinkRevoke": "Thu hồi liên kết đăng nhập",
+      "MagicLinkActivate": "Kích hoạt liên kết đăng nhập",
+      "MagicLinkDeactivate": "Vô hiệu hóa liên kết đăng nhập",
       "OidcLogin": "Đăng nhập bằng OIDC",
       "OidcUserProvisioned": "Cấp phát người dùng OIDC",
       "OidcIdentityLinked": "Liên kết danh tính OIDC",
@@ -5974,13 +6333,13 @@
         },
         "emptyStage": {
           "title": "Chưa ghi hoạt động nào cho sách này",
-          "description": "Nhật ký đọc được tạo từ các phiên. BookOrbit ghi lại mỗi lần bạn đọc trên trình đọc web và thu thập các phiên khác từ thiết bị bạn đồng bộ.",
+          "description": "Nhật ký đọc được tạo từ các phiên. Thư viện Cát Minh ghi lại mỗi lần bạn đọc trên trình đọc web và thu thập các phiên khác từ thiết bị bạn đồng bộ.",
           "readerTitle": "Đọc tại đây",
-          "readerBody": "Mỗi phút trong trình đọc BookOrbit đều được ghi tự động.",
+          "readerBody": "Mỗi phút trong trình đọc Thư viện Cát Minh đều được ghi tự động.",
           "koreaderTitle": "Đồng bộ KOReader",
           "koreaderBody": "Plugin gửi lại từng lần đọc cùng trang bạn đã đọc tới.",
           "koboTitle": "Đồng bộ Kobo",
-          "koboBody": "Cắm thiết bị vào và BookOrbit sẽ đọc bộ đếm thời gian đọc của thiết bị.",
+          "koboBody": "Cắm thiết bị vào và Thư viện Cát Minh sẽ đọc bộ đếm thời gian đọc của thiết bị.",
           "addSession": "Thêm phiên thủ công",
           "recordPast": "Ghi lần đọc trước đây"
         },
@@ -6340,7 +6699,7 @@
       "audiolessEpub": "Tải EPUB cho KOReader đã bỏ các tệp âm thanh",
       "noAudio": "không âm thanh",
       "resetReadingTitle": "Đặt lại trạng thái đọc?",
-      "resetReadingBody": "Thao tác này xóa tiến độ BookOrbit và Kobo/KOReader đã đồng bộ, phiên đọc và ngày đọc của sách này. Đánh dấu, ghi chú và tệp sách được giữ lại.",
+      "resetReadingBody": "Thao tác này xóa tiến độ Thư viện Cát Minh và Kobo/KOReader đã đồng bộ, phiên đọc và ngày đọc của sách này. Đánh dấu, ghi chú và tệp sách được giữ lại.",
       "newValue": "Mới",
       "unknownError": "Lỗi không xác định",
       "loadSessionsFailed": "Không thể tải phiên đọc",
@@ -6750,22 +7109,22 @@
         "notProvided": "Chưa cung cấp",
         "searchScope": "Chọn một trong {count, plural, other {# ISBN}} để tìm kiếm, hoặc tìm theo tiêu đề và tác giả.",
         "searchScopeLimited": "Chọn một ISBN để tìm kiếm.",
-        "titleAuthorOnly": "Chưa có ISBN. BookOrbit sẽ tìm một lần theo tiêu đề và tác giả.",
+        "titleAuthorOnly": "Chưa có ISBN. Thư viện Cát Minh sẽ tìm một lần theo tiêu đề và tác giả.",
         "chooseSearch": "Chọn ấn bản để tìm kiếm",
         "searchByEdition": "Tìm bản phát hành cho một ấn bản",
         "findRelease": "Tìm bản phát hành",
         "primaryIsbn": "ISBN {isbn}",
         "primaryTitleAuthor": "Tiêu đề và tác giả",
         "recommended": "Đề xuất",
-        "recommendationHelpLabel": "Cách BookOrbit chọn ISBN đề xuất",
+        "recommendationHelpLabel": "Cách Thư viện Cát Minh chọn ISBN đề xuất",
         "recommendationTitle": "Cách chọn tìm kiếm đề xuất",
         "recommendationLanguage": "Ưu tiên ngôn ngữ yêu cầu, rồi ngôn ngữ chưa rõ, trước ngôn ngữ đã biết không khớp.",
         "recommendationAgreement": "Ưu tiên ISBN được nhiều nhà cung cấp siêu dữ liệu độc lập xác nhận hơn.",
-        "recommendationProvider": "Dùng thứ tự ưu tiên nhà cung cấp siêu dữ liệu ổn định của BookOrbit.",
+        "recommendationProvider": "Dùng thứ tự ưu tiên nhà cung cấp siêu dữ liệu ổn định của Thư viện Cát Minh.",
         "recommendationRelevance": "Dùng vị trí của ấn bản trong kết quả của nhà cung cấp đó.",
         "recommendationYear": "Ưu tiên năm ấn bản gần nhất với năm sớm nhất đã biết của tác phẩm.",
         "recommendationStable": "Dùng chính ISBN làm tiêu chí cuối cùng khi các yếu tố khác bằng nhau.",
-        "recommendationFallback": "Nếu không có ISBN hợp lệ, BookOrbit tìm một lần theo tiêu đề và tác giả. Chọn ấn bản từ menu luôn thay thế đề xuất này.",
+        "recommendationFallback": "Nếu không có ISBN hợp lệ, Thư viện Cát Minh tìm một lần theo tiêu đề và tác giả. Chọn ấn bản từ menu luôn thay thế đề xuất này.",
         "withoutIsbn": "Tìm theo tiêu đề và tác giả",
         "action": "Thao tác"
       },
@@ -6939,7 +7298,7 @@
         "fileTooLarge": "Tệp lớn hơn {limit}, nên đây không phải tệp .torrent",
         "fileUnreadable": "Không thể đọc tệp đó"
       },
-      "noClientList": "BookOrbit sẽ dùng trình tải xuống đang bật có độ ưu tiên cao nhất."
+      "noClientList": "Thư viện Cát Minh sẽ dùng trình tải xuống đang bật có độ ưu tiên cao nhất."
     },
     "attempts": {
       "title": "Các lần thử trước",
@@ -7064,7 +7423,7 @@
       "manifest": {
         "ready": "{count, plural, other {Bản phát hành này có # tệp. Có thể nhập tệp sách được hỗ trợ.}}",
         "noSupported": "Bản phát hành này không có tệp sách được hỗ trợ trực tiếp nên không thể gửi.",
-        "contentsUnknown": "Bản phát hành này được đóng gói trong tệp nén (RAR, ZIP hoặc 7z). BookOrbit sẽ giải nén sau khi tải xuống nên chưa biết nội dung bên trong.",
+        "contentsUnknown": "Bản phát hành này được đóng gói trong tệp nén (RAR, ZIP hoặc 7z). Thư viện Cát Minh sẽ giải nén sau khi tải xuống nên chưa biết nội dung bên trong.",
         "multipleBooks": "Bản phát hành này có {count} sách riêng biệt. Sau khi tải xuống, bạn sẽ được hỏi muốn nhập sách nào.",
         "multiPartBook": "{count, plural, other {Bản phát hành này là một sách gồm # tệp, được nhập cùng nhau thành một sách.}}",
         "metadataUnavailable": "Đây là liên kết magnet. Danh sách tệp chỉ có sau khi trình tải torrent lấy siêu dữ liệu từ mạng chia sẻ.",
@@ -7190,7 +7549,7 @@
     },
     "seed": {
       "title": "Trình tải xuống",
-      "automated": "BookOrbit đã tự động chọn bản phát hành này.",
+      "automated": "Thư viện Cát Minh đã tự động chọn bản phát hành này.",
       "loading": "Đang đọc trình tải xuống...",
       "loadFailed": "Không thể kết nối trình tải xuống cho yêu cầu này.",
       "notInClient": "Trình tải xuống không còn torrent này.",
@@ -7205,7 +7564,7 @@
       "ofGoal": "{value} trên {goal}",
       "deleteFiles": "Xóa cả các tệp đã tải xuống",
       "remove": "Xóa khỏi trình tải",
-      "removeHint": "BookOrbit không tự dừng chia sẻ. Dù thế nào, sách đã nhập vẫn ở trong thư viện.",
+      "removeHint": "Thư viện Cát Minh không tự dừng chia sẻ. Dù thế nào, sách đã nhập vẫn ở trong thư viện.",
       "confirm": {
         "title": "Xóa torrent này?",
         "description": "Torrent ngừng chia sẻ. Các tệp đã tải xuống vẫn ở trên ổ đĩa.",
@@ -7759,7 +8118,7 @@
       "trigger": "Thông báo pháp lý",
       "title": "Giới thiệu BookOrbit",
       "description": "Ghi công, giấy phép và mã nguồn BookOrbit.",
-      "poweredBy": "Phát triển bởi BookOrbit",
+      "poweredBy": "Xây dựng trên BookOrbit",
       "originalDevelopment": "Phần mềm này chứa tài liệu được phát triển ban đầu dưới dạng BookOrbit.",
       "copyright": "Bản quyền (C) 2025-2026 neon.",
       "contributors": "Bản quyền bổ sung thuộc về các đóng góp viên BookOrbit tương ứng.",
@@ -7815,7 +8174,7 @@
     },
     "libraryLoad": {
       "errorTitle": "Không thể tải thư viện của bạn",
-      "errorDescription": "BookOrbit không thể lấy danh sách thư viện. Dữ liệu thư viện của bạn chưa bị xóa."
+      "errorDescription": "Thư viện Cát Minh không thể lấy danh sách thư viện. Dữ liệu thư viện của bạn chưa bị xóa."
     },
     "scroller": {
       "failedToLoad": "Không thể tải.",
@@ -7858,7 +8217,8 @@
         "wantToRead": "Muốn đọc",
         "upNextInSeries": "Tập tiếp theo trong bộ sách",
         "random": "Khám phá sách mới",
-        "smartScope": "Bộ lọc thông minh"
+        "smartScope": "Bộ lọc thông minh",
+        "featuredShelf": "Kệ chung"
       },
       "shelfLayout": {
         "title": "Bố cục kệ sách",
@@ -7993,6 +8353,45 @@
         "readCount": "đã đọc {count}",
         "daysLeft": "còn {count} ngày"
       }
+    },
+    "featured": {
+      "tab": "Kệ chung",
+      "badge": "Chung",
+      "description": "Mục bạn ghim ở đây sẽ hiển thị trên trang tổng quan của mọi người. Mỗi mục là một kệ riêng hiển thị bộ sưu tập công khai, hoặc một thẻ Thánh đặt ở đầu kệ có sẵn như Mới thêm. Mỗi người chỉ thấy sách thuộc thư viện họ có quyền truy cập. Thay đổi được áp dụng ngay.",
+      "empty": "Chưa có kệ chung nào. Hãy ghim một bộ sưu tập ở bên dưới.",
+      "addTitle": "Ghim bộ sưu tập",
+      "chooseCollection": "Chọn bộ sưu tập công khai",
+      "titleLabel": "Tên kệ",
+      "titlePlaceholder": "Tên kệ (mặc định là tên bộ sưu tập)",
+      "collectionLabel": "Bộ sưu tập",
+      "add": "Thêm kệ",
+      "uploadImage": "Tải ảnh chân dung (hiển thị trong khung vòm)",
+      "removeImage": "Gỡ ảnh",
+      "moveUp": "Lên trên",
+      "moveDown": "Xuống dưới",
+      "delete": "Xóa kệ",
+      "unavailableCollection": "Bộ sưu tập không còn khả dụng",
+      "noPublicCollections": "Chưa có bộ sưu tập công khai nào. Hãy bật Công khai cho bộ sưu tập để ghim lên đây.",
+      "privateHint": "{count, plural, other {Đang ẩn # bộ sưu tập riêng tư. Bật Công khai để ghim lên đây.}}",
+      "confirmDelete": "Gỡ kệ chung \"{title}\" khỏi trang tổng quan của mọi người?",
+      "defaultTitle": "Mặc định cho mọi người",
+      "defaultDescription": "Lưu bố cục và thứ tự kệ này làm mặc định cho những người chưa tự tùy chỉnh trang tổng quan. Kệ Bộ lọc thông minh không được đưa vào vì đó là bộ lọc riêng của bạn.",
+      "saveAsDefault": "Đặt làm mặc định cho mọi người",
+      "confirmDefault": "Dùng bố cục này làm trang tổng quan mặc định cho mọi người chưa tự tùy chỉnh?",
+      "toasts": {
+        "created": "Đã thêm kệ chung",
+        "defaultSaved": "Đã lưu trang tổng quan mặc định cho mọi người"
+      },
+      "errors": {
+        "generic": "Đã có lỗi xảy ra. Hãy thử lại."
+      },
+      "viewWorks": "Xem tác phẩm",
+      "portraitLabel": "Ảnh chân dung",
+      "saintNameLabel": "Tên Thánh",
+      "saintNamePlaceholder": "Tên Thánh, ví dụ: Thánh Têrêsa Avila - Tiến sĩ Hội Thánh",
+      "attachLabel": "Hiển thị trên",
+      "attachStandalone": "Kệ riêng (sách trong bộ sưu tập)",
+      "attachOption": "Đặt ở đầu kệ \"{shelf}\""
     }
   },
   "email": {
@@ -8094,7 +8493,7 @@
       "create": "Tạo nhóm",
       "newTitle": "Nhóm mới",
       "name": "Tên nhóm",
-      "namePlaceholder": "VD: Câu lạc bộ sách",
+      "namePlaceholder": "VD: Nhóm đọc sách huấn luyện",
       "creating": "Đang tạo...",
       "empty": "Chưa có nhóm nào. Tạo một nhóm để gửi cho nhiều người nhận cùng lúc.",
       "memberCount": "{count, plural, =0 {Không có thành viên} other {# thành viên}}",
@@ -8185,13 +8584,13 @@
     }
   },
   "errors": {
-    "network": "Không thể kết nối với BookOrbit. Kiểm tra kết nối rồi thử lại.",
+    "network": "Không thể kết nối với Thư viện Cát Minh. Kiểm tra kết nối rồi thử lại.",
     "codes": {
       "PODCAST_LOCAL_NO_REFRESH": "Podcast này không có nguồn cấp nên không có gì để làm mới.",
       "PODCAST_LOCAL_NO_DOWNLOAD": "Tập này là tệp của bạn nên không có gì để tải xuống. Bản của bạn đã là bản duy nhất.",
-      "PODCAST_LOCAL_FILE_NOT_REMOVABLE": "Tập này là tệp của bạn nên BookOrbit sẽ không xóa. Bạn cần tự xóa tệp khỏi thư mục.",
+      "PODCAST_LOCAL_FILE_NOT_REMOVABLE": "Tập này là tệp của bạn nên Thư viện Cát Minh sẽ không xóa. Bạn cần tự xóa tệp khỏi thư mục.",
       "PODCAST_LOCAL_MEDIA_MISSING": "Bản duy nhất của tập này không còn trên ổ đĩa nên không thể phát.",
-      "PODCAST_LOCAL_FOLDER_EMPTY": "Thư mục này không có âm thanh mà BookOrbit có thể nhập nên không thể tạo thành podcast.",
+      "PODCAST_LOCAL_FOLDER_EMPTY": "Thư mục này không có âm thanh mà Thư viện Cát Minh có thể nhập nên không thể tạo thành podcast.",
       "PODCAST_STORAGE_FULL": "Thư viện podcast này đã hết dung lượng. Hãy giải phóng dung lượng hoặc tăng hạn mức rồi thử lại. Các tệp thuộc podcast cục bộ không bao giờ bị xóa để giải phóng dung lượng."
     }
   },
@@ -8213,206 +8612,206 @@
       "show": "Hiện",
       "hide": "Ẩn",
       "findTokenAt": "Tìm mã API của bạn tại",
-      "validateToken": "Validate token",
-      "valid": "Valid ({username})",
-      "invalidToken": "Invalid token",
-      "syncOptions": "Sync options",
-      "syncInfo": "Sync runs only for books that are not unread. This applies to status, progress, and rating triggers. These switches control when a sync runs.",
+      "validateToken": "Xác thực token",
+      "valid": "Hợp lệ ({username})",
+      "invalidToken": "Token không hợp lệ",
+      "syncOptions": "Tùy chọn đồng bộ",
+      "syncInfo": "Chỉ đồng bộ những sách không ở trạng thái chưa đọc. Áp dụng cho các thay đổi về trạng thái, tiến độ và đánh giá. Các công tắc này quyết định khi nào đồng bộ chạy.",
       "syncScope": {
-        "title": "Book sync scope",
+        "title": "Phạm vi đồng bộ sách",
         "allEligible": {
-          "label": "All eligible books",
-          "description": "Sync everything unless you exclude a book."
+          "label": "Tất cả sách đủ điều kiện",
+          "description": "Đồng bộ mọi sách, trừ những sách bạn loại ra."
         },
         "selectedOnly": {
-          "label": "Selected books only",
-          "description": "Sync only books you explicitly include."
+          "label": "Chỉ sách đã chọn",
+          "description": "Chỉ đồng bộ những sách bạn chủ động thêm vào."
         }
       },
       "enableSync": {
-        "title": "Enable sync",
-        "description": "Pause all Hardcover syncing without disconnecting."
+        "title": "Bật đồng bộ",
+        "description": "Tạm dừng mọi đồng bộ Hardcover mà không ngắt kết nối."
       },
       "syncOnStatus": {
-        "title": "Sync on status change",
-        "description": "Push updates when you mark a book as reading, read, etc."
+        "title": "Đồng bộ khi đổi trạng thái",
+        "description": "Gửi cập nhật khi bạn đánh dấu sách là đang đọc, đã đọc..."
       },
       "syncOnProgress": {
-        "title": "Sync on progress update",
-        "description": "Push reading progress and dates when BookOrbit or KOReader progress changes."
+        "title": "Đồng bộ khi cập nhật tiến độ",
+        "description": "Gửi tiến độ và ngày đọc khi tiến độ trên Thư viện Cát Minh hoặc KOReader thay đổi."
       },
       "syncOnRating": {
-        "title": "Sync on rating change",
-        "description": "Push your star ratings to Hardcover."
+        "title": "Đồng bộ khi đổi đánh giá",
+        "description": "Gửi số sao bạn đánh giá lên Hardcover."
       },
       "privacy": {
-        "title": "Privacy",
-        "description": "Default visibility for synced books on Hardcover.",
-        "public": "Public",
-        "followersOnly": "Followers only",
-        "private": "Private"
+        "title": "Quyền riêng tư",
+        "description": "Chế độ hiển thị mặc định của sách được đồng bộ trên Hardcover.",
+        "public": "Công khai",
+        "followersOnly": "Chỉ người theo dõi",
+        "private": "Riêng tư"
       },
-      "disconnect": "Disconnect",
+      "disconnect": "Ngắt kết nối",
       "toast": {
-        "enterToken": "Enter your Hardcover API token first",
-        "saved": "Hardcover settings saved",
-        "saveFailed": "Failed to save settings",
-        "disconnected": "Hardcover disconnected"
+        "enterToken": "Hãy nhập token API Hardcover trước",
+        "saved": "Đã lưu cài đặt Hardcover",
+        "saveFailed": "Không thể lưu cài đặt",
+        "disconnected": "Đã ngắt kết nối Hardcover"
       }
     },
     "sync": {
-      "title": "Manual sync",
-      "description": "Push your {scope} to Hardcover now.",
+      "title": "Đồng bộ thủ công",
+      "description": "Gửi {scope} lên Hardcover ngay.",
       "scope": {
-        "selected": "selected books",
-        "eligible": "eligible books"
+        "selected": "những sách đã chọn",
+        "eligible": "những sách đủ điều kiện"
       },
-      "checkingPending": "Checking pending items...",
-      "pendingOf": "{pending} pending of {total} books.",
-      "noBooksInScope": "No books in sync scope.",
-      "allSynced": "All books are already synced.",
-      "lastSyncedLabel": "Last synced",
-      "lastSuccessfulSync": "Last successful sync",
-      "syncing": "Syncing...",
-      "progressCount": "{synced} / {total} books",
+      "checkingPending": "Đang kiểm tra mục chờ...",
+      "pendingOf": "{pending} cuốn đang chờ trên tổng {total} cuốn.",
+      "noBooksInScope": "Không có sách nào trong phạm vi đồng bộ.",
+      "allSynced": "Tất cả sách đã được đồng bộ.",
+      "lastSyncedLabel": "Lần đồng bộ cuối",
+      "lastSuccessfulSync": "Lần đồng bộ thành công cuối",
+      "syncing": "Đang đồng bộ...",
+      "progressCount": "{synced} / {total} cuốn",
       "unavailable": {
-        "permissionDenied": "You do not have permission to use Hardcover sync.",
-        "userDisabled": "Sync is paused in your Hardcover settings."
+        "permissionDenied": "Bạn không có quyền dùng đồng bộ Hardcover.",
+        "userDisabled": "Đồng bộ đang tạm dừng trong cài đặt Hardcover của bạn."
       },
       "button": {
-        "unavailable": "Sync unavailable",
-        "syncNow": "Sync now",
-        "syncNowCount": "Sync now ({count})"
+        "unavailable": "Không thể đồng bộ",
+        "syncNow": "Đồng bộ ngay",
+        "syncNowCount": "Đồng bộ ngay ({count})"
       },
       "lastSynced": {
-        "justNow": "Just now",
-        "minutesAgo": "{count} min ago",
+        "justNow": "Vừa xong",
+        "minutesAgo": "{count} phút trước",
         "hoursAgo": "{count, plural, =0 {# hour ago} other {# hours ago}}",
         "daysAgo": "{count, plural, =0 {# day ago} other {# days ago}}"
       }
     },
     "import": {
-      "title": "Pull read status",
-      "description": "Preview Hardcover matches before filling blank BookOrbit statuses.",
-      "clear": "Clear",
-      "preview": "Preview",
-      "importProgress": "Import progress",
-      "reviewMatches": "Review matches",
-      "importReady": "Import ready",
+      "title": "Lấy trạng thái đã đọc",
+      "description": "Xem trước các kết quả khớp từ Hardcover trước khi điền vào các trạng thái Thư viện Cát Minh còn trống.",
+      "clear": "Xóa",
+      "preview": "Xem trước",
+      "importProgress": "Nhập tiến độ",
+      "reviewMatches": "Xem lại kết quả khớp",
+      "importReady": "Sẵn sàng nhập",
       "exactMatches": "{count, plural, =0 {no exact matches can be imported without review} other {# exact matches can be imported without review}}",
       "progressAvailable": "{count, plural, =0 {no progress updates available} other {# progress updates available}}",
       "progressConflicts": "{count, plural, =0 {no conflicts} other {# conflicts}}",
       "unavailable": {
-        "permissionDenied": "You do not have permission to use Hardcover sync.",
-        "missingToken": "Connect Hardcover before importing.",
-        "userDisabled": "Sync is paused in your Hardcover settings."
+        "permissionDenied": "Bạn không có quyền dùng đồng bộ Hardcover.",
+        "missingToken": "Hãy kết nối Hardcover trước khi nhập.",
+        "userDisabled": "Đồng bộ đang tạm dừng trong cài đặt Hardcover của bạn."
       },
       "summary": {
-        "ready": "Ready",
-        "review": "Review",
-        "conflicts": "Conflicts",
-        "unmatched": "Unmatched",
-        "skipped": "Skipped"
+        "ready": "Sẵn sàng",
+        "review": "Cần xem lại",
+        "conflicts": "Xung đột",
+        "unmatched": "Không khớp",
+        "skipped": "Đã bỏ qua"
       },
       "result": {
-        "summary": "{applied} imported{progress}, {failed} failed",
-        "progressUpdated": "{count} progress updated"
+        "summary": "{applied} đã nhập{progress}, {failed} thất bại",
+        "progressUpdated": "{count} tiến độ đã cập nhật"
       },
       "toast": {
-        "importFailed": "Failed to import Hardcover read status",
+        "importFailed": "Không thể nhập trạng thái đã đọc từ Hardcover",
         "imported": "{count, plural, =0 {no read statuses imported{progress}} other {# read statuses imported{progress}}}",
         "progressUpdates": "{count, plural, =0 {no progress updates} other {# progress updates}}"
       }
     },
     "review": {
-      "title": "Hardcover import review",
-      "subtitle": "{total} Hardcover books, {matched} matched.",
-      "closeAriaLabel": "Close import review",
-      "searchPlaceholder": "Search title or author",
-      "importProgress": "Import progress",
-      "untitled": "Untitled",
-      "blank": "blank",
-      "noRows": "No rows match the current filters.",
-      "selectRowAriaLabel": "Select {title}",
-      "selectionSummary": "{count} selected: {ready} ready, {reviewed} reviewed.",
+      "title": "Xem lại dữ liệu nhập từ Hardcover",
+      "subtitle": "{total} sách trên Hardcover, {matched} đã khớp.",
+      "closeAriaLabel": "Đóng phần xem lại dữ liệu nhập",
+      "searchPlaceholder": "Tìm theo tiêu đề hoặc tác giả",
+      "importProgress": "Nhập tiến độ",
+      "untitled": "Chưa có tiêu đề",
+      "blank": "trống",
+      "noRows": "Không có dòng nào khớp với bộ lọc hiện tại.",
+      "selectRowAriaLabel": "Chọn {title}",
+      "selectionSummary": "Đã chọn {count}: {ready} sẵn sàng, {reviewed} đã xem lại.",
       "selectedProgress": "{count, plural, =0 {no progress updates} other {# progress updates}}",
-      "selectReady": "Select ready",
-      "selectPage": "Select page",
-      "clearPage": "Clear page",
-      "clearSelection": "Clear selection",
-      "importSelected": "Import selected",
-      "previousPage": "Previous page",
-      "nextPage": "Next page",
-      "pageRange": "{start}-{end} of {total}",
+      "selectReady": "Chọn mục sẵn sàng",
+      "selectPage": "Chọn trang",
+      "clearPage": "Bỏ chọn trang",
+      "clearSelection": "Bỏ chọn tất cả",
+      "importSelected": "Nhập mục đã chọn",
+      "previousPage": "Trang trước",
+      "nextPage": "Trang sau",
+      "pageRange": "{start}-{end} trên {total}",
       "tabs": {
-        "all": "All",
-        "ready": "Ready",
-        "review": "Review",
-        "conflicts": "Conflicts",
-        "unmatched": "Unmatched",
-        "skipped": "Skipped"
+        "all": "Tất cả",
+        "ready": "Sẵn sàng",
+        "review": "Cần xem lại",
+        "conflicts": "Xung đột",
+        "unmatched": "Không khớp",
+        "skipped": "Đã bỏ qua"
       },
       "summary": {
-        "ready": "Ready",
-        "review": "Review",
-        "conflicts": "Conflicts",
-        "unmatched": "Unmatched",
-        "skipped": "Skipped"
+        "ready": "Sẵn sàng",
+        "review": "Cần xem lại",
+        "conflicts": "Xung đột",
+        "unmatched": "Không khớp",
+        "skipped": "Đã bỏ qua"
       },
       "matchOptions": {
-        "all": "All match types"
+        "all": "Mọi kiểu khớp"
       },
       "matchMethod": {
         "hardcoverId": "Hardcover ID",
         "isbn": "ISBN",
-        "titleAuthor": "Title + author"
+        "titleAuthor": "Tiêu đề + tác giả"
       },
       "outcome": {
-        "ready": "Ready",
-        "review": "Review",
-        "conflict": "Conflict",
-        "unmatched": "Unmatched",
-        "skipped": "Skipped"
+        "ready": "Sẵn sàng",
+        "review": "Cần xem lại",
+        "conflict": "Xung đột",
+        "unmatched": "Không khớp",
+        "skipped": "Đã bỏ qua"
       },
       "column": {
-        "progress": "Progress"
+        "progress": "Tiến độ"
       }
     },
     "linkedBooks": {
-      "title": "Linked books",
-      "description": "Shows books you're currently reading. Once a book is matched to Hardcover, pick a different edition (physical, ebook, audiobook) here to change what your reading progress syncs against.",
-      "loading": "Loading books...",
-      "loadError": "Failed to load books.",
-      "retry": "Retry",
-      "empty": "No books currently being read.",
-      "untitled": "Untitled",
-      "unknownAuthor": "Unknown author",
+      "title": "Sách đã liên kết",
+      "description": "Hiển thị các sách bạn đang đọc. Khi sách đã khớp với Hardcover, chọn ấn bản khác (bản in, sách điện tử, sách nói) tại đây để đổi ấn bản dùng cho đồng bộ tiến độ đọc.",
+      "loading": "Đang tải sách...",
+      "loadError": "Không thể tải sách.",
+      "retry": "Thử lại",
+      "empty": "Hiện không có sách nào đang đọc.",
+      "untitled": "Chưa có tiêu đề",
+      "unknownAuthor": "Không rõ tác giả",
       "matchMethod": {
         "isbn": "ISBN",
-        "title": "Title",
-        "cached": "Cached",
-        "manual": "Manual",
-        "metadata_id": "Metadata match"
+        "title": "Tiêu đề",
+        "cached": "Đã lưu đệm",
+        "manual": "Thủ công",
+        "metadata_id": "Khớp siêu dữ liệu"
       },
       "status": {
-        "error": "Error: {error}",
-        "linked": "Linked",
-        "linkedWithMethod": "Linked ({method})",
-        "notLinked": "Not linked yet"
+        "error": "Lỗi: {error}",
+        "linked": "Đã liên kết",
+        "linkedWithMethod": "Đã liên kết ({method})",
+        "notLinked": "Chưa liên kết"
       },
-      "unmatchedHint": "This book hasn't been matched to Hardcover yet. It will be matched automatically the next time it syncs.",
-      "editionsLoadError": "Failed to load editions.",
-      "viewEditions": "View editions",
-      "noEditionsFound": "No editions found.",
-      "booksTruncated": "Showing the first {count} books you're reading.",
-      "editionsTruncated": "Showing the first {count} editions.",
+      "unmatchedHint": "Sách này chưa khớp với Hardcover. Sách sẽ được khớp tự động ở lần đồng bộ tiếp theo.",
+      "editionsLoadError": "Không thể tải các ấn bản.",
+      "viewEditions": "Xem các ấn bản",
+      "noEditionsFound": "Không tìm thấy ấn bản nào.",
+      "booksTruncated": "Đang hiển thị {count} cuốn đầu tiên bạn đang đọc.",
+      "editionsTruncated": "Đang hiển thị {count} ấn bản đầu tiên.",
       "pages": "{count, plural, other {# pages}}",
       "isbn": "ISBN {isbn}",
-      "current": "Current",
-      "useThis": "Use this",
+      "current": "Hiện tại",
+      "useThis": "Dùng ấn bản này",
       "toast": {
-        "switched": "Switched to {format}",
-        "switchFailed": "Failed to switch edition"
+        "switched": "Đã chuyển sang {format}",
+        "switchFailed": "Không thể đổi ấn bản"
       }
     }
   },
@@ -8457,13 +8856,13 @@
           "placeholder": "Chọn biểu tượng...",
           "selected": "Đã chọn"
         },
-        "libraryType": "Library Type",
-        "books": "Books",
-        "booksHint": "Books Hint",
-        "podcasts": "Podcasts",
-        "podcastsHint": "Podcasts Hint",
-        "podcastName": "Podcast Name",
-        "podcastNamePlaceholder": "Podcast Name Placeholder"
+        "libraryType": "Loại thư viện",
+        "books": "Sách",
+        "booksHint": "Gợi ý về sách",
+        "podcasts": "Podcast",
+        "podcastsHint": "Gợi ý về podcast",
+        "podcastName": "Tên podcast",
+        "podcastNamePlaceholder": "Nhập tên podcast"
       },
       "folders": {
         "title": "Thư mục quét",
@@ -8492,33 +8891,33 @@
         "local": {
           "title": "Thư mục podcast có sẵn",
           "optional": "Tùy chọn",
-          "description": "Các thư mục bạn đang lưu podcast. BookOrbit đọc tại chỗ và không đổi tên, di chuyển hay xóa nội dung bên trong.",
+          "description": "Các thư mục bạn đang lưu podcast. Thư viện Cát Minh đọc tại chỗ và không đổi tên, di chuyển hay xóa nội dung bên trong.",
           "addTitle": "Thêm thư mục podcast có sẵn",
           "addDescription": "Mỗi thư mục con trực tiếp sẽ trở thành một podcast.",
           "add": "Thêm thư mục khác",
           "remove": "Gỡ {folder}"
         },
-        "checkingSummary": "Checking Summary",
-        "verifySummary": "Verify Summary",
-        "matchingFiles": "Matching Files",
-        "inaccessibleSummary": "Inaccessible Summary",
-        "accessibleSummary": "Accessible Summary",
-        "checking": "Checking",
-        "unchecked": "Unchecked",
-        "inaccessible": "Inaccessible",
-        "overlap": "Overlap",
-        "accessibleFiles": "Accessible Files",
-        "overlapTitle": "Overlap Title",
-        "podcastBrowseDescription": "Podcast Browse Description",
-        "storageFolder": "Storage Folder",
-        "checkingButton": "Checking Button",
-        "checkAgain": "Check Again",
-        "checkFolders": "Check Folders",
+        "checkingSummary": "Đang kiểm tra",
+        "verifySummary": "Kết quả kiểm tra",
+        "matchingFiles": "Tệp khớp",
+        "inaccessibleSummary": "Không truy cập được",
+        "accessibleSummary": "Truy cập được",
+        "checking": "Đang kiểm tra",
+        "unchecked": "Chưa kiểm tra",
+        "inaccessible": "Không truy cập được",
+        "overlap": "Trùng lặp",
+        "accessibleFiles": "Tệp truy cập được",
+        "overlapTitle": "Thư mục trùng lặp",
+        "podcastBrowseDescription": "Duyệt thư mục podcast",
+        "storageFolder": "Thư mục lưu trữ",
+        "checkingButton": "Đang kiểm tra",
+        "checkAgain": "Kiểm tra lại",
+        "checkFolders": "Kiểm tra thư mục",
         "errors": {
-          "pathRequired": "Path Required",
-          "absolutePathRequired": "Absolute Path Required",
-          "alreadyAdded": "Already Added",
-          "coveredBy": "Covered By"
+          "pathRequired": "Cần nhập đường dẫn",
+          "absolutePathRequired": "Cần đường dẫn tuyệt đối",
+          "alreadyAdded": "Đã được thêm",
+          "coveredBy": "Đã nằm trong thư mục khác"
         }
       },
       "scanner": {
@@ -8542,7 +8941,7 @@
           "options": {
             "imported": {
               "title": "Khi nhập",
-              "hint": "Ngày BookOrbit nhập sách lần đầu. Đây là mặc định."
+              "hint": "Ngày Thư viện Cát Minh nhập sách lần đầu. Đây là mặc định."
             },
             "file_modified": {
               "title": "Thời gian sửa tệp",
@@ -8777,66 +9176,66 @@
     "missingFields": "{count, plural, =0 {không thiếu trường - sửa siêu dữ liệu} other {thiếu # trường - sửa siêu dữ liệu}}"
   },
   "migration": {
-    "sidebarTitle": "Booklore Import",
-    "importTitle": "Library Import",
+    "sidebarTitle": "Nhập từ Booklore",
+    "importTitle": "Nhập thư viện",
     "status": {
-      "done": "Done",
-      "saved": "Saved",
-      "running": "Running",
-      "failed": "Failed"
+      "done": "Xong",
+      "saved": "Đã lưu",
+      "running": "Đang chạy",
+      "failed": "Thất bại"
     },
     "badge": {
-      "validated": "Validated",
-      "upToDate": "Up to date",
-      "completed": "Completed"
+      "validated": "Đã xác thực",
+      "upToDate": "Đã cập nhật",
+      "completed": "Đã hoàn tất"
     },
     "steps": {
       "source": {
-        "short": "Source Connection",
-        "title": "Source Connection",
-        "subtitle": "Configure the database connection to your source Booklore instance.",
-        "genericSubtitle": "Configure the connection to your source library application."
+        "short": "Kết nối nguồn",
+        "title": "Kết nối nguồn",
+        "subtitle": "Cấu hình kết nối cơ sở dữ liệu tới bản Booklore nguồn.",
+        "genericSubtitle": "Cấu hình kết nối tới ứng dụng thư viện nguồn."
       },
       "mappings": {
-        "short": "User & Path Mapping",
-        "title": "User & Path Mapping",
-        "subtitle": "Map source users to target users and translate file paths."
+        "short": "Ánh xạ người dùng và đường dẫn",
+        "title": "Ánh xạ người dùng và đường dẫn",
+        "subtitle": "Ánh xạ người dùng nguồn sang người dùng đích và chuyển đổi đường dẫn tệp."
       },
       "dryRun": {
-        "short": "Dry Run",
-        "title": "Dry Run",
-        "subtitle": "Preview what will be imported before running the live migration."
+        "short": "Chạy thử",
+        "title": "Chạy thử",
+        "subtitle": "Xem trước những gì sẽ được nhập trước khi chạy chuyển đổi thật."
       },
       "migration": {
-        "short": "Run Migration",
-        "title": "Run Migration",
-        "subtitle": "Start the live import and monitor its progress."
+        "short": "Chạy chuyển đổi",
+        "title": "Chạy chuyển đổi",
+        "subtitle": "Bắt đầu nhập thật và theo dõi tiến độ."
       },
       "report": {
-        "short": "Report",
-        "title": "Migration Report",
-        "subtitle": "Review what was imported and export a detailed report."
+        "short": "Báo cáo",
+        "title": "Báo cáo chuyển đổi",
+        "subtitle": "Xem lại những gì đã nhập và xuất báo cáo chi tiết."
       }
     },
     "footer": {
-      "continueToMappings": "Continue to Mappings",
-      "continueToDryRun": "Continue to Dry Run",
-      "continueToMigration": "Continue to Migration",
-      "viewReport": "View Report",
-      "resetSetup": "Reset Setup",
-      "stepOf": "Step {current} of {total}",
-      "backToSetup": "Back to Setup"
+      "continueToMappings": "Tiếp tục tới phần ánh xạ",
+      "continueToDryRun": "Tiếp tục tới phần chạy thử",
+      "continueToMigration": "Tiếp tục tới phần chuyển đổi",
+      "viewReport": "Xem báo cáo",
+      "resetSetup": "Đặt lại thiết lập",
+      "stepOf": "Bước {current} / {total}",
+      "backToSetup": "Quay lại thiết lập"
     },
     "stages": {
-      "init": "Initializing",
-      "sharedOverlays": "Importing metadata",
-      "bookCovers": "Importing covers",
-      "userState": "Importing user data"
+      "init": "Đang khởi tạo",
+      "sharedOverlays": "Đang nhập siêu dữ liệu",
+      "bookCovers": "Đang nhập ảnh bìa",
+      "userState": "Đang nhập dữ liệu người dùng"
     },
     "source": {
-      "testConnection": "Test Connection",
-      "saveAndValidate": "Save & Validate",
-      "validatedWithWarnings": "Source validated with warnings",
+      "testConnection": "Kiểm tra kết nối",
+      "saveAndValidate": "Lưu và xác thực",
+      "validatedWithWarnings": "Đã xác thực nguồn, có cảnh báo",
       "types": {
         "booklore": "Booklore",
         "grimmory": "Grimmory",
@@ -8844,278 +9243,278 @@
         "calibreWebAutomated": "Calibre-Web Automated"
       },
       "fields": {
-        "type": "Source Type",
-        "name": "Source Name",
-        "namePlaceholder": "Library import",
-        "host": "Host",
-        "port": "Port",
-        "user": "User",
-        "password": "Password",
-        "passwordSaved": "Saved - leave unchanged",
-        "passwordNotSet": "No password set",
-        "showSecret": "Show secret",
-        "hideSecret": "Hide secret",
-        "database": "Database",
-        "mediaRootPath": "Media Root Path",
-        "ssl": "Use TLS/SSL",
-        "connectionMode": "Connection mode",
-        "apiMode": "Live API",
-        "backupMode": "Backup file",
-        "baseUrl": "Audiobookshelf URL",
-        "apiToken": "API token",
-        "apiTokenPlaceholder": "Enter an administrator API token",
-        "secretSaved": "Saved - leave unchanged",
-        "allowPrivateNetwork": "Allow private network access",
-        "allowPrivateNetworkHint": "Enable this only when Audiobookshelf is hosted on a trusted local or private network.",
-        "backupPath": "Backup file path",
-        "backupPathHint": "Enter an absolute server path inside the configured migration import directory.",
-        "cwaAppDatabasePath": "Calibre-Web Automated app.db snapshot",
+        "type": "Loại nguồn",
+        "name": "Tên nguồn",
+        "namePlaceholder": "Nhập thư viện",
+        "host": "Máy chủ",
+        "port": "Cổng",
+        "user": "Người dùng",
+        "password": "Mật khẩu",
+        "passwordSaved": "Đã lưu - để nguyên nếu không đổi",
+        "passwordNotSet": "Chưa đặt mật khẩu",
+        "showSecret": "Hiện khóa bí mật",
+        "hideSecret": "Ẩn khóa bí mật",
+        "database": "Cơ sở dữ liệu",
+        "mediaRootPath": "Đường dẫn gốc thư mục media",
+        "ssl": "Dùng TLS/SSL",
+        "connectionMode": "Chế độ kết nối",
+        "apiMode": "API trực tiếp",
+        "backupMode": "Tệp sao lưu",
+        "baseUrl": "URL Audiobookshelf",
+        "apiToken": "Token API",
+        "apiTokenPlaceholder": "Nhập token API quản trị viên",
+        "secretSaved": "Đã lưu - để nguyên nếu không đổi",
+        "allowPrivateNetwork": "Cho phép truy cập mạng riêng",
+        "allowPrivateNetworkHint": "Chỉ bật khi Audiobookshelf chạy trong mạng nội bộ hoặc mạng riêng đáng tin cậy.",
+        "backupPath": "Đường dẫn tệp sao lưu",
+        "backupPathHint": "Nhập đường dẫn tuyệt đối trên máy chủ, nằm trong thư mục nhập chuyển đổi đã cấu hình.",
+        "cwaAppDatabasePath": "Bản chụp app.db của Calibre-Web Automated",
         "cwaAppDatabasePathPlaceholder": "/imports/calibre-web-automated/app.db",
-        "cwaMetadataDatabasePath": "Calibre metadata.db snapshot",
+        "cwaMetadataDatabasePath": "Bản chụp metadata.db của Calibre",
         "cwaMetadataDatabasePathPlaceholder": "/imports/calibre-web-automated/metadata.db"
       },
       "validation": {
-        "nameRequired": "Source name is required",
-        "databaseFieldsRequired": "Host, user, database, and source name are required",
-        "apiFieldsRequired": "Audiobookshelf URL, API token, and source name are required",
-        "baseUrlInvalid": "Audiobookshelf URL must be a clean HTTP or HTTPS origin without a path",
-        "backupPathRequired": "Backup file path and source name are required",
-        "backupPathAbsolute": "Backup file path must be an absolute path",
-        "cwaAppDatabasePathRequired": "The Calibre-Web Automated app.db snapshot path is required",
-        "cwaAppDatabasePathAbsolute": "The Calibre-Web Automated app.db snapshot path must be absolute",
-        "cwaMetadataDatabasePathRequired": "The Calibre metadata.db snapshot path is required",
-        "cwaMetadataDatabasePathAbsolute": "The Calibre metadata.db snapshot path must be absolute"
+        "nameRequired": "Cần nhập tên nguồn",
+        "databaseFieldsRequired": "Cần nhập máy chủ, người dùng, cơ sở dữ liệu và tên nguồn",
+        "apiFieldsRequired": "Cần nhập URL Audiobookshelf, token API và tên nguồn",
+        "baseUrlInvalid": "URL Audiobookshelf phải là địa chỉ HTTP hoặc HTTPS gọn, không có đường dẫn",
+        "backupPathRequired": "Cần nhập đường dẫn tệp sao lưu và tên nguồn",
+        "backupPathAbsolute": "Đường dẫn tệp sao lưu phải là đường dẫn tuyệt đối",
+        "cwaAppDatabasePathRequired": "Cần nhập đường dẫn bản chụp app.db của Calibre-Web Automated",
+        "cwaAppDatabasePathAbsolute": "Đường dẫn bản chụp app.db của Calibre-Web Automated phải là đường dẫn tuyệt đối",
+        "cwaMetadataDatabasePathRequired": "Cần nhập đường dẫn bản chụp metadata.db của Calibre",
+        "cwaMetadataDatabasePathAbsolute": "Đường dẫn bản chụp metadata.db của Calibre phải là đường dẫn tuyệt đối"
       },
       "cwa": {
-        "snapshotTitle": "Stopped snapshot mode",
-        "stoppedWarning": "Stop Calibre-Web Automated before copying both databases. BookOrbit cannot verify that the two snapshots were copied at exactly the same instant.",
-        "importRootGuidance": "Both snapshot files must be readable server paths below the configured MIGRATION_IMPORT_ROOT directory.",
-        "logicalRootGuidance": "Book path mapping uses the logical Calibre library root stored in app.db, not the host folder containing these database snapshots.",
-        "compatibilityNote": "Schema behavior is verified against Calibre-Web Automated v4.0.6. Its databases do not expose a reliable application release version."
+        "snapshotTitle": "Chế độ bản chụp khi đã dừng",
+        "stoppedWarning": "Hãy dừng Calibre-Web Automated trước khi sao chép cả hai cơ sở dữ liệu. Thư viện Cát Minh không thể xác minh hai bản chụp được sao chép cùng một thời điểm.",
+        "importRootGuidance": "Cả hai tệp bản chụp phải là đường dẫn máy chủ đọc được, nằm trong thư mục MIGRATION_IMPORT_ROOT đã cấu hình.",
+        "logicalRootGuidance": "Ánh xạ đường dẫn sách dùng thư mục gốc thư viện Calibre lưu trong app.db, không phải thư mục trên máy chủ chứa các bản chụp này.",
+        "compatibilityNote": "Cấu trúc dữ liệu đã được kiểm chứng với Calibre-Web Automated v4.0.6. Cơ sở dữ liệu của ứng dụng này không cho biết phiên bản phát hành một cách đáng tin cậy."
       },
       "mediaPath": {
-        "hintRequired": "Required for migrating book covers.",
-        "hintAbsolute": "Use an absolute path (for example: /books). Relative paths are not supported.",
-        "hintConfigured": "Cover import path configured. Use Test Connection to verify access and Booklore images folder structure.",
-        "buttonOk": "Path OK",
-        "buttonIssue": "Path Issue",
-        "buttonTest": "Test Path"
+        "hintRequired": "Bắt buộc để chuyển ảnh bìa sách.",
+        "hintAbsolute": "Dùng đường dẫn tuyệt đối (ví dụ: /books). Không hỗ trợ đường dẫn tương đối.",
+        "hintConfigured": "Đã cấu hình đường dẫn nhập ảnh bìa. Dùng Kiểm tra kết nối để xác minh quyền truy cập và cấu trúc thư mục ảnh của Booklore.",
+        "buttonOk": "Đường dẫn hợp lệ",
+        "buttonIssue": "Đường dẫn có vấn đề",
+        "buttonTest": "Kiểm tra đường dẫn"
       },
       "compatibility": {
-        "title": "Tested compatibility",
-        "verifiedAgainst": "Verified against:",
-        "note": "Later versions are likely compatible but have not been verified. Run a dry-run first to confirm before committing data."
+        "title": "Mức tương thích đã kiểm thử",
+        "verifiedAgainst": "Đã kiểm chứng với:",
+        "note": "Các phiên bản mới hơn có thể tương thích nhưng chưa được kiểm chứng. Hãy chạy thử trước để xác nhận rồi mới ghi dữ liệu."
       },
       "snapshot": {
-        "title": "Last validation snapshot",
-        "sourceVersion": "Source version: {version}",
-        "unknown": "Unknown",
-        "missingTables": "Missing required tables: {tables}"
+        "title": "Bản ghi xác thực gần nhất",
+        "sourceVersion": "Phiên bản nguồn: {version}",
+        "unknown": "Không rõ",
+        "missingTables": "Thiếu các bảng bắt buộc: {tables}"
       }
     },
     "mappings": {
-      "suggestionsAutoLoad": "User suggestions load automatically after source validation.",
-      "refresh": "Refresh",
-      "sourceUser": "Source User",
-      "targetUser": "Target User",
-      "doNotImport": "Do not import this user",
-      "noSourceUsersLoaded": "No source users loaded yet.",
-      "noActiveTargetUsers": "No active target users found. Create or re-enable a BookOrbit user before mapping.",
-      "pathPrefixMappings": "Path Prefix Mappings",
-      "addMapping": "Add Mapping",
-      "pathMappingsExplanation": "Path mappings translate source file paths to target paths so books can be matched by file location. Books are also matched by ISBN, file hash, and title/author regardless of path mappings.",
-      "noPrefixesFound": "No prefixes found - validate source first",
-      "selectSourcePrefix": "Select source prefix...",
-      "selectTargetFolder": "Select target folder...",
-      "remove": "Remove",
-      "saveMappings": "Save Mappings",
+      "suggestionsAutoLoad": "Gợi ý người dùng sẽ tự tải sau khi xác thực nguồn.",
+      "refresh": "Làm mới",
+      "sourceUser": "Người dùng nguồn",
+      "targetUser": "Người dùng đích",
+      "doNotImport": "Không nhập người dùng này",
+      "noSourceUsersLoaded": "Chưa tải người dùng nguồn nào.",
+      "noActiveTargetUsers": "Không tìm thấy người dùng đích đang hoạt động. Tạo hoặc bật lại người dùng Thư viện Cát Minh trước khi ánh xạ.",
+      "pathPrefixMappings": "Ánh xạ tiền tố đường dẫn",
+      "addMapping": "Thêm ánh xạ",
+      "pathMappingsExplanation": "Ánh xạ đường dẫn chuyển đường dẫn tệp nguồn sang đường dẫn đích để khớp sách theo vị trí tệp. Sách cũng được khớp theo ISBN, mã băm tệp và tiêu đề/tác giả, bất kể ánh xạ đường dẫn.",
+      "noPrefixesFound": "Không tìm thấy tiền tố - hãy xác thực nguồn trước",
+      "selectSourcePrefix": "Chọn tiền tố nguồn...",
+      "selectTargetFolder": "Chọn thư mục đích...",
+      "remove": "Xóa",
+      "saveMappings": "Lưu ánh xạ",
       "pathValidation": {
-        "title": "Path validation",
-        "mappedSummary": "{mapped} of {total} source books have a mapped path",
-        "unmatched": "{count} mapped paths not found on disk",
-        "allMatched": "All {count} mapped paths found on disk"
+        "title": "Kiểm tra đường dẫn",
+        "mappedSummary": "{mapped} / {total} sách nguồn có đường dẫn đã ánh xạ",
+        "unmatched": "{count} đường dẫn đã ánh xạ không có trên ổ đĩa",
+        "allMatched": "Tìm thấy đủ {count} đường dẫn đã ánh xạ trên ổ đĩa"
       }
     },
     "dryRun": {
-      "run": "Run Dry-Run",
-      "matched": "Matched:",
-      "unresolved": "Unresolved:",
-      "duplicates": "Duplicates:",
-      "unresolvedSummary": "Unresolved summary"
+      "run": "Chạy thử",
+      "matched": "Đã khớp:",
+      "unresolved": "Chưa xử lý:",
+      "duplicates": "Trùng lặp:",
+      "unresolvedSummary": "Tóm tắt mục chưa xử lý"
     },
     "duplicates": {
-      "title": "Resolve duplicate target matches",
-      "explanation": "For each target book, choose one source book to keep. Recommended choices are preselected when there is a single strongest match.",
-      "remainingGroups": "Remaining groups:",
-      "ofCount": "of {total}",
-      "targetBookId": "Target book #{id}",
-      "recommended": "Recommended",
+      "title": "Xử lý các kết quả khớp trùng với sách đích",
+      "explanation": "Với mỗi sách đích, chọn một sách nguồn để giữ lại. Lựa chọn đề xuất được chọn sẵn khi có một kết quả khớp mạnh nhất.",
+      "remainingGroups": "Nhóm còn lại:",
+      "ofCount": "trên {total}",
+      "targetBookId": "Sách đích #{id}",
+      "recommended": "Đề xuất",
       "resolveButton": "{count, plural, =0 {Resolve # duplicate} other {Resolve # duplicates}}",
-      "sourceRecordId": "Source record ID #{id}",
-      "byAuthor": "by {author} (ID: {id})",
+      "sourceRecordId": "Mã bản ghi nguồn #{id}",
+      "byAuthor": "của {author} (ID: {id})",
       "byFilePath": "{filePath} (ID: {id})",
-      "bookloreSourceId": "Booklore source ID: {id}",
-      "libraryBookId": "Library book #{id}"
+      "bookloreSourceId": "Mã nguồn Booklore: {id}",
+      "libraryBookId": "Sách thư viện #{id}"
     },
     "preflight": {
-      "title": "Preflight checks",
-      "allPassed": "All checks passed - ready to migrate",
-      "sourceValidated": "Source validated",
-      "saveAndValidateSource": "Save and validate source connection",
-      "validateSourceConnection": "Validate source connection",
-      "mappingsSaved": "Mappings saved",
-      "saveUserAndPathMappings": "Save user and path mappings",
-      "pathMappingsValidated": "Path mappings validated",
-      "savePathMappingsToValidate": "Save path mappings to validate them",
-      "dryRunUpToDate": "Dry-run is up to date",
-      "runFreshDryRun": "Run a fresh dry-run",
+      "title": "Kiểm tra trước khi chạy",
+      "allPassed": "Tất cả kiểm tra đều đạt - sẵn sàng chuyển đổi",
+      "sourceValidated": "Đã xác thực nguồn",
+      "saveAndValidateSource": "Lưu và xác thực kết nối nguồn",
+      "validateSourceConnection": "Xác thực kết nối nguồn",
+      "mappingsSaved": "Đã lưu ánh xạ",
+      "saveUserAndPathMappings": "Lưu ánh xạ người dùng và đường dẫn",
+      "pathMappingsValidated": "Đã xác thực ánh xạ đường dẫn",
+      "savePathMappingsToValidate": "Lưu ánh xạ đường dẫn để xác thực",
+      "dryRunUpToDate": "Lần chạy thử đã cập nhật",
+      "runFreshDryRun": "Chạy thử lại",
       "issues": {
-        "saveSource": "Save source connection settings",
-        "validateSource": "Validate source connection",
-        "saveMappings": "Save user and path mappings",
-        "savePathMappings": "Save path mappings to validate them",
-        "freshDryRun": "Run a fresh dry-run",
-        "resolveDuplicates": "Resolve duplicate target book matches in the dry-run",
-        "waitForRun": "Wait for active run to finish"
+        "saveSource": "Lưu cài đặt kết nối nguồn",
+        "validateSource": "Xác thực kết nối nguồn",
+        "saveMappings": "Lưu ánh xạ người dùng và đường dẫn",
+        "savePathMappings": "Lưu ánh xạ đường dẫn để xác thực",
+        "freshDryRun": "Chạy thử lại",
+        "resolveDuplicates": "Xử lý các kết quả khớp trùng với sách đích trong lần chạy thử",
+        "waitForRun": "Chờ lượt chạy hiện tại kết thúc"
       }
     },
     "run": {
-      "confirmPrompt": "This will start the live migration. Are you sure?",
-      "confirmStart": "Confirm Start",
-      "startMigration": "Start Migration",
-      "cancelRun": "Cancel Run",
-      "refreshStatus": "Refresh Status",
-      "pollingStopped": "Status polling stopped due to an error.",
-      "retry": "Retry",
-      "stage": "Stage: {stage}",
-      "initializing": "initializing",
-      "ended": "Ended {time}"
+      "confirmPrompt": "Thao tác này sẽ bắt đầu chuyển đổi thật. Bạn có chắc không?",
+      "confirmStart": "Xác nhận bắt đầu",
+      "startMigration": "Bắt đầu chuyển đổi",
+      "cancelRun": "Hủy lượt chạy",
+      "refreshStatus": "Làm mới trạng thái",
+      "pollingStopped": "Đã ngừng cập nhật trạng thái do có lỗi.",
+      "retry": "Thử lại",
+      "stage": "Giai đoạn: {stage}",
+      "initializing": "đang khởi tạo",
+      "ended": "Kết thúc {time}"
     },
     "report": {
-      "noRunYet": "No migration run yet. Complete the steps above to start.",
-      "runNumber": "Run #{id}",
-      "notStarted": "Not started",
-      "reloadReport": "Reload Report",
-      "loadFullReport": "Load Full Report",
-      "exportJson": "Export JSON",
-      "exportCsv": "Export CSV",
-      "migrationFailed": "Migration failed",
-      "retryFromLastStage": "Retry from last completed stage",
-      "booksSection": "Books",
-      "metadataOverlays": "Metadata overlays applied",
-      "authorMappings": "Author mappings replaced",
-      "narratorMappings": "Narrator mappings replaced",
-      "genreMappings": "Genre mappings replaced",
-      "tagMappings": "Tag mappings replaced",
-      "coversImported": "Covers imported",
-      "coverImportSkipped": "Cover import skipped - media root path not configured",
-      "couldNotMatch": "Could not match",
-      "userDataSection": "User Data",
-      "readingStatuses": "Reading statuses",
-      "readingProgressEntries": "Reading progress entries",
-      "audiobookProgressEntries": "Audiobook progress entries",
-      "readingSessions": "Reading sessions",
-      "bookmarks": "Bookmarks",
-      "annotations": "Annotations",
-      "collectionEntries": "Collection entries",
-      "loadFullReportHint": "Click \"Load Full Report\" to include the dry-run match summary in the exported report.",
-      "completedNoIssues": "Migration completed with no unresolved books or failures.",
-      "matchedBooks": "Matched books ({count})",
-      "matchedBooksExplanation": "These dry-run matches were used to decide which library books received imported data.",
-      "sourceBook": "Source book {id}",
-      "libraryBook": "Library book {id}",
-      "unresolvedBooks": "Unresolved books ({count})",
-      "unresolvedBooksExplanation": "These books exist in the source but could not be matched to any book in your library.",
-      "mappedUsers": "Mapped users ({count})",
-      "mappedUsersExplanation": "Per-user totals come from the dry-run preview cached with the migration plan.",
-      "coverFailures": "{count} cover import(s) failed. Detailed failure rows are not stored.",
-      "userPreviewCounts": "{statuses} statuses, {progress} progress entries, {sessions} reading sessions, {bookmarks} bookmarks, {annotations} annotations, {collections} collection entries"
+      "noRunYet": "Chưa có lượt chuyển đổi nào. Hoàn tất các bước ở trên để bắt đầu.",
+      "runNumber": "Lượt chạy #{id}",
+      "notStarted": "Chưa bắt đầu",
+      "reloadReport": "Tải lại báo cáo",
+      "loadFullReport": "Tải báo cáo đầy đủ",
+      "exportJson": "Xuất JSON",
+      "exportCsv": "Xuất CSV",
+      "migrationFailed": "Chuyển đổi thất bại",
+      "retryFromLastStage": "Thử lại từ giai đoạn hoàn tất gần nhất",
+      "booksSection": "Sách",
+      "metadataOverlays": "Đã áp dụng siêu dữ liệu",
+      "authorMappings": "Đã thay ánh xạ tác giả",
+      "narratorMappings": "Đã thay ánh xạ người đọc",
+      "genreMappings": "Đã thay ánh xạ thể loại",
+      "tagMappings": "Đã thay ánh xạ thẻ",
+      "coversImported": "Ảnh bìa đã nhập",
+      "coverImportSkipped": "Bỏ qua nhập ảnh bìa - chưa cấu hình đường dẫn gốc thư mục media",
+      "couldNotMatch": "Không thể khớp",
+      "userDataSection": "Dữ liệu người dùng",
+      "readingStatuses": "Trạng thái đọc",
+      "readingProgressEntries": "Mục tiến độ đọc",
+      "audiobookProgressEntries": "Mục tiến độ sách nói",
+      "readingSessions": "Phiên đọc",
+      "bookmarks": "Dấu trang",
+      "annotations": "Chú thích",
+      "collectionEntries": "Mục bộ sưu tập",
+      "loadFullReportHint": "Nhấn \"Tải báo cáo đầy đủ\" để đưa tóm tắt khớp của lần chạy thử vào báo cáo xuất ra.",
+      "completedNoIssues": "Chuyển đổi hoàn tất, không có sách chưa xử lý hay lỗi nào.",
+      "matchedBooks": "Sách đã khớp ({count})",
+      "matchedBooksExplanation": "Các kết quả khớp của lần chạy thử này được dùng để quyết định sách nào trong thư viện nhận dữ liệu nhập vào.",
+      "sourceBook": "Sách nguồn {id}",
+      "libraryBook": "Sách thư viện {id}",
+      "unresolvedBooks": "Sách chưa xử lý ({count})",
+      "unresolvedBooksExplanation": "Những sách này có trong nguồn nhưng không khớp với sách nào trong thư viện của bạn.",
+      "mappedUsers": "Người dùng đã ánh xạ ({count})",
+      "mappedUsersExplanation": "Số liệu theo từng người dùng lấy từ bản xem trước chạy thử được lưu cùng kế hoạch chuyển đổi.",
+      "coverFailures": "{count} lượt nhập ảnh bìa thất bại. Không lưu chi tiết từng lỗi.",
+      "userPreviewCounts": "{statuses} trạng thái, {progress} mục tiến độ, {sessions} phiên đọc, {bookmarks} dấu trang, {annotations} chú thích, {collections} mục bộ sưu tập"
     },
     "unresolvedReason": {
-      "noTitleAuthorMatch": "No matching book found by title or author",
-      "noFilePathMatch": "File path did not match any book in this library",
-      "noFileHashMatch": "File hash did not match any book in this library",
-      "noIsbnMatch": "ISBN did not match any book in this library",
-      "noAsinMatch": "ASIN did not match any book in this library",
-      "insufficientSourceData": "Not enough metadata to attempt matching",
-      "ambiguousIsbnMatch": "Multiple books matched the same ISBN",
-      "ambiguousAsinMatch": "Multiple books matched the same ASIN",
-      "ambiguousFileHashMatch": "Multiple books matched the same file hash",
-      "ambiguousFilePathMatch": "Multiple books matched the same file path",
-      "ambiguousTitleAuthorMatch": "Multiple books matched the same title and author",
-      "unknown": "Could not determine reason"
+      "noTitleAuthorMatch": "Không tìm thấy sách khớp theo tiêu đề hoặc tác giả",
+      "noFilePathMatch": "Đường dẫn tệp không khớp với sách nào trong thư viện này",
+      "noFileHashMatch": "Mã băm tệp không khớp với sách nào trong thư viện này",
+      "noIsbnMatch": "ISBN không khớp với sách nào trong thư viện này",
+      "noAsinMatch": "ASIN không khớp với sách nào trong thư viện này",
+      "insufficientSourceData": "Không đủ siêu dữ liệu để thử khớp",
+      "ambiguousIsbnMatch": "Nhiều sách khớp cùng một ISBN",
+      "ambiguousAsinMatch": "Nhiều sách khớp cùng một ASIN",
+      "ambiguousFileHashMatch": "Nhiều sách khớp cùng một mã băm tệp",
+      "ambiguousFilePathMatch": "Nhiều sách khớp cùng một đường dẫn tệp",
+      "ambiguousTitleAuthorMatch": "Nhiều sách khớp cùng tiêu đề và tác giả",
+      "unknown": "Không xác định được lý do"
     },
     "matchStrategy": {
-      "isbn": "Matched by ISBN",
-      "asin": "Matched by ASIN",
-      "fileHash": "Matched by file hash",
-      "pathMapping": "Matched by mapped file path",
-      "titleAuthor": "Matched by title and author",
-      "unavailable": "Match strategy unavailable"
+      "isbn": "Khớp theo ISBN",
+      "asin": "Khớp theo ASIN",
+      "fileHash": "Khớp theo mã băm tệp",
+      "pathMapping": "Khớp theo đường dẫn tệp đã ánh xạ",
+      "titleAuthor": "Khớp theo tiêu đề và tác giả",
+      "unavailable": "Không có cách khớp"
     },
     "connectionError": {
-      "unreachable": "Could not reach the database server. Check the host and port.",
-      "authFailed": "Authentication failed. Check the username and password.",
-      "databaseNotFound": "Database not found. Check the database name.",
-      "timeout": "Connection timed out. Check host and firewall settings.",
-      "generic": "Connection test failed"
+      "unreachable": "Không kết nối được máy chủ cơ sở dữ liệu. Kiểm tra máy chủ và cổng.",
+      "authFailed": "Xác thực thất bại. Kiểm tra tên đăng nhập và mật khẩu.",
+      "databaseNotFound": "Không tìm thấy cơ sở dữ liệu. Kiểm tra tên cơ sở dữ liệu.",
+      "timeout": "Hết thời gian kết nối. Kiểm tra máy chủ và cài đặt tường lửa.",
+      "generic": "Kiểm tra kết nối thất bại"
     },
     "userSelect": {
-      "placeholder": "Select user",
-      "noUsersFound": "No users found"
+      "placeholder": "Chọn người dùng",
+      "noUsersFound": "Không tìm thấy người dùng"
     },
     "toast": {
-      "initFailed": "Failed to initialize migration settings",
-      "loadSupportedTypesFailed": "Failed to load supported migration source types",
-      "loadTargetUsersFailed": "Failed to load target users",
-      "loadTargetFoldersFailed": "Failed to load target library folders",
-      "noSourceUsers": "No source users were returned",
-      "suggestionsLoaded": "User mapping suggestions loaded",
-      "loadSuggestionsFailed": "Failed to load user mapping suggestions",
-      "sourceFieldsRequired": "Host, user, database, and source name are required",
-      "connectionPassedWithWarnings": "Connection test passed with warnings",
-      "connectionPassedWithWarningCount": "Connection test passed with {count} warning(s). First: {warning}",
-      "connectionPassed": "Connection test passed",
-      "connectionMissingTables": "Connection ok, but {count} required table(s) are missing",
-      "cannotTestMediaWhileRunning": "Cannot test media path while a run is active",
-      "mediaPathRequired": "Media Root Path is required for cover import.",
-      "mediaPathAbsolute": "Use an absolute path (for example: /books).",
-      "mediaPathVerified": "Media path verified.",
-      "mediaPathValid": "Media path is valid and readable",
-      "mediaPathValidationFailed": "Media path validation failed.",
-      "connectionFailedBeforeMedia": "Connection test failed before media path validation could complete.",
-      "cannotModifySourceWhileRunning": "Cannot modify source while a run is active",
-      "sourceSavedWithWarnings": "Source saved and validated with {count} warning(s)",
-      "sourceSaved": "Source saved and validated",
-      "saveSourceFailed": "Failed to save or validate source",
-      "cannotSaveMappingsWhileRunning": "Cannot save mappings while a run is active",
-      "saveSourceFirst": "Save source first",
-      "mapAtLeastOneUser": "Map at least one source user to a target user",
-      "mapEveryUser": "Map every source user before saving",
-      "pathValidationFailedButSaved": "Path validation failed, but profile will still be saved",
-      "mappingsSaved": "Mappings saved",
-      "saveMappingsFailed": "Failed to save mappings",
-      "cannotDryRunWhileRunning": "Cannot run dry-run while a run is active",
-      "saveMappingsFirst": "Save mappings first",
-      "dryRunCompleted": "Dry-run completed: {matched} matched, {unresolved} unresolved",
-      "dryRunFailed": "Dry-run failed",
-      "selectSourceForDuplicates": "Select a source book for all {count} duplicate groups",
-      "duplicatesResolved": "Duplicate matches resolved",
-      "resolveDuplicatesFailed": "Failed to resolve duplicates",
-      "preflightNotReady": "Migration preflight not ready",
-      "runDryRunFirst": "Run dry-run first",
-      "runStarted": "Migration run started",
-      "startFailed": "Failed to start migration",
-      "runCancelled": "Migration run cancelled",
-      "cancelFailed": "Failed to cancel migration",
-      "runRetried": "Migration run retried - resuming from last completed stage",
-      "retryFailed": "Failed to retry migration",
-      "loadProgressFailed": "Failed to load run progress",
-      "startMigrationFirst": "Start migration first",
-      "reportRefreshed": "Run report refreshed",
-      "loadReportFailed": "Failed to load run report",
-      "reportExported": "Report exported as {format}",
-      "exportFailed": "Failed to export migration report"
+      "initFailed": "Không thể khởi tạo cài đặt chuyển đổi",
+      "loadSupportedTypesFailed": "Không thể tải các loại nguồn được hỗ trợ",
+      "loadTargetUsersFailed": "Không thể tải người dùng đích",
+      "loadTargetFoldersFailed": "Không thể tải thư mục thư viện đích",
+      "noSourceUsers": "Không có người dùng nguồn nào được trả về",
+      "suggestionsLoaded": "Đã tải gợi ý ánh xạ người dùng",
+      "loadSuggestionsFailed": "Không thể tải gợi ý ánh xạ người dùng",
+      "sourceFieldsRequired": "Cần nhập máy chủ, người dùng, cơ sở dữ liệu và tên nguồn",
+      "connectionPassedWithWarnings": "Kiểm tra kết nối đạt, có cảnh báo",
+      "connectionPassedWithWarningCount": "Kiểm tra kết nối đạt, có {count} cảnh báo. Cảnh báo đầu tiên: {warning}",
+      "connectionPassed": "Kiểm tra kết nối đạt",
+      "connectionMissingTables": "Kết nối được, nhưng thiếu {count} bảng bắt buộc",
+      "cannotTestMediaWhileRunning": "Không thể kiểm tra đường dẫn media khi đang có lượt chạy",
+      "mediaPathRequired": "Cần đường dẫn gốc thư mục media để nhập ảnh bìa.",
+      "mediaPathAbsolute": "Dùng đường dẫn tuyệt đối (ví dụ: /books).",
+      "mediaPathVerified": "Đã xác minh đường dẫn media.",
+      "mediaPathValid": "Đường dẫn media hợp lệ và đọc được",
+      "mediaPathValidationFailed": "Xác thực đường dẫn media thất bại.",
+      "connectionFailedBeforeMedia": "Kiểm tra kết nối thất bại trước khi kịp xác thực đường dẫn media.",
+      "cannotModifySourceWhileRunning": "Không thể sửa nguồn khi đang có lượt chạy",
+      "sourceSavedWithWarnings": "Đã lưu và xác thực nguồn, có {count} cảnh báo",
+      "sourceSaved": "Đã lưu và xác thực nguồn",
+      "saveSourceFailed": "Không thể lưu hoặc xác thực nguồn",
+      "cannotSaveMappingsWhileRunning": "Không thể lưu ánh xạ khi đang có lượt chạy",
+      "saveSourceFirst": "Hãy lưu nguồn trước",
+      "mapAtLeastOneUser": "Ánh xạ ít nhất một người dùng nguồn sang người dùng đích",
+      "mapEveryUser": "Ánh xạ mọi người dùng nguồn trước khi lưu",
+      "pathValidationFailedButSaved": "Kiểm tra đường dẫn thất bại, nhưng cấu hình vẫn được lưu",
+      "mappingsSaved": "Đã lưu ánh xạ",
+      "saveMappingsFailed": "Không thể lưu ánh xạ",
+      "cannotDryRunWhileRunning": "Không thể chạy thử khi đang có lượt chạy",
+      "saveMappingsFirst": "Hãy lưu ánh xạ trước",
+      "dryRunCompleted": "Chạy thử hoàn tất: {matched} đã khớp, {unresolved} chưa xử lý",
+      "dryRunFailed": "Chạy thử thất bại",
+      "selectSourceForDuplicates": "Chọn sách nguồn cho cả {count} nhóm trùng lặp",
+      "duplicatesResolved": "Đã xử lý các kết quả khớp trùng",
+      "resolveDuplicatesFailed": "Không thể xử lý trùng lặp",
+      "preflightNotReady": "Chưa đủ điều kiện để chuyển đổi",
+      "runDryRunFirst": "Hãy chạy thử trước",
+      "runStarted": "Đã bắt đầu chuyển đổi",
+      "startFailed": "Không thể bắt đầu chuyển đổi",
+      "runCancelled": "Đã hủy lượt chuyển đổi",
+      "cancelFailed": "Không thể hủy chuyển đổi",
+      "runRetried": "Đã thử lại chuyển đổi - tiếp tục từ giai đoạn hoàn tất gần nhất",
+      "retryFailed": "Không thể thử lại chuyển đổi",
+      "loadProgressFailed": "Không thể tải tiến độ lượt chạy",
+      "startMigrationFirst": "Hãy bắt đầu chuyển đổi trước",
+      "reportRefreshed": "Đã làm mới báo cáo lượt chạy",
+      "loadReportFailed": "Không thể tải báo cáo lượt chạy",
+      "reportExported": "Đã xuất báo cáo dạng {format}",
+      "exportFailed": "Không thể xuất báo cáo chuyển đổi"
     }
   },
   "notifications": {
@@ -9213,390 +9612,390 @@
     }
   },
   "reader": {
-    "retry": "Retry",
+    "retry": "Thử lại",
     "pdf": {
-      "openError": "Unable to open this PDF",
-      "preparing": "Preparing PDF reader",
-      "opening": "Opening PDF",
-      "loading": "Loading PDF",
-      "loadFallback": "The document could not be loaded.",
-      "requestFailed": "The PDF request failed with status {status}.",
-      "emptyDocument": "The PDF request returned an empty document.",
-      "managerError": "The PDF document manager could not be initialized.",
-      "engineNoPages": "The PDF engine opened this document without any pages.",
-      "engineOpenError": "The PDF could not be opened by the document engine.",
-      "noPages": "This PDF opened without any pages",
-      "noPagesHint": "Reload the document to recover from the incomplete PDF engine response.",
-      "externalLinkTitle": "Open external link?",
-      "externalLinkDescription": "This PDF wants to open {host} in a new tab.",
-      "openLink": "Open link",
-      "annotationsLoadError": "Could not load highlights for this PDF.",
-      "loadingAnnotations": "Loading PDF highlights",
-      "loadMoreAnnotations": "Load more highlights",
-      "loadingMoreAnnotations": "Loading more highlights…",
+      "openError": "Không thể mở PDF này",
+      "preparing": "Đang chuẩn bị trình đọc PDF",
+      "opening": "Đang mở PDF",
+      "loading": "Đang tải PDF",
+      "loadFallback": "Không thể tải tài liệu.",
+      "requestFailed": "Yêu cầu PDF thất bại với mã trạng thái {status}.",
+      "emptyDocument": "Yêu cầu PDF trả về tài liệu trống.",
+      "managerError": "Không thể khởi tạo trình quản lý tài liệu PDF.",
+      "engineNoPages": "Trình xử lý PDF đã mở tài liệu này nhưng không có trang nào.",
+      "engineOpenError": "Trình xử lý tài liệu không thể mở PDF này.",
+      "noPages": "PDF này mở ra nhưng không có trang nào",
+      "noPagesHint": "Tải lại tài liệu để khắc phục phản hồi không đầy đủ từ trình xử lý PDF.",
+      "externalLinkTitle": "Mở liên kết bên ngoài?",
+      "externalLinkDescription": "PDF này muốn mở {host} trong tab mới.",
+      "openLink": "Mở liên kết",
+      "annotationsLoadError": "Không thể tải các đánh dấu của PDF này.",
+      "loadingAnnotations": "Đang tải đánh dấu PDF",
+      "loadMoreAnnotations": "Tải thêm đánh dấu",
+      "loadingMoreAnnotations": "Đang tải thêm đánh dấu…",
       "sidebar": {
-        "pages": "Pages",
-        "contents": "Contents",
-        "search": "Search",
-        "tabsLabel": "PDF navigation",
-        "closeNavigation": "Close navigation",
-        "goToPage": "Go to page {page}",
-        "noOutline": "This PDF has no document outline.",
-        "searchPlaceholder": "Search this PDF",
-        "clearSearch": "Clear search",
-        "matchCase": "Match case",
-        "wholeWord": "Whole word",
-        "resultPosition": "{current} of {total}",
-        "previousResult": "Previous result",
-        "nextResult": "Next result",
-        "searchingPage": "Searching page {page} of {total}",
-        "searchPrompt": "Type a term to search this PDF.",
-        "searchTooShort": "Enter at least {min} characters to search this PDF.",
-        "noSearchResults": "No searchable text matched your query.",
-        "page": "Page {page}",
-        "filterOutline": "Filter outline",
-        "noOutlineMatch": "No outline entries match your filter.",
-        "loadingOutline": "Loading outline",
-        "expandSection": "Expand {title}",
-        "collapseSection": "Collapse {title}",
-        "jumpToPage": "Jump to page",
-        "resizePanel": "Resize navigation panel"
+        "pages": "Trang",
+        "contents": "Mục lục",
+        "search": "Tìm kiếm",
+        "tabsLabel": "Điều hướng PDF",
+        "closeNavigation": "Đóng điều hướng",
+        "goToPage": "Đến trang {page}",
+        "noOutline": "PDF này không có mục lục.",
+        "searchPlaceholder": "Tìm trong PDF này",
+        "clearSearch": "Xóa tìm kiếm",
+        "matchCase": "Phân biệt hoa thường",
+        "wholeWord": "Nguyên từ",
+        "resultPosition": "{current} / {total}",
+        "previousResult": "Kết quả trước",
+        "nextResult": "Kết quả sau",
+        "searchingPage": "Đang tìm trang {page} / {total}",
+        "searchPrompt": "Nhập từ khóa để tìm trong PDF này.",
+        "searchTooShort": "Nhập ít nhất {min} ký tự để tìm trong PDF này.",
+        "noSearchResults": "Không có văn bản nào khớp với từ khóa.",
+        "page": "Trang {page}",
+        "filterOutline": "Lọc mục lục",
+        "noOutlineMatch": "Không có mục nào khớp với bộ lọc.",
+        "loadingOutline": "Đang tải mục lục",
+        "expandSection": "Mở rộng {title}",
+        "collapseSection": "Thu gọn {title}",
+        "jumpToPage": "Đi tới trang",
+        "resizePanel": "Đổi kích thước bảng điều hướng"
       },
       "toolbar": {
-        "navigation": "Document navigation",
-        "previousPage": "Previous page",
-        "currentPage": "Current page",
-        "nextPage": "Next page",
-        "zoomOut": "Zoom out",
-        "zoomIn": "Zoom in",
-        "panTool": "Pan tool",
-        "pan": "Pan",
-        "selectTool": "Select text tool",
-        "selectText": "Select text",
-        "pinHeader": "Pin reader header",
-        "unpinHeader": "Unpin reader header",
-        "pinHeaderShort": "Pin header",
-        "unpinHeaderShort": "Unpin header",
-        "moreTools": "More PDF tools",
-        "settings": "PDF settings"
+        "navigation": "Điều hướng tài liệu",
+        "previousPage": "Trang trước",
+        "currentPage": "Trang hiện tại",
+        "nextPage": "Trang sau",
+        "zoomOut": "Thu nhỏ",
+        "zoomIn": "Phóng to",
+        "panTool": "Công cụ kéo",
+        "pan": "Kéo",
+        "selectTool": "Công cụ chọn văn bản",
+        "selectText": "Chọn văn bản",
+        "pinHeader": "Ghim thanh tiêu đề",
+        "unpinHeader": "Bỏ ghim thanh tiêu đề",
+        "pinHeaderShort": "Ghim tiêu đề",
+        "unpinHeaderShort": "Bỏ ghim tiêu đề",
+        "moreTools": "Thêm công cụ PDF",
+        "settings": "Cài đặt PDF"
       }
     },
-    "loadingBook": "Loading book…",
-    "failedToLoadBook": "Failed to load book",
-    "chapterNumber": "Chapter {number}",
+    "loadingBook": "Đang tải sách…",
+    "failedToLoadBook": "Không thể tải sách",
+    "chapterNumber": "Chương {number}",
     "peek": {
-      "badge": "Peeking",
-      "startReading": "Start reading"
+      "badge": "Đang xem thử",
+      "startReading": "Bắt đầu đọc"
     },
     "toast": {
-      "linkedHighlightError": "Could not open the linked highlight position",
-      "resumed": "Resumed at {pct}% - {label}"
+      "linkedHighlightError": "Không thể mở vị trí đánh dấu đã liên kết",
+      "resumed": "Tiếp tục tại {pct}% - {label}"
     },
     "header": {
-      "goBack": "Go back",
-      "tableOfContents": "Table of contents",
-      "toggleBookmark": "Toggle bookmark",
-      "cycleFooterMode": "Cycle footer info mode",
-      "keyboardShortcutsHint": "Keyboard shortcuts (?)",
-      "enterFullscreen": "Enter fullscreen",
-      "exitFullscreen": "Exit fullscreen",
-      "narrationPlaying": "Narration playing",
-      "ttsPlaying": "TTS playing",
-      "listenWithNarrationShort": "Listen (narration)",
-      "listen": "Listen",
-      "listenWithNarration": "Listen with narration",
-      "listenWithTts": "Listen with TTS",
+      "goBack": "Quay lại",
+      "tableOfContents": "Mục lục",
+      "toggleBookmark": "Bật/tắt dấu trang",
+      "cycleFooterMode": "Đổi thông tin chân trang",
+      "keyboardShortcutsHint": "Phím tắt (?)",
+      "enterFullscreen": "Toàn màn hình",
+      "exitFullscreen": "Thoát toàn màn hình",
+      "narrationPlaying": "Đang phát lời đọc",
+      "ttsPlaying": "Đang đọc thành tiếng",
+      "listenWithNarrationShort": "Nghe (lời đọc)",
+      "listen": "Nghe",
+      "listenWithNarration": "Nghe với lời đọc",
+      "listenWithTts": "Nghe bằng giọng đọc máy",
       "footerMode": {
-        "pageProgress": "Footer info: page + progress",
-        "sessionTimeLeft": "Footer info: reading session + time left",
-        "chapterTimeLeft": "Footer info: chapter + chapter time left"
+        "pageProgress": "Chân trang: trang + tiến độ",
+        "sessionTimeLeft": "Chân trang: phiên đọc + thời gian còn lại",
+        "chapterTimeLeft": "Chân trang: chương + thời gian còn lại của chương"
       }
     },
     "footer": {
-      "previousSection": "Previous section",
-      "nextSection": "Next section",
-      "goToPlaceholder": "45 or p123",
-      "jumpToLocation": "Jump to location",
-      "jumpTooltip": "Jump to % or page (e.g. 45 or p123)",
-      "go": "Go"
+      "previousSection": "Phần trước",
+      "nextSection": "Phần sau",
+      "goToPlaceholder": "45 hoặc p123",
+      "jumpToLocation": "Đi tới vị trí",
+      "jumpTooltip": "Đi tới % hoặc trang (ví dụ 45 hoặc p123)",
+      "go": "Đi"
     },
     "settings": {
-      "title": "Settings",
-      "ariaLabel": "Reader settings",
-      "close": "Close settings",
-      "reset": "Reset to defaults",
-      "modeLabel": "Color mode",
+      "title": "Cài đặt",
+      "ariaLabel": "Cài đặt trình đọc",
+      "close": "Đóng cài đặt",
+      "reset": "Khôi phục mặc định",
+      "modeLabel": "Chế độ màu",
       "mode": {
-        "light": "Light",
-        "dark": "Dark"
+        "light": "Sáng",
+        "dark": "Tối"
       },
-      "textSize": "Text size",
-      "textSizeSmaller": "Smaller text",
-      "textSizeLarger": "Larger text",
+      "textSize": "Cỡ chữ",
+      "textSizeSmaller": "Chữ nhỏ hơn",
+      "textSizeLarger": "Chữ lớn hơn",
       "pixels": "{value} px",
       "percent": "{value}%",
-      "pageColor": "Page color",
-      "font": "Font",
-      "fontBuiltIn": "Built-in",
-      "fontServer": "Server fonts",
-      "fontYours": "Your fonts",
-      "fontStyle": "Style",
-      "fontStyleItalicOf": "{style} Italic",
-      "lineSpacing": "Line spacing",
-      "paragraphSpacing": "Paragraph spacing",
-      "paragraphSpacingDefault": "Default",
+      "pageColor": "Màu trang",
+      "font": "Phông chữ",
+      "fontBuiltIn": "Có sẵn",
+      "fontServer": "Phông chữ máy chủ",
+      "fontYours": "Phông chữ của bạn",
+      "fontStyle": "Kiểu",
+      "fontStyleItalicOf": "{style} nghiêng",
+      "lineSpacing": "Giãn dòng",
+      "paragraphSpacing": "Khoảng cách đoạn",
+      "paragraphSpacingDefault": "Mặc định",
       "paragraphSpacingValue": "{value} em",
-      "letterSpacing": "Letter spacing",
-      "wordSpacing": "Word spacing",
-      "textIndent": "First-line indent",
-      "bookDefault": "Book",
-      "custom": "Custom",
+      "letterSpacing": "Giãn chữ",
+      "wordSpacing": "Khoảng cách từ",
+      "textIndent": "Thụt đầu dòng",
+      "bookDefault": "Theo sách",
+      "custom": "Tùy chỉnh",
       "emValue": "{value} em",
-      "pageWidth": "Page width",
-      "pageWidthNarrow": "Narrow",
-      "pageWidthMedium": "Medium",
-      "pageWidthWide": "Wide",
-      "pageWidthFull": "Full",
-      "readingFlow": "Reading flow",
+      "pageWidth": "Độ rộng trang",
+      "pageWidthNarrow": "Hẹp",
+      "pageWidthMedium": "Vừa",
+      "pageWidthWide": "Rộng",
+      "pageWidthFull": "Toàn bộ",
+      "readingFlow": "Cách đọc",
       "flow": {
-        "paginated": "Pages",
-        "scrolled": "Scroll"
+        "paginated": "Lật trang",
+        "scrolled": "Cuộn"
       },
-      "pageSpreads": "Page spreads",
-      "pageSpreadsHint": "Choose how this image-based EPUB pairs pages.",
+      "pageSpreads": "Trang đôi",
+      "pageSpreadsHint": "Chọn cách ghép trang cho EPUB dạng hình ảnh này.",
       "spread": {
-        "bookDefault": "Book default",
-        "singlePage": "Single page"
+        "bookDefault": "Theo mặc định của sách",
+        "singlePage": "Một trang"
       },
-      "advanced": "Advanced layout",
-      "columns": "Columns",
-      "columnsFewer": "Fewer columns",
-      "columnsMore": "More columns",
-      "columnGap": "Column gap",
-      "justifyText": "Justify text",
-      "hyphenation": "Hyphenation",
+      "advanced": "Bố cục nâng cao",
+      "columns": "Số cột",
+      "columnsFewer": "Ít cột hơn",
+      "columnsMore": "Nhiều cột hơn",
+      "columnGap": "Khoảng cách cột",
+      "justifyText": "Căn đều hai bên",
+      "hyphenation": "Ngắt từ",
       "themes": {
-        "default": "Default",
-        "gray": "Gray",
-        "sepia": "Sepia",
-        "crimson": "Crimson",
-        "meadow": "Meadow",
-        "rosewood": "Rosewood",
-        "azure": "Azure",
-        "dawnlight": "Dawnlight",
-        "ember": "Ember",
-        "aurora": "Aurora",
-        "ocean": "Ocean",
-        "mist": "Mist",
+        "default": "Mặc định",
+        "gray": "Xám",
+        "sepia": "Nâu cổ",
+        "crimson": "Đỏ thẫm",
+        "meadow": "Đồng cỏ",
+        "rosewood": "Gỗ hồng",
+        "azure": "Xanh trời",
+        "dawnlight": "Bình minh",
+        "ember": "Than hồng",
+        "aurora": "Cực quang",
+        "ocean": "Đại dương",
+        "mist": "Sương mù",
         "amoled": "AMOLED"
       },
       "fonts": {
-        "bookDefault": "Book default",
-        "serif": "Serif",
-        "sansSerif": "Sans-serif",
-        "monospace": "Monospace"
+        "bookDefault": "Theo mặc định của sách",
+        "serif": "Có chân",
+        "sansSerif": "Không chân",
+        "monospace": "Đơn cách"
       }
     },
     "search": {
-      "placeholder": "Search in book (min {min} chars)...",
-      "searching": "Searching…",
-      "tooShort": "Type at least {min} characters",
-      "noResults": "No results found",
-      "prompt": "Type to search",
+      "placeholder": "Tìm trong sách (tối thiểu {min} ký tự)...",
+      "searching": "Đang tìm…",
+      "tooShort": "Nhập ít nhất {min} ký tự",
+      "noResults": "Không tìm thấy kết quả",
+      "prompt": "Nhập để tìm",
       "resultCount": "{count, plural, =0 {no results} other {# results}}"
     },
     "sidebar": {
       "tabs": {
-        "chapters": "Chapters",
-        "bookmarks": "Bookmarks",
-        "highlights": "Highlights",
-        "toc": "Table of contents",
-        "tocShort": "TOC",
-        "marksShort": "Marks",
-        "notesShort": "Notes"
+        "chapters": "Chương",
+        "bookmarks": "Dấu trang",
+        "highlights": "Đánh dấu",
+        "toc": "Mục lục",
+        "tocShort": "Mục lục",
+        "marksShort": "Dấu",
+        "notesShort": "Ghi chú"
       },
-      "pin": "Pin sidebar",
-      "unpin": "Unpin sidebar",
-      "close": "Close sidebar",
-      "noChapters": "No chapters found",
-      "noBookmarks": "No bookmarks yet",
-      "noBookmarksMatch": "No bookmarks match your filters",
-      "noHighlights": "No highlights yet",
-      "noHighlightsMatch": "No highlights match your filters",
-      "searchBookmarks": "Search bookmarks...",
-      "searchHighlights": "Search highlights...",
-      "bookmarkFallback": "Bookmark",
-      "locationUnavailable": "Location unavailable",
-      "customColor": "Custom ({color})",
-      "allColors": "All colors",
-      "allChapters": "All chapters",
-      "notesOnly": "Notes only",
-      "deleteBookmark": "Delete bookmark",
-      "deleteHighlight": "Delete highlight",
-      "approximatePosition": "Synced from device; exact position unavailable, jumps to the chapter",
+      "pin": "Ghim thanh bên",
+      "unpin": "Bỏ ghim thanh bên",
+      "close": "Đóng thanh bên",
+      "noChapters": "Không tìm thấy chương nào",
+      "noBookmarks": "Chưa có dấu trang",
+      "noBookmarksMatch": "Không có dấu trang nào khớp với bộ lọc",
+      "noHighlights": "Chưa có đánh dấu",
+      "noHighlightsMatch": "Không có đánh dấu nào khớp với bộ lọc",
+      "searchBookmarks": "Tìm dấu trang...",
+      "searchHighlights": "Tìm đánh dấu...",
+      "bookmarkFallback": "Dấu trang",
+      "locationUnavailable": "Không có vị trí",
+      "customColor": "Tùy chỉnh ({color})",
+      "allColors": "Mọi màu",
+      "allChapters": "Mọi chương",
+      "notesOnly": "Chỉ ghi chú",
+      "deleteBookmark": "Xóa dấu trang",
+      "deleteHighlight": "Xóa đánh dấu",
+      "approximatePosition": "Đồng bộ từ thiết bị; không có vị trí chính xác nên sẽ chuyển tới đầu chương",
       "sort": {
-        "readingOrder": "Reading order",
-        "newest": "Newest first",
-        "oldest": "Oldest first"
+        "readingOrder": "Thứ tự đọc",
+        "newest": "Mới nhất trước",
+        "oldest": "Cũ nhất trước"
       }
     },
     "selection": {
-      "copy": "Copy",
-      "copied": "Copied!",
-      "highlight": "Highlight",
-      "translate": "Translate",
-      "define": "Define",
-      "deleteAnnotation": "Delete annotation",
-      "apply": "Apply",
-      "color": "Highlight color: {color}",
-      "style": "Highlight style: {style}",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép!",
+      "highlight": "Đánh dấu",
+      "translate": "Dịch",
+      "define": "Tra nghĩa",
+      "deleteAnnotation": "Xóa chú thích",
+      "apply": "Áp dụng",
+      "color": "Màu đánh dấu: {color}",
+      "style": "Kiểu đánh dấu: {style}",
       "styles": {
-        "highlight": "Highlight",
-        "underline": "Underline",
-        "strikethrough": "Strikethrough",
-        "squiggly": "Squiggly underline"
+        "highlight": "Tô sáng",
+        "underline": "Gạch chân",
+        "strikethrough": "Gạch ngang",
+        "squiggly": "Gạch chân lượn sóng"
       }
     },
     "note": {
-      "title": "Add note",
-      "placeholder": "Write your note…"
+      "title": "Thêm ghi chú",
+      "placeholder": "Viết ghi chú của bạn…"
     },
     "dictionary": {
-      "noDefinition": "No definition found",
-      "loadError": "Could not load definition"
+      "noDefinition": "Không tìm thấy định nghĩa",
+      "loadError": "Không thể tải định nghĩa"
     },
     "translation": {
-      "original": "Original",
-      "translation": "Translation",
-      "translating": "Translating...",
-      "noTranslation": "No translation yet",
-      "viaProvider": "via {provider}",
-      "copyTranslation": "Copy translation"
+      "original": "Bản gốc",
+      "translation": "Bản dịch",
+      "translating": "Đang dịch...",
+      "noTranslation": "Chưa có bản dịch",
+      "viaProvider": "qua {provider}",
+      "copyTranslation": "Sao chép bản dịch"
     },
     "shortcuts": {
-      "title": "Keyboard Shortcuts",
+      "title": "Phím tắt",
       "groups": {
-        "panels": "Panels",
-        "reading": "Reading",
-        "actions": "Actions"
+        "panels": "Bảng",
+        "reading": "Đọc",
+        "actions": "Thao tác"
       },
-      "toggleToc": "Toggle table of contents",
-      "toggleSearch": "Toggle search",
-      "toggleHelp": "Show/hide this help",
-      "closePanel": "Close panel",
-      "prevNextPage": "Previous/next page",
-      "goToStart": "Go to start of book",
-      "goToEnd": "Go to end of book",
-      "toggleBookmark": "Toggle bookmark",
-      "toggleFullscreen": "Toggle fullscreen",
-      "cycleFooterMode": "Cycle footer info mode"
+      "toggleToc": "Bật/tắt mục lục",
+      "toggleSearch": "Bật/tắt tìm kiếm",
+      "toggleHelp": "Hiện/ẩn trợ giúp này",
+      "closePanel": "Đóng bảng",
+      "prevNextPage": "Trang trước/sau",
+      "goToStart": "Về đầu sách",
+      "goToEnd": "Tới cuối sách",
+      "toggleBookmark": "Bật/tắt dấu trang",
+      "toggleFullscreen": "Bật/tắt toàn màn hình",
+      "cycleFooterMode": "Đổi thông tin chân trang"
     },
     "cbz": {
-      "fitMode": "Fit mode",
-      "background": "Background",
-      "scrollMode": "Scroll mode",
-      "scrollModeHint": "Use \"No gaps\" for webtoons and vertical strips.",
-      "readingDirection": "Reading direction",
-      "autoAdvance": "Auto-advance",
-      "autoAdvanceHint": "Turning past the last page opens the next book in the series.",
-      "autoAdvancePagedOnly": "Auto-advance applies in paged mode only.",
-      "pageView": "Page view",
-      "twoPagePagedOnly": "Two pages are shown only in paged mode.",
-      "spreadSection": "Two-page spread",
-      "spreadFallbackHint": "This screen is too narrow for two pages, so single pages are shown.",
-      "spreadAlignmentLabel": "Spread alignment",
-      "spreadGap": "Spread gap",
+      "fitMode": "Kiểu vừa khung",
+      "background": "Nền",
+      "scrollMode": "Kiểu cuộn",
+      "scrollModeHint": "Dùng \"Không khoảng cách\" cho webtoon và truyện cuộn dọc.",
+      "readingDirection": "Hướng đọc",
+      "autoAdvance": "Tự chuyển tập",
+      "autoAdvanceHint": "Lật qua trang cuối sẽ mở cuốn tiếp theo trong bộ sách.",
+      "autoAdvancePagedOnly": "Tự chuyển tập chỉ áp dụng ở chế độ lật trang.",
+      "pageView": "Kiểu xem trang",
+      "twoPagePagedOnly": "Chỉ hiển thị hai trang ở chế độ lật trang.",
+      "spreadSection": "Trang đôi",
+      "spreadFallbackHint": "Màn hình quá hẹp để hiển thị hai trang nên chỉ hiện từng trang.",
+      "spreadAlignmentLabel": "Căn trang đôi",
+      "spreadGap": "Khoảng cách trang đôi",
       "spreadGapValue": "{value}px",
-      "forceTwoPage": "Force two-page",
-      "widePages": "Wide pages",
-      "firstPage": "First page",
-      "lastPage": "Last page",
-      "zoomControls": "Zoom controls",
-      "zoomOut": "Zoom out",
-      "zoomIn": "Zoom in",
+      "forceTwoPage": "Luôn hiển thị hai trang",
+      "widePages": "Trang rộng",
+      "firstPage": "Trang đầu",
+      "lastPage": "Trang cuối",
+      "zoomControls": "Điều khiển thu phóng",
+      "zoomOut": "Thu nhỏ",
+      "zoomIn": "Phóng to",
       "fit": {
-        "page": "Page Fit",
-        "width": "Page Width",
-        "height": "Page Height",
-        "actual": "Actual Size"
+        "page": "Vừa trang",
+        "width": "Vừa chiều rộng",
+        "height": "Vừa chiều cao",
+        "actual": "Kích thước thật"
       },
       "view": {
-        "single": "Single",
-        "twoPage": "Two-page"
+        "single": "Một trang",
+        "twoPage": "Hai trang"
       },
       "scroll": {
-        "paged": "Paged",
-        "infinite": "Infinite",
-        "noGaps": "No gaps"
+        "paged": "Lật trang",
+        "infinite": "Cuộn liên tục",
+        "noGaps": "Không khoảng cách"
       },
       "direction": {
-        "ltr": "L to R",
-        "rtl": "R to L"
+        "ltr": "Trái sang phải",
+        "rtl": "Phải sang trái"
       },
       "spreadAlignment": {
-        "normal": "Normal",
-        "shifted": "Shifted"
+        "normal": "Bình thường",
+        "shifted": "Lệch một trang"
       },
       "widePage": {
-        "auto": "Auto",
-        "inSpreads": "In spreads"
+        "auto": "Tự động",
+        "inSpreads": "Trong trang đôi"
       },
       "bg": {
-        "black": "Black",
-        "gray": "Gray",
-        "white": "White"
+        "black": "Đen",
+        "gray": "Xám",
+        "white": "Trắng"
       },
       "nextIssue": {
-        "eyebrow": "Next in series",
-        "action": "Read next",
-        "open": "Read next: {title}",
+        "eyebrow": "Tiếp theo trong bộ sách",
+        "action": "Đọc tiếp",
+        "open": "Đọc tiếp: {title}",
         "numbered": "#{index} {title}",
-        "untitled": "Untitled",
-        "autoAdvanceHint": "Turn the page again to continue"
+        "untitled": "Chưa có tiêu đề",
+        "autoAdvanceHint": "Lật trang lần nữa để đọc tiếp"
       }
     },
     "audiobook": {
-      "untitled": "Untitled",
-      "loading": "Loading audiobook...",
-      "loadError": "Failed to load audiobook",
-      "noAudioFiles": "No audio files found for this book.",
-      "speed": "Speed",
-      "chapters": "Chapters",
-      "bookmarks": "Bookmarks",
-      "volume": "Volume",
-      "muted": "Muted",
-      "sleep": "Sleep",
+      "untitled": "Chưa có tiêu đề",
+      "loading": "Đang tải sách nói...",
+      "loadError": "Không thể tải sách nói",
+      "noAudioFiles": "Không tìm thấy tệp âm thanh nào cho sách này.",
+      "speed": "Tốc độ",
+      "chapters": "Chương",
+      "bookmarks": "Dấu trang",
+      "volume": "Âm lượng",
+      "muted": "Đã tắt tiếng",
+      "sleep": "Hẹn giờ",
       "chapterAbbrev": "Ch.",
-      "sleepTimer": "Sleep timer",
+      "sleepTimer": "Hẹn giờ tắt",
       "minutes": "{count, plural, other {# minutes}}",
-      "endOfChapter": "End of chapter",
-      "noChaptersAvailable": "No chapters available",
-      "extend15": "+ 15 minutes",
-      "timeLeft": "({time} left)",
-      "playbackSpeed": "Playback speed",
-      "noChapters": "No chapters available.",
-      "noBookmarks": "No bookmarks yet.",
-      "noBookmarksHint": "Tap the bookmark icon at the top to save your current position.",
-      "playerSettings": "Player settings",
-      "skipBack": "Skip back",
-      "skipForward": "Skip forward"
+      "endOfChapter": "Hết chương",
+      "noChaptersAvailable": "Không có chương nào",
+      "extend15": "+ 15 phút",
+      "timeLeft": "(còn {time})",
+      "playbackSpeed": "Tốc độ phát",
+      "noChapters": "Không có chương nào.",
+      "noBookmarks": "Chưa có dấu trang.",
+      "noBookmarksHint": "Nhấn biểu tượng dấu trang ở trên để lưu vị trí hiện tại.",
+      "playerSettings": "Cài đặt trình phát",
+      "skipBack": "Lùi lại",
+      "skipForward": "Tua tới"
     },
     "sheet": {
-      "expand": "Expand panel",
-      "collapse": "Collapse panel"
+      "expand": "Mở rộng bảng",
+      "collapse": "Thu gọn bảng"
     },
     "narration": {
-      "fallbackTitle": "Narration",
-      "meta": "Audio narration - {speed}x",
-      "openControls": "Open narration controls",
-      "previousSentence": "Previous sentence",
-      "nextSentence": "Next sentence",
-      "play": "Play narration",
-      "pause": "Pause narration",
-      "showControls": "Show controls",
-      "hideControls": "Hide controls",
-      "stop": "Stop narration",
-      "error": "Narration playback error"
+      "fallbackTitle": "Lời đọc",
+      "meta": "Lời đọc - {speed}x",
+      "openControls": "Mở điều khiển lời đọc",
+      "previousSentence": "Câu trước",
+      "nextSentence": "Câu sau",
+      "play": "Phát lời đọc",
+      "pause": "Tạm dừng lời đọc",
+      "showControls": "Hiện điều khiển",
+      "hideControls": "Ẩn điều khiển",
+      "stop": "Dừng lời đọc",
+      "error": "Lỗi phát lời đọc"
     }
   },
   "scanner": {
@@ -9758,7 +10157,7 @@
     "visibleToAllHint": "Mọi người dùng đều có thể xem và dùng bộ lọc thông minh này",
     "dialog": {
       "name": "Tên",
-      "namePlaceholder": "Ví dụ: Khoa học viễn tưởng chưa đọc",
+      "namePlaceholder": "Ví dụ: Sách linh đạo chưa đọc",
       "icon": "Biểu tượng",
       "iconPlaceholder": "Chọn biểu tượng...",
       "nameRequired": "Cần nhập tên",
@@ -9991,478 +10390,478 @@
   },
   "tools": {
     "header": {
-      "entityManager": "Entity Manager",
-      "bulkRename": "Bulk Rename",
-      "duplicateBooks": "Duplicate Books",
-      "missingResources": "Missing Resources"
+      "entityManager": "Quản lý dữ liệu",
+      "bulkRename": "Đổi tên hàng loạt",
+      "duplicateBooks": "Sách trùng lặp",
+      "missingResources": "Tài nguyên bị thiếu"
     },
     "entityTypes": {
-      "authors": "Authors",
-      "genres": "Genres",
-      "tags": "Tags",
-      "narrators": "Narrators",
-      "publishers": "Publishers",
-      "languages": "Languages",
-      "series": "Series"
+      "authors": "Tác giả",
+      "genres": "Thể loại",
+      "tags": "Thẻ",
+      "narrators": "Người đọc",
+      "publishers": "Nhà xuất bản",
+      "languages": "Ngôn ngữ",
+      "series": "Bộ sách"
     },
     "bulkRename": {
-      "library": "Library",
-      "selectLibraryPlaceholder": "Select a library...",
-      "noEligibleLibraries": "No libraries have file rename enabled. Enable it in Library Settings.",
-      "refresh": "Refresh",
-      "previewFailed": "Failed to load preview",
-      "executionFailed": "Bulk rename failed",
-      "openBookDetails": "Open book details",
-      "openBook": "Open book",
+      "library": "Thư viện",
+      "selectLibraryPlaceholder": "Chọn thư viện...",
+      "noEligibleLibraries": "Chưa có thư viện nào bật đổi tên tệp. Hãy bật trong Cài đặt thư viện.",
+      "refresh": "Làm mới",
+      "previewFailed": "Không thể tải bản xem trước",
+      "executionFailed": "Đổi tên hàng loạt thất bại",
+      "openBookDetails": "Mở chi tiết sách",
+      "openBook": "Mở sách",
       "toRenameCount": "{count, plural, =0 {nothing to rename} other {# to rename}}",
       "applyCount": "{count, plural, other {Apply # renames}}",
       "search": {
-        "placeholder": "Find a book or path",
-        "label": "Find a book",
-        "clear": "Clear search"
+        "placeholder": "Tìm sách hoặc đường dẫn",
+        "label": "Tìm sách",
+        "clear": "Xóa tìm kiếm"
       },
       "filter": {
-        "all": "All",
-        "changes": "Changes",
-        "conflicts": "Conflicts",
-        "unchanged": "Unchanged"
+        "all": "Tất cả",
+        "changes": "Thay đổi",
+        "conflicts": "Xung đột",
+        "unchanged": "Không đổi"
       },
       "status": {
-        "willRename": "Will rename",
-        "unchanged": "Unchanged",
-        "collision": "Conflict",
-        "noPattern": "No pattern",
-        "error": "Error"
+        "willRename": "Sẽ đổi tên",
+        "unchanged": "Không đổi",
+        "collision": "Xung đột",
+        "noPattern": "Không có mẫu",
+        "error": "Lỗi"
       },
       "group": {
-        "collision": "Destination conflict",
-        "unchanged": "Already correct",
-        "noPattern": "No naming pattern",
-        "error": "Errored",
-        "includeAll": "Include every {kind} rename",
-        "expand": "Expand {kind}",
-        "collapse": "Collapse {kind}",
-        "heldBack": "These cannot be renamed"
+        "collision": "Xung đột đích đến",
+        "unchanged": "Đã đúng",
+        "noPattern": "Không có mẫu đặt tên",
+        "error": "Gặp lỗi",
+        "includeAll": "Gồm mọi thay đổi loại {kind}",
+        "expand": "Mở rộng {kind}",
+        "collapse": "Thu gọn {kind}",
+        "heldBack": "Những mục này không thể đổi tên"
       },
       "changeKind": {
-        "ungroup": "Series grouping removed",
-        "flatten": "Duplicate folder level removed",
-        "yearRemoved": "Publication year removed",
-        "yearAdded": "Publication year added",
-        "yearCorrected": "Publication year corrected",
-        "authorSpelling": "Author name spelling",
-        "capitalisation": "Capitalisation and spacing",
-        "unsafeCharacters": "Unsafe characters replaced",
-        "filenameRebuilt": "Filename rebuilt from metadata",
-        "folderRenamed": "Folder renamed",
-        "rebuilt": "Folder and filename rebuilt",
-        "restructured": "Path restructured",
-        "multiple": "Multiple changes"
+        "ungroup": "Đã bỏ nhóm bộ sách",
+        "flatten": "Đã bỏ cấp thư mục trùng",
+        "yearRemoved": "Đã bỏ năm xuất bản",
+        "yearAdded": "Đã thêm năm xuất bản",
+        "yearCorrected": "Đã sửa năm xuất bản",
+        "authorSpelling": "Chính tả tên tác giả",
+        "capitalisation": "Viết hoa và khoảng trắng",
+        "unsafeCharacters": "Đã thay ký tự không an toàn",
+        "filenameRebuilt": "Dựng lại tên tệp từ siêu dữ liệu",
+        "folderRenamed": "Đã đổi tên thư mục",
+        "rebuilt": "Dựng lại thư mục và tên tệp",
+        "restructured": "Đã sắp xếp lại đường dẫn",
+        "multiple": "Nhiều thay đổi"
       },
       "select": {
-        "ofSelected": "of {total} selected",
-        "toggleAll": "Select or clear every rename",
-        "toggleGroup": "Select or clear every {kind} rename",
-        "toggleBook": "Rename {title}"
+        "ofSelected": "đã chọn trên {total}",
+        "toggleAll": "Chọn hoặc bỏ chọn mọi thay đổi",
+        "toggleGroup": "Chọn hoặc bỏ chọn mọi thay đổi loại {kind}",
+        "toggleBook": "Đổi tên {title}"
       },
       "review": {
-        "loadMore": "Load more",
-        "queue": "Pending renames",
-        "position": "{index} of {total}",
-        "previous": "Previous book",
-        "next": "Next book",
-        "keyboardHint": "move",
-        "keyboardSkip": "skip",
-        "skip": "Skip",
-        "include": "Include",
-        "excluded": "Excluded",
-        "back": "Back to the list"
+        "loadMore": "Tải thêm",
+        "queue": "Đổi tên đang chờ",
+        "position": "{index} / {total}",
+        "previous": "Sách trước",
+        "next": "Sách sau",
+        "keyboardHint": "di chuyển",
+        "keyboardSkip": "bỏ qua",
+        "skip": "Bỏ qua",
+        "include": "Bao gồm",
+        "excluded": "Đã loại",
+        "back": "Quay lại danh sách"
       },
       "detail": {
-        "whatChanges": "What changes",
+        "whatChanges": "Những gì thay đổi",
         "foldedFolders": "{count, plural, other {# unchanged folders}}",
-        "onDisk": "On disk",
-        "today": "Today",
-        "afterRename": "After rename",
-        "showLibraryFolders": "Show library folders",
-        "hideLibraryFolders": "Hide library folders",
-        "currentPath": "Current path",
-        "whyItMoves": "Why it moves",
-        "levelTop": "Top folder",
-        "levelFolder": "Folder {depth}",
-        "levelFilename": "Filename",
-        "levelRemoved": "Removed",
+        "onDisk": "Trên ổ đĩa",
+        "today": "Hiện tại",
+        "afterRename": "Sau khi đổi tên",
+        "showLibraryFolders": "Hiện thư mục thư viện",
+        "hideLibraryFolders": "Ẩn thư mục thư viện",
+        "currentPath": "Đường dẫn hiện tại",
+        "whyItMoves": "Lý do di chuyển",
+        "levelTop": "Thư mục gốc",
+        "levelFolder": "Thư mục {depth}",
+        "levelFilename": "Tên tệp",
+        "levelRemoved": "Đã bỏ",
         "tokenCount": "{count, plural, other {# tokens}}",
-        "optionalLevel": "An optional folder level, produced by a group in the pattern.",
-        "removedExplainer": "The naming pattern has no folder at this level, so {folder} is dropped and its contents move up.",
-        "conflictTitle": "Another file already claims this destination.",
-        "conflictBody": "Renaming would overwrite it, so this book is held back until the conflict is resolved.",
+        "optionalLevel": "Một cấp thư mục tùy chọn, tạo bởi một nhóm trong mẫu.",
+        "removedExplainer": "Mẫu đặt tên không có thư mục ở cấp này nên {folder} bị bỏ và nội dung bên trong được chuyển lên.",
+        "conflictTitle": "Đã có tệp khác ở đích đến này.",
+        "conflictBody": "Đổi tên sẽ ghi đè tệp đó nên sách này bị giữ lại cho đến khi xử lý xong xung đột.",
         "siblings": "{count, plural, other {# more with the same change}}",
-        "siblingsMore": "+{count} more"
+        "siblingsMore": "+{count} mục nữa"
       },
       "empty": {
-        "title": "Pick a library to start",
-        "description": "Select a library to preview rename changes, review them one at a time, and apply the run.",
-        "chooseLibrary": "Choose library",
-        "noneTitle": "Nothing to review",
-        "noneDescription": "No book matches the current filter. Clear the search or switch to All.",
-        "noMatch": "No books match your search."
+        "title": "Chọn một thư viện để bắt đầu",
+        "description": "Chọn thư viện để xem trước các thay đổi tên, xem lại từng mục và áp dụng.",
+        "chooseLibrary": "Chọn thư viện",
+        "noneTitle": "Không có gì để xem lại",
+        "noneDescription": "Không có sách nào khớp với bộ lọc hiện tại. Xóa tìm kiếm hoặc chuyển sang Tất cả.",
+        "noMatch": "Không có sách nào khớp với tìm kiếm."
       },
       "confirmDialog": {
         "title": "{count, plural, other {Rename # files on disk?}}",
-        "body": "This moves real files inside {library}. BookOrbit records each move, but undoing means renaming back.",
-        "willRename": "Will be renamed",
-        "skippedByYou": "Skipped by you",
-        "heldBack": "Held back as conflicts",
-        "untouched": "Left untouched",
+        "body": "Thao tác này di chuyển tệp thật trong {library}. Thư viện Cát Minh ghi lại từng lần di chuyển, nhưng muốn hoàn tác thì phải đổi tên lại.",
+        "willRename": "Sẽ được đổi tên",
+        "skippedByYou": "Bạn đã bỏ qua",
+        "heldBack": "Giữ lại do xung đột",
+        "untouched": "Giữ nguyên",
         "confirm": "{count, plural, other {Rename # files}}",
-        "cannotRename": "Cannot be renamed"
+        "cannotRename": "Không thể đổi tên"
       },
       "run": {
-        "preparing": "Preparing…",
-        "preparingHint": "Checking every file against the naming pattern before anything moves.",
-        "title": "Renaming {done} of {total}",
-        "runningHint": "Files are being renamed. You can stop after the current file finishes.",
-        "stop": "Stop after this file",
+        "preparing": "Đang chuẩn bị…",
+        "preparingHint": "Đang đối chiếu từng tệp với mẫu đặt tên trước khi di chuyển.",
+        "title": "Đang đổi tên {done} / {total}",
+        "runningHint": "Đang đổi tên tệp. Bạn có thể dừng sau khi tệp hiện tại xong.",
+        "stop": "Dừng sau tệp này",
         "resultTitle": "{done, plural, other {Renamed # of {total} files}}",
         "resultFailed": "{count, plural, other {# failed}}",
         "resultSkipped": "{count, plural, other {# skipped}}",
-        "dismiss": "Dismiss"
+        "dismiss": "Đóng"
       },
       "executionError": {
-        "http": "The server rejected the request (HTTP {status}).",
-        "noBody": "The server did not send a response body.",
-        "incomplete": "The connection ended before the rename finished. Some files may not have been renamed.",
-        "unknown": "The rename could not be completed."
+        "http": "Máy chủ từ chối yêu cầu (HTTP {status}).",
+        "noBody": "Máy chủ không gửi nội dung phản hồi.",
+        "incomplete": "Kết nối bị ngắt trước khi đổi tên xong. Một số tệp có thể chưa được đổi tên.",
+        "unknown": "Không thể hoàn tất việc đổi tên."
       }
     },
     "bookDuplicates": {
-      "title": "Duplicate Books",
-      "scope": "Library scope",
-      "allLibraries": "All accessible libraries",
-      "similarity": "Similar titles",
-      "explainSimilarity": "Explain the similar-title threshold",
-      "similarityHelp": "Only for Similar title and author matches. At least one author and the book type must also match. Lower finds more possible duplicates; higher requires closer titles. Identical files, ISBN, and exact metadata are checked separately.",
-      "runScan": "Run scan",
-      "rescan": "Rescan",
+      "title": "Sách trùng lặp",
+      "scope": "Phạm vi thư viện",
+      "allLibraries": "Mọi thư viện có quyền truy cập",
+      "similarity": "Tiêu đề tương tự",
+      "explainSimilarity": "Giải thích ngưỡng tiêu đề tương tự",
+      "similarityHelp": "Chỉ áp dụng cho kiểu khớp tiêu đề và tác giả tương tự. Ít nhất một tác giả và loại sách cũng phải khớp. Ngưỡng thấp tìm được nhiều bản có thể trùng hơn; ngưỡng cao đòi hỏi tiêu đề gần giống hơn. Tệp giống hệt, ISBN và siêu dữ liệu trùng khớp được kiểm tra riêng.",
+      "runScan": "Quét",
+      "rescan": "Quét lại",
       "status": {
-        "queued": "Scan queued",
-        "running": "Scanning books"
+        "queued": "Đã xếp hàng quét",
+        "running": "Đang quét sách"
       },
-      "filter": "Filter by match type",
-      "allReasons": "All match types",
+      "filter": "Lọc theo kiểu khớp",
+      "allReasons": "Mọi kiểu khớp",
       "reasons": {
-        "file_hash": "Identical file set",
-        "isbn": "Same ISBN",
-        "exact_metadata": "Exact title and authors",
-        "fuzzy_metadata": "Similar title and author"
+        "file_hash": "Bộ tệp giống hệt",
+        "isbn": "Cùng ISBN",
+        "exact_metadata": "Trùng tiêu đề và tác giả",
+        "fuzzy_metadata": "Tiêu đề và tác giả tương tự"
       },
-      "notDuplicates": "Not duplicates",
-      "unknownAuthor": "Unknown author",
-      "unknown": "Unknown",
-      "none": "None",
-      "accessDenied": "You do not have permission to use the duplicate book tool.",
-      "pairDetails": "Why these matched",
-      "pairLabel": "{first} and {second}",
+      "notDuplicates": "Không trùng lặp",
+      "unknownAuthor": "Không rõ tác giả",
+      "unknown": "Không rõ",
+      "none": "Không có",
+      "accessDenied": "Bạn không có quyền dùng công cụ tìm sách trùng lặp.",
+      "pairDetails": "Lý do khớp",
+      "pairLabel": "{first} và {second}",
       "fields": {
-        "library": "Library",
+        "library": "Thư viện",
         "isbn": "ISBN",
-        "formats": "Formats",
-        "collections": "Collections",
-        "added": "Added",
-        "size": "Size",
-        "metadata": "Metadata",
-        "reading": "Reading",
-        "folder": "Folder",
-        "noIsbn": "Not set",
-        "notStarted": "Not started",
+        "formats": "Định dạng",
+        "collections": "Bộ sưu tập",
+        "added": "Ngày thêm",
+        "size": "Dung lượng",
+        "metadata": "Siêu dữ liệu",
+        "reading": "Đang đọc",
+        "folder": "Thư mục",
+        "noIsbn": "Chưa đặt",
+        "notStarted": "Chưa bắt đầu",
         "outOfHundred": "/100",
-        "percentRead": "{percent} read",
+        "percentRead": "Đã đọc {percent}",
         "fileCount": "{count, plural, other {# files}}"
       },
       "initial": {
-        "title": "Find duplicate books",
-        "description": "Choose a library scope and similarity level, then run a scan. No books are changed until you explicitly confirm a deletion."
+        "title": "Tìm sách trùng lặp",
+        "description": "Chọn phạm vi thư viện và mức tương tự rồi chạy quét. Không sách nào bị thay đổi cho đến khi bạn xác nhận xóa."
       },
       "empty": {
-        "title": "No duplicate groups found",
-        "description": "No books matched the current scope, similarity level, and match filter."
+        "title": "Không tìm thấy nhóm trùng lặp nào",
+        "description": "Không có sách nào khớp với phạm vi, mức tương tự và bộ lọc hiện tại."
       },
       "deleteDialog": {
-        "warning": "Metadata, collections, reading data, and device state are not transferred to the kept book. Associated data for other users is also removed.",
+        "warning": "Siêu dữ liệu, bộ sưu tập, dữ liệu đọc và trạng thái thiết bị không được chuyển sang bản giữ lại. Dữ liệu liên quan của người dùng khác cũng bị xóa.",
         "confirm": "{count, plural, =0 {Delete # book} other {Delete # books}}",
         "success": "{count, plural, =0 {No books deleted} other {# duplicate books deleted}}"
       },
       "errors": {
-        "start": "Could not start the duplicate scan.",
-        "status": "Could not load scan progress.",
-        "scan": "The duplicate scan failed. Try running it again.",
-        "results": "Could not load duplicate groups.",
-        "delete": "Could not delete the selected duplicate books.",
-        "dismiss": "Could not dismiss that group.",
-        "restore": "Could not restore that pair."
+        "start": "Không thể bắt đầu quét trùng lặp.",
+        "status": "Không thể tải tiến độ quét.",
+        "scan": "Quét trùng lặp thất bại. Hãy thử chạy lại.",
+        "results": "Không thể tải các nhóm trùng lặp.",
+        "delete": "Không thể xóa các sách trùng lặp đã chọn.",
+        "dismiss": "Không thể bỏ qua nhóm này.",
+        "restore": "Không thể khôi phục cặp này."
       },
       "pagination": {
-        "label": "Duplicate groups pages",
-        "page": "Page {page} of {total}"
+        "label": "Các trang nhóm trùng lặp",
+        "page": "Trang {page} / {total}"
       },
-      "similarityOption": "{percent} and up",
-      "scannedBooks": "{count} books · checked {when}",
-      "scanProgress": "{processed} of {total} books",
-      "recommended": "Recommended",
-      "keeping": "Keeping",
-      "willDelete": "Delete",
-      "keepCopy": "Keep {name}",
-      "selectGroup": "Select {title}",
-      "selectAll": "Select every group on this page",
-      "compareCopies": "Compare the copies of {title}",
-      "compareCaption": "Field by field comparison of {count} copies",
-      "fieldColumn": "Field",
+      "similarityOption": "Từ {percent} trở lên",
+      "scannedBooks": "{count} cuốn · kiểm tra {when}",
+      "scanProgress": "{processed} / {total} cuốn",
+      "recommended": "Đề xuất",
+      "keeping": "Giữ lại",
+      "willDelete": "Xóa",
+      "keepCopy": "Giữ {name}",
+      "selectGroup": "Chọn {title}",
+      "selectAll": "Chọn mọi nhóm trên trang này",
+      "compareCopies": "So sánh các bản của {title}",
+      "compareCaption": "So sánh từng trường của {count} bản",
+      "fieldColumn": "Trường",
       "filesEach": "{count, plural, other {# files each}}",
       "moreFilesCount": "{count, plural, other {and # more files}}",
       "identicalAcross": "{count, plural, other {Identical in all # copies:}}",
       "deleteGroup": "{count, plural, other {Delete # copies, free {size}}}",
       "confidence": {
-        "file_hash": "Identical",
-        "isbn": "Same ISBN",
-        "exact_metadata": "Exact match",
-        "fuzzy_metadata": "Similar",
+        "file_hash": "Giống hệt",
+        "isbn": "Cùng ISBN",
+        "exact_metadata": "Trùng khớp",
+        "fuzzy_metadata": "Tương tự",
         "withSimilarity": "{label} {percent}"
       },
       "summary": {
         "groups": "{count, plural, other {groups}}",
         "extraCopies": "{count, plural, other {extra copies}}",
-        "reclaimable": "reclaimable"
+        "reclaimable": "có thể giải phóng"
       },
       "columns": {
-        "match": "Match",
-        "book": "Book",
-        "copies": "Copies",
-        "libraries": "Libraries",
-        "frees": "Frees",
-        "keeping": "Keeping"
+        "match": "Kiểu khớp",
+        "book": "Sách",
+        "copies": "Số bản",
+        "libraries": "Thư viện",
+        "frees": "Giải phóng",
+        "keeping": "Giữ lại"
       },
       "keepRule": {
-        "label": "Keep",
-        "metadata": "Best metadata",
-        "size": "Largest files",
-        "formats": "Most formats",
-        "oldest": "Oldest copy",
-        "newest": "Newest copy",
-        "hint": "Picks a keeper in every group. You can override any row."
+        "label": "Giữ",
+        "metadata": "Siêu dữ liệu tốt nhất",
+        "size": "Tệp lớn nhất",
+        "formats": "Nhiều định dạng nhất",
+        "oldest": "Bản cũ nhất",
+        "newest": "Bản mới nhất",
+        "hint": "Chọn sẵn bản giữ lại trong mỗi nhóm. Bạn có thể đổi ở từng dòng."
       },
       "sort": {
-        "label": "Sort",
-        "reclaimable": "Most space freed",
-        "copies": "Most copies",
-        "confidence": "Strongest match",
-        "title": "Title A to Z"
+        "label": "Sắp xếp",
+        "reclaimable": "Giải phóng nhiều nhất",
+        "copies": "Nhiều bản nhất",
+        "confidence": "Khớp mạnh nhất",
+        "title": "Tiêu đề A-Z"
       },
       "keeper": {
-        "yourChoice": "Your choice",
-        "reading": "you are {percent} through it",
-        "collection": "it is in {name}",
-        "metadata": "metadata {score}",
-        "largest": "largest at {size}",
-        "formats": "{count} formats",
-        "isbn": "has an ISBN",
-        "added": "added {date}",
-        "riskReading": "deletes a copy you are {percent} through",
-        "riskCollection": "deletes a copy in {name}"
+        "yourChoice": "Lựa chọn của bạn",
+        "reading": "bạn đã đọc được {percent}",
+        "collection": "có trong {name}",
+        "metadata": "siêu dữ liệu {score}",
+        "largest": "lớn nhất, {size}",
+        "formats": "{count} định dạng",
+        "isbn": "có ISBN",
+        "added": "thêm ngày {date}",
+        "riskReading": "sẽ xóa bản bạn đã đọc được {percent}",
+        "riskCollection": "sẽ xóa bản trong {name}"
       },
       "selection": {
-        "summary": "{groups} groups selected, {copies} copies to delete, frees {size}",
-        "clear": "Clear",
+        "summary": "Đã chọn {groups} nhóm, {copies} bản sẽ bị xóa, giải phóng {size}",
+        "clear": "Bỏ chọn",
         "review": "{count, plural, other {Review # copies}}",
-        "hint": "Tick the groups you trust, or open one to compare the copies."
+        "hint": "Đánh dấu các nhóm bạn tin chắc, hoặc mở một nhóm để so sánh các bản."
       },
       "keys": {
-        "move": "move",
-        "expand": "expand",
-        "keep": "keep",
-        "select": "select"
+        "move": "di chuyển",
+        "expand": "mở rộng",
+        "keep": "giữ",
+        "select": "chọn"
       },
       "review": {
         "title": "{count, plural, other {Delete # copies}}",
-        "description": "Across {groups} groups, freeing {size}. Nothing is deleted until you confirm.",
+        "description": "Trên {groups} nhóm, giải phóng {size}. Không có gì bị xóa cho đến khi bạn xác nhận.",
         "riskWarning": "{count, plural, other {# groups delete a copy carrying your reading data.}}",
-        "footer": "Frees {size}"
+        "footer": "Giải phóng {size}"
       },
       "dismissed": {
         "show": "{count, plural, other {Show # dismissed pairs}}",
-        "hide": "Hide dismissed pairs",
-        "restore": "Restore this pair",
-        "restored": "Pair restored. It can match again on the next scan."
+        "hide": "Ẩn các cặp đã bỏ qua",
+        "restore": "Khôi phục cặp này",
+        "restored": "Đã khôi phục cặp. Cặp này có thể khớp lại ở lần quét sau."
       }
     },
     "entityManager": {
-      "unknown": "Unknown",
+      "unknown": "Không rõ",
       "bookCount": "{count, plural, =0 {no books} other {# books}}",
-      "sortPrefix": "· sort: {sortName}",
-      "selectTargetToKeep": "Select target to keep",
-      "writeToFiles": "Write to files",
-      "writeChangesToFiles": "Write changes to files",
-      "mergeIntoTarget": "Merge {count} into target",
+      "sortPrefix": "· sắp xếp: {sortName}",
+      "selectTargetToKeep": "Chọn mục đích để giữ lại",
+      "writeToFiles": "Ghi vào tệp",
+      "writeChangesToFiles": "Ghi thay đổi vào tệp",
+      "mergeIntoTarget": "Gộp {count} mục vào mục đích",
       "modes": {
-        "browse": "Browse & Manage",
-        "duplicates": "Find Duplicates"
+        "browse": "Duyệt và quản lý",
+        "duplicates": "Tìm trùng lặp"
       },
       "actions": {
-        "rename": "Rename",
-        "split": "Split",
-        "merge": "Merge"
+        "rename": "Đổi tên",
+        "split": "Tách",
+        "merge": "Gộp"
       },
       "duplicates": {
-        "similarity": "Similarity:",
-        "scan": "Scan",
-        "scanning": "Scanning...",
-        "computing": "Computing candidates...",
-        "computedAt": "Candidates computed {date}",
-        "recompute": "Recompute",
-        "noneComputed": "No candidates computed yet.",
-        "computeNow": "Compute now",
-        "emptyTitle": "Find duplicate entities",
-        "emptyDescription": "Adjust the similarity threshold and click Scan to detect potential duplicates.",
-        "noneFoundTitle": "No duplicates found",
-        "noneFoundDescription": "No potential duplicates were detected with the current settings.",
+        "similarity": "Độ tương tự:",
+        "scan": "Quét",
+        "scanning": "Đang quét...",
+        "computing": "Đang tính các mục có thể trùng...",
+        "computedAt": "Đã tính các mục có thể trùng lúc {date}",
+        "recompute": "Tính lại",
+        "noneComputed": "Chưa tính các mục có thể trùng.",
+        "computeNow": "Tính ngay",
+        "emptyTitle": "Tìm mục trùng lặp",
+        "emptyDescription": "Điều chỉnh ngưỡng tương tự rồi nhấn Quét để tìm các mục có thể trùng.",
+        "noneFoundTitle": "Không tìm thấy mục trùng lặp",
+        "noneFoundDescription": "Không phát hiện mục nào có thể trùng với cài đặt hiện tại.",
         "clustersFound": "{count, plural, =0 {no clusters found} other {# clusters found}}",
         "plusOthers": "{count, plural, =0 {+ # other} other {+ # others}}",
-        "percentSimilar": "{percent}% similar",
-        "pairDetails": "Pair details",
-        "dismissEntityTitle": "Dismiss all pairs for this entity",
-        "dismissPairTitle": "Dismiss this pair",
-        "groupsLabel": "Possible duplicate groups",
-        "keepThisOne": "Keep this one",
-        "mergeAway": "Merge away",
-        "notAMatch": "Not a match",
-        "notAMatchTitle": "Dismiss every pair in this group",
-        "selectPromptTitle": "Select a group to review",
-        "selectPromptDescription": "Choose a group from the list to compare its entities side by side.",
-        "backToList": "Back to groups",
-        "noBookTitles": "No books linked to this record",
-        "thresholdLabel": "Minimum similarity",
+        "percentSimilar": "Tương tự {percent}%",
+        "pairDetails": "Chi tiết cặp",
+        "dismissEntityTitle": "Bỏ qua mọi cặp của mục này",
+        "dismissPairTitle": "Bỏ qua cặp này",
+        "groupsLabel": "Các nhóm có thể trùng",
+        "keepThisOne": "Giữ mục này",
+        "mergeAway": "Gộp đi",
+        "notAMatch": "Không trùng",
+        "notAMatchTitle": "Bỏ qua mọi cặp trong nhóm này",
+        "selectPromptTitle": "Chọn một nhóm để xem lại",
+        "selectPromptDescription": "Chọn một nhóm trong danh sách để so sánh các mục cạnh nhau.",
+        "backToList": "Quay lại danh sách nhóm",
+        "noBookTitles": "Không có sách nào liên kết với mục này",
+        "thresholdLabel": "Độ tương tự tối thiểu",
         "thresholdValue": "{percent}%+",
         "willBeMerged": "{count, plural, other {# entities will be merged and removed}}",
-        "chooseTargetHint": "Select the entity to keep. Everything else in the group merges into it."
+        "chooseTargetHint": "Chọn mục để giữ lại. Mọi mục khác trong nhóm sẽ được gộp vào đó."
       },
       "dismissed": {
-        "loading": "Loading dismissed pairs...",
-        "empty": "No dismissed pairs",
-        "restore": "Restore",
-        "restoreTitle": "Restore this pair",
-        "hidePairs": "Hide dismissed pairs",
-        "showPairs": "Show dismissed pairs"
+        "loading": "Đang tải các cặp đã bỏ qua...",
+        "empty": "Không có cặp nào đã bỏ qua",
+        "restore": "Khôi phục",
+        "restoreTitle": "Khôi phục cặp này",
+        "hidePairs": "Ẩn các cặp đã bỏ qua",
+        "showPairs": "Hiện các cặp đã bỏ qua"
       },
       "browse": {
-        "searchPlaceholder": "Search...",
-        "emptyOnly": "Empty only",
-        "clear": "Clear",
-        "noEntities": "No entities found",
-        "mergeCount": "Merge ({count})",
-        "deleteCount": "Delete ({count})",
-        "totalCount": "{count} total",
-        "sortLabel": "sort: {sortName}",
+        "searchPlaceholder": "Tìm kiếm...",
+        "emptyOnly": "Chỉ mục trống",
+        "clear": "Xóa",
+        "noEntities": "Không tìm thấy mục nào",
+        "mergeCount": "Gộp ({count})",
+        "deleteCount": "Xóa ({count})",
+        "totalCount": "Tổng {count}",
+        "sortLabel": "sắp xếp: {sortName}",
         "sort": {
-          "nameAsc": "Name A-Z",
-          "nameDesc": "Name Z-A",
-          "fewestBooks": "Fewest books",
-          "mostBooks": "Most books"
+          "nameAsc": "Tên A-Z",
+          "nameDesc": "Tên Z-A",
+          "fewestBooks": "Ít sách nhất",
+          "mostBooks": "Nhiều sách nhất"
         },
-        "sortByLabel": "Sort by",
-        "entityTypeLabel": "Entity type",
+        "sortByLabel": "Sắp xếp theo",
+        "entityTypeLabel": "Loại dữ liệu",
         "resultCount": "{count, plural, =0 {no entities} other {# entities}}",
         "selectedCount": "{count, plural, other {# selected}}",
         "columns": {
-          "name": "Name",
-          "sortName": "Sort name",
-          "books": "Books",
-          "status": "Status",
-          "actions": "Actions"
+          "name": "Tên",
+          "sortName": "Tên sắp xếp",
+          "books": "Sách",
+          "status": "Trạng thái",
+          "actions": "Thao tác"
         },
-        "selectAllOnPage": "Select all entities on this page",
-        "selectEntity": "Select {name}",
-        "actionsFor": "Actions for {name}",
+        "selectAllOnPage": "Chọn mọi mục trên trang này",
+        "selectEntity": "Chọn {name}",
+        "actionsFor": "Thao tác cho {name}",
         "status": {
-          "noBooks": "No books"
+          "noBooks": "Không có sách"
         },
         "filters": {
-          "all": "All",
-          "noBooks": "No books"
+          "all": "Tất cả",
+          "noBooks": "Không có sách"
         },
         "density": {
-          "label": "Row height",
-          "comfortable": "Comfortable",
-          "compact": "Compact"
+          "label": "Chiều cao dòng",
+          "comfortable": "Thoáng",
+          "compact": "Gọn"
         },
-        "rowsPerPage": "Rows per page",
-        "range": "Showing {from}-{to} of {total}",
-        "pagination": "Pagination",
-        "previousPage": "Previous page",
-        "nextPage": "Next page",
-        "goToPage": "Go to page {page}",
-        "morePages": "More pages",
-        "noEntitiesDescription": "Nothing has been added to this entity type yet.",
-        "noMatchesTitle": "No matches",
-        "noMatchesDescription": "No entities match your current search and filters.",
-        "clearFilters": "Clear filters"
+        "rowsPerPage": "Số dòng mỗi trang",
+        "range": "Hiển thị {from}-{to} trên {total}",
+        "pagination": "Phân trang",
+        "previousPage": "Trang trước",
+        "nextPage": "Trang sau",
+        "goToPage": "Đến trang {page}",
+        "morePages": "Thêm trang",
+        "noEntitiesDescription": "Chưa có mục nào thuộc loại này.",
+        "noMatchesTitle": "Không có kết quả",
+        "noMatchesDescription": "Không có mục nào khớp với tìm kiếm và bộ lọc hiện tại.",
+        "clearFilters": "Xóa bộ lọc"
       },
       "deleteMode": {
-        "label": "Delete mode",
-        "softTitle": "Soft delete",
-        "softDescription": "Unlink from all books but keep the entity record",
-        "softDescriptionPlural": "Unlink from all books but keep the entity records",
-        "hardTitle": "Hard delete",
-        "hardDescription": "Remove entity and all associations permanently",
-        "hardDescriptionPlural": "Remove entities and all associations permanently"
+        "label": "Chế độ xóa",
+        "softTitle": "Xóa mềm",
+        "softDescription": "Gỡ khỏi mọi sách nhưng giữ lại bản ghi",
+        "softDescriptionPlural": "Gỡ khỏi mọi sách nhưng giữ lại các bản ghi",
+        "hardTitle": "Xóa vĩnh viễn",
+        "hardDescription": "Xóa vĩnh viễn mục này và mọi liên kết",
+        "hardDescriptionPlural": "Xóa vĩnh viễn các mục này và mọi liên kết"
       },
       "renameModal": {
-        "title": "Rename Entity",
-        "currentName": "Current name",
-        "newName": "New name"
+        "title": "Đổi tên mục",
+        "currentName": "Tên hiện tại",
+        "newName": "Tên mới"
       },
       "deleteModal": {
-        "title": "Delete Entity",
-        "confirm": "Are you sure you want to delete {name}?"
+        "title": "Xóa mục",
+        "confirm": "Bạn có chắc muốn xóa {name}?"
       },
       "splitModal": {
-        "title": "Split Entity",
-        "splitting": "Splitting",
-        "newNames": "New names (min 2)",
-        "namePlaceholder": "Enter name...",
-        "addAnother": "Add another"
+        "title": "Tách mục",
+        "splitting": "Đang tách",
+        "newNames": "Tên mới (tối thiểu 2)",
+        "namePlaceholder": "Nhập tên...",
+        "addAnother": "Thêm tên"
       },
       "bulkDeleteModal": {
-        "title": "Bulk Delete",
+        "title": "Xóa hàng loạt",
         "confirm": "{count, plural, =0 {Are you sure you want to delete # selected entity?} other {Are you sure you want to delete # selected entities?}}",
-        "deleteButton": "Delete {count}"
+        "deleteButton": "Xóa {count}"
       },
       "mergeModal": {
-        "title": "Merge Entities",
-        "description": "Select which entity to keep. The others will be merged into it and removed."
+        "title": "Gộp các mục",
+        "description": "Chọn mục để giữ lại. Các mục khác sẽ được gộp vào và bị xóa."
       }
     },
     "missingResources": {
-      "title": "Missing Resources",
-      "accessDenied": "You do not have permission to clean up missing resources.",
-      "categoriesLabel": "Cleanup category",
-      "untitled": "Untitled",
-      "clearSelection": "Clear selection",
-      "cleanSelected": "Clean {count} selected",
-      "selectAllMatching": "Select all {count} matching entries",
-      "allSelected": "All {count} matching entries are selected.",
+      "title": "Tài nguyên bị thiếu",
+      "accessDenied": "Bạn không có quyền dọn dẹp tài nguyên bị thiếu.",
+      "categoriesLabel": "Loại dọn dẹp",
+      "untitled": "Chưa có tiêu đề",
+      "clearSelection": "Bỏ chọn tất cả",
+      "cleanSelected": "Dọn {count} mục đã chọn",
+      "selectAllMatching": "Chọn cả {count} mục khớp",
+      "allSelected": "Đã chọn cả {count} mục khớp.",
       "sweep": {
-        "title": "Cover check",
-        "description": "Checks every book that claims a cover against the files on disk, and looks for cover folders left behind by deleted books. Nothing is removed during the check.",
-        "run": "Run check",
-        "running": "Checking",
-        "progress": "Checked {processed} of {total} books",
-        "lastRun": "Last checked {at}",
-        "truncated": "Only the first results are listed. Clean these, then run the check again to see the rest."
+        "title": "Kiểm tra ảnh bìa",
+        "description": "Đối chiếu mọi sách có ảnh bìa với tệp trên ổ đĩa, đồng thời tìm các thư mục ảnh bìa còn sót lại từ sách đã xóa. Không có gì bị xóa trong lúc kiểm tra.",
+        "run": "Chạy kiểm tra",
+        "running": "Đang kiểm tra",
+        "progress": "Đã kiểm tra {processed} / {total} cuốn",
+        "lastRun": "Kiểm tra lần cuối {at}",
+        "truncated": "Chỉ liệt kê các kết quả đầu tiên. Hãy dọn những mục này rồi chạy kiểm tra lại để xem phần còn lại."
       },
       "categories": {
-        "missing_books": "Missing books",
-        "broken_covers": "Broken covers",
-        "orphaned_cover_dirs": "Orphaned cover folders"
+        "missing_books": "Sách bị thiếu",
+        "broken_covers": "Ảnh bìa hỏng",
+        "orphaned_cover_dirs": "Thư mục ảnh bìa mồ côi"
       },
       "found": {
         "missing_books": "{count, plural, =0 {No books with missing files} other {# books with missing files}}",
@@ -10470,27 +10869,27 @@
         "orphaned_cover_dirs": "{count, plural, =0 {No orphaned cover folders} other {# orphaned cover folders}}"
       },
       "empty": {
-        "missing_books": "No missing books",
-        "broken_covers": "No broken cover references",
-        "orphaned_cover_dirs": "No orphaned cover folders",
-        "description": "Everything in this category is accounted for."
+        "missing_books": "Không có sách bị thiếu",
+        "broken_covers": "Không có tham chiếu ảnh bìa hỏng",
+        "orphaned_cover_dirs": "Không có thư mục ảnh bìa mồ côi",
+        "description": "Mọi mục trong loại này đều đầy đủ."
       },
       "needsSweep": {
-        "title": "Run the cover check first",
-        "description": "Cover results come from a disk check. Run it to see broken references and orphaned folders."
+        "title": "Hãy chạy kiểm tra ảnh bìa trước",
+        "description": "Kết quả ảnh bìa lấy từ lần kiểm tra ổ đĩa. Chạy kiểm tra để xem các tham chiếu hỏng và thư mục mồ côi."
       },
       "coverSource": {
-        "extracted": "Extracted",
-        "custom": "Custom"
+        "extracted": "Trích từ tệp",
+        "custom": "Tùy chỉnh"
       },
       "table": {
-        "selectPage": "Select everything on this page",
-        "coverFolder": "Cover folder for book #{bookId}",
+        "selectPage": "Chọn mọi mục trên trang này",
+        "coverFolder": "Thư mục ảnh bìa của sách #{bookId}",
         "fileCount": "{count, plural, other {# files}}"
       },
       "confirm": {
-        "title": "Clean missing resources?",
-        "action": "Clean",
+        "title": "Dọn tài nguyên bị thiếu?",
+        "action": "Dọn",
         "missing_books": "{count, plural, other {Deletes the database records for # books whose files are gone. The books, their metadata, reading progress, and covers are removed. This cannot be undone.}}",
         "broken_covers": "{count, plural, other {Clears the cover references for # books so they show as having no cover. Metadata is not otherwise changed.}}",
         "orphaned_cover_dirs": "{count, plural, other {Deletes # cover folders from disk. Their books are no longer in the database. This cannot be undone.}}"
@@ -10501,15 +10900,15 @@
         "orphaned_cover_dirs": "{count, plural, =0 {Nothing to clean} other {Removed # orphaned cover folders}}"
       },
       "pagination": {
-        "label": "Missing resource pages",
-        "page": "Page {page} of {total}"
+        "label": "Các trang tài nguyên bị thiếu",
+        "page": "Trang {page} / {total}"
       },
       "errors": {
-        "summary": "Could not load the missing resource summary.",
-        "sweepStart": "Could not start the cover check.",
-        "sweep": "The cover check failed.",
-        "list": "Could not load these entries.",
-        "clean": "Cleanup failed."
+        "summary": "Không thể tải tóm tắt tài nguyên bị thiếu.",
+        "sweepStart": "Không thể bắt đầu kiểm tra ảnh bìa.",
+        "sweep": "Kiểm tra ảnh bìa thất bại.",
+        "list": "Không thể tải các mục này.",
+        "clean": "Dọn dẹp thất bại."
       }
     }
   },
@@ -10823,8 +11222,8 @@
       "title": "Xóa chương trình đã chọn",
       "action": "Xóa",
       "confirmPhrase": "XÓA",
-      "description": "Thao tác này xóa vĩnh viễn {count} chương trình và mọi dữ liệu BookOrbit biết về chúng, gồm lịch sử nghe của bạn. Không thể hoàn tác.",
-      "descriptionWithFiles": "Thao tác này xóa vĩnh viễn {count} chương trình, mọi dữ liệu BookOrbit biết về chúng và {size} tệp đã tải. Thư mục riêng của bạn không bị ảnh hưởng. Không thể hoàn tác.",
+      "description": "Thao tác này xóa vĩnh viễn {count} chương trình và mọi dữ liệu Thư viện Cát Minh biết về chúng, gồm lịch sử nghe của bạn. Không thể hoàn tác.",
+      "descriptionWithFiles": "Thao tác này xóa vĩnh viễn {count} chương trình, mọi dữ liệu Thư viện Cát Minh biết về chúng và {size} tệp đã tải. Thư mục riêng của bạn không bị ảnh hưởng. Không thể hoàn tác.",
       "queued": "Đang xóa {count} chương trình",
       "queuedWithFailures": "Đang xóa {count} chương trình, không thể bắt đầu {failed} chương trình",
       "errors": {
@@ -11022,7 +11421,7 @@
     "import": {
       "title": "Nhập tệp cục bộ",
       "description": "Ghép âm thanh đã có trong thư mục thư viện với các tập từ nguồn cấp bạn theo dõi.",
-      "placementHint": "Đặt tệp vào thư mục thư viện trước. BookOrbit tiếp nhận ngay tại chỗ: không sao chép, đổi tên hay di chuyển.",
+      "placementHint": "Đặt tệp vào thư mục thư viện trước. Thư viện Cát Minh tiếp nhận ngay tại chỗ: không sao chép, đổi tên hay di chuyển.",
       "scan": "Quét tìm tệp",
       "running": "Đang quét...",
       "progress": "Đã quét {current} trên {total} tệp",
@@ -11266,7 +11665,7 @@
       "siteUrlLabel": "Trang web",
       "siteUrlPlaceholder": "https://example.com/show",
       "languageLabel": "Ngôn ngữ",
-      "languagePlaceholder": "en-us",
+      "languagePlaceholder": "vi-vn",
       "categoriesLabel": "Danh mục",
       "categoriesPlaceholder": "Thêm danh mục rồi nhấn Enter",
       "removeCategory": "Xóa danh mục {category}",
@@ -11347,7 +11746,7 @@
       "updateEpisode": "Không thể cập nhật tập",
       "refresh": "Không thể xếp hàng làm mới podcast",
       "reparse": "Không thể xếp hàng phân tích lại podcast",
-      "reparseNoSnapshot": "BookOrbit chưa có bản lưu nguồn cấp này. Hãy làm mới trước.",
+      "reparseNoSnapshot": "Thư viện Cát Minh chưa có bản lưu nguồn cấp này. Hãy làm mới trước.",
       "updatePodcast": "Không thể cập nhật podcast",
       "archive": "Không thể lưu trữ podcast",
       "prepareDelete": "Không thể chuẩn bị xóa chương trình",
@@ -11536,7 +11935,7 @@
       "createFailed": "Không thể tạo bộ sưu tập.",
       "alreadyIn": "Đã có trong bộ sưu tập này",
       "none": "Chưa có bộ sưu tập podcast. Tạo một bộ bên dưới.",
-      "newPlaceholder": "Podcast khoa học viễn tưởng",
+      "newPlaceholder": "Podcast bài giảng",
       "newLabel": "Tên bộ sưu tập mới",
       "create": "Tạo",
       "newCollection": "Bộ sưu tập mới",
@@ -11726,6 +12125,30 @@
     },
     "errors": {
       "generic": "Lỗi TTS"
+    }
+  },
+  "onboarding": {
+    "tour": {
+      "librariesTitle": "Thư viện của bạn ở đây",
+      "librariesBody": "Thư viện sẽ hiện ở đây sau khi được tạo. Dùng nút + để thêm thư viện đầu tiên, rồi nhấn vào thư viện bất kỳ để xem sách.",
+      "smartScopesTitle": "Bộ lọc thông minh",
+      "smartScopesBody": "Bộ lọc thông minh là các quy tắc lọc đã lưu, luôn tự cập nhật. Đặt tiêu chí một lần, ví dụ \"sách linh đạo Cát Minh chưa đọc\", rồi xem ngay phần thư viện đó.",
+      "collectionsTitle": "Bộ sưu tập - danh sách tự chọn",
+      "collectionsBody": "Bộ sưu tập là danh sách bạn tự lập, rất hợp cho chương trình đọc sách huấn luyện, sách đọc trong tuần tĩnh tâm, hoặc đồng bộ một nhóm sách sang Kobo.",
+      "searchTitle": "Tìm trong thư viện",
+      "searchBody": "Dùng thanh tìm kiếm để tìm ngay bất kỳ sách, tác giả hay bộ sách nào trong thư viện.",
+      "bookDockTitle": "Book Dock",
+      "bookDockBody": "Tệp đã tải lên sẽ chờ ở đây. Xem lại siêu dữ liệu, chọn thư viện đích, rồi hoàn tất để thêm vào thư viện.",
+      "statisticsTitle": "Thống kê đọc sách",
+      "statisticsBody": "Khám phá hơn 33 biểu đồ về nhịp độ đọc, tỷ lệ thể loại, thói quen đọc, các tác giả đọc nhiều nhất và hơn thế nữa. Toàn bộ hành trình đọc của bạn trong một trang.",
+      "uploadTitle": "Tải sách lên",
+      "uploadBody": "Tải sách lên ngay từ trình duyệt. Sách sẽ vào Book Dock để xem lại siêu dữ liệu trước khi thêm vào thư viện.",
+      "appearanceTitle": "Tùy chỉnh theo ý bạn",
+      "appearanceBody": "Đổi giao diện, màu nhấn và hình nền trong menu giao diện.",
+      "progress": "{current} / {total}",
+      "next": "Tiếp",
+      "back": "Quay lại",
+      "done": "Xong"
     }
   }
 }

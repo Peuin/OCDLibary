@@ -79,6 +79,7 @@ export type Radius = (typeof RADIUS_IDS)[number];
 
 export const BACKGROUND_IDS = [
   "none",
+  "carmel",
   "dots",
   "cross",
   "millimeter",

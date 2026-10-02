@@ -26,9 +26,12 @@ export const RADIUS_OPTIONS: { id: Radius; label: string }[] = [
   { id: 'pill', label: 'Pill' },
 ]
 
+export const DEFAULT_BACKGROUND: Background = 'carmel'
+
 export const BACKGROUND_OPTIONS: { id: Background; label: string; cssClass: string }[] = [
   // Fundamental
   { id: 'none', label: 'None', cssClass: '' },
+  { id: 'carmel', label: 'Carmel', cssClass: 'pattern-carmel' },
   { id: 'dots', label: 'Dots', cssClass: 'pattern-dots' },
   { id: 'cross', label: 'Cross', cssClass: 'pattern-cross' },
   { id: 'millimeter', label: 'Millimeter', cssClass: 'pattern-millimeter' },
@@ -84,8 +87,14 @@ export const useThemeStore = defineStore('theme', () => {
   const storedRadius = storage.get<Radius>('radius', 'default')
   const radius = ref<Radius>(RADIUS_IDS.includes(storedRadius) ? storedRadius : 'default')
 
-  const storedBackground = storage.get<Background>('background', 'vinyl')
-  const background = ref<Background>(BACKGROUND_IDS.includes(storedBackground) ? storedBackground : 'dots')
+  // Vinyl was the old default and was written to storage on every first visit, so a stored vinyl
+  // is not a real choice. Move it to the Carmel artwork once, then respect whatever is picked.
+  if (storage.get<string>('backgroundDefault', '') !== DEFAULT_BACKGROUND) {
+    if (storage.get<string>('background', 'vinyl') === 'vinyl') storage.set('background', DEFAULT_BACKGROUND)
+    storage.set('backgroundDefault', DEFAULT_BACKGROUND)
+  }
+  const storedBackground = storage.get<Background>('background', DEFAULT_BACKGROUND)
+  const background = ref<Background>(BACKGROUND_IDS.includes(storedBackground) ? storedBackground : DEFAULT_BACKGROUND)
 
   const brightness = ref<number>(storage.get<number>('brightness', DEFAULT_SURFACE_BRIGHTNESS))
 

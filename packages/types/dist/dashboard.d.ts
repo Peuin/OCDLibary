@@ -8,6 +8,7 @@ export declare const SCROLLER_TYPE: {
     readonly UP_NEXT_IN_SERIES: "up-next-in-series";
     readonly RANDOM: "random";
     readonly SMART_SCOPE: "smart-scope";
+    readonly FEATURED_SHELF: "featured-shelf";
 };
 export type ScrollerType = (typeof SCROLLER_TYPE)[keyof typeof SCROLLER_TYPE];
 export declare const SCROLLER_TYPES: ReadonlyArray<ScrollerType>;
@@ -24,6 +25,7 @@ export declare const BOOK_SCROLLER_TYPE: {
     readonly UP_NEXT_IN_SERIES: "up-next-in-series";
     readonly RANDOM: "random";
     readonly SMART_SCOPE: "smart-scope";
+    readonly FEATURED_SHELF: "featured-shelf";
 };
 export type BookScrollerType = (typeof BOOK_SCROLLER_TYPE)[keyof typeof BOOK_SCROLLER_TYPE];
 export declare const BOOK_SCROLLER_TYPES: ReadonlyArray<BookScrollerType>;
@@ -61,6 +63,7 @@ export interface DashboardScrollerBatchItem {
     type: BookScrollerType;
     limit: number;
     smartScopeId?: number;
+    featuredShelfId?: number;
 }
 export interface DashboardScrollerBatchRequest {
     items: DashboardScrollerBatchItem[];
@@ -82,6 +85,56 @@ export interface ScrollerConfig {
     limit: number;
     rows: number;
     smartScopeId?: number;
+    featuredShelfId?: number;
+}
+export declare const DASHBOARD_SHELF_LAYOUTS: readonly ["wide", "two-columns"];
+export type DashboardShelfLayoutValue = (typeof DASHBOARD_SHELF_LAYOUTS)[number];
+/** Shelves an administrator pins for every user, each backed by one public book collection. */
+export declare const DASHBOARD_FEATURED_SHELF_MAX = 8;
+export declare const DASHBOARD_FEATURED_SHELF_TITLE_MAX = 80;
+export declare const DASHBOARD_FEATURED_SHELF_SAINT_NAME_MAX = 120;
+/** Built-in book shelves a featured entry can decorate with its saint card instead of adding its own shelf. */
+export declare const DASHBOARD_ATTACHABLE_SHELF_TYPES: readonly ["recently-added", "random", "continue-reading", "continue-listening", "want-to-read", "up-next-in-series"];
+export type DashboardAttachableShelfType = (typeof DASHBOARD_ATTACHABLE_SHELF_TYPES)[number];
+export declare const DASHBOARD_FEATURED_SHELF_IMAGE_MAX_BYTES: number;
+export interface DashboardFeaturedShelf {
+    id: number;
+    title: string;
+    collectionId: number;
+    collectionName: string;
+    /** Name shown under the portrait at the head of the shelf, or null for a plain shelf. */
+    saintName: string | null;
+    /** The built-in shelf this entry decorates, or null when it is a shelf of its own. */
+    attachTo: DashboardAttachableShelfType | null;
+    /** Versioned URL of the shelf portrait (3:4), or null when none was attached. */
+    imageUrl: string | null;
+    displayOrder: number;
+}
+export interface CreateDashboardFeaturedShelfRequest {
+    collectionId: number;
+    title?: string;
+    saintName?: string;
+    attachTo?: DashboardAttachableShelfType | null;
+}
+export interface UpdateDashboardFeaturedShelfRequest {
+    collectionId?: number;
+    title?: string;
+    /** An empty string clears the name. */
+    saintName?: string;
+    /** null turns the entry back into a shelf of its own. */
+    attachTo?: DashboardAttachableShelfType | null;
+}
+export interface ReorderDashboardFeaturedShelvesRequest {
+    ids: number[];
+}
+/** The shelf arrangement an administrator saved for users who have not customized their own. */
+export interface DashboardDefaultLayout {
+    scrollers: ScrollerConfig[];
+    shelfLayout: DashboardShelfLayoutValue;
+}
+export interface DashboardSharedConfig {
+    featuredShelves: DashboardFeaturedShelf[];
+    defaultLayout: DashboardDefaultLayout | null;
 }
 export declare const WIDGET_TYPE: {
     readonly READING_STREAK: "reading-streak";

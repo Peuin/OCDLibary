@@ -6,6 +6,7 @@ import { createAuthenticatedSocket } from '@/lib/socket'
 import type { AchievementRarity, NotificationItem, NotificationPage } from '@bookorbit/types'
 import { NotificationType } from '@bookorbit/types'
 import { showAchievementToast } from '@/features/achievements/utils/achievementToast'
+import { localizeAchievementName } from '@/features/achievements/utils/localizeAchievement'
 
 const PAGE_SIZE = 20
 const ACHIEVEMENT_RARITIES: readonly AchievementRarity[] = ['common', 'rare', 'epic', 'legendary']
@@ -30,13 +31,15 @@ function resolveAchievementToastPayload(item: NotificationItem): { name: string;
   const meta = item.meta
   const metaRarity = meta?.['rarity']
   const metaName = meta?.['achievementName']
+  const metaKey = meta?.['achievementKey']
 
   const rarity = isAchievementRarity(metaRarity) ? metaRarity : 'common'
   const messageName = item.message?.trim() ?? ''
   const fallbackName = typeof metaName === 'string' ? metaName.trim() : ''
 
+  const name = messageName || fallbackName
   return {
-    name: messageName || fallbackName || 'New achievement',
+    name: typeof metaKey === 'string' && metaKey ? localizeAchievementName(metaKey, name) : name,
     rarity,
   }
 }

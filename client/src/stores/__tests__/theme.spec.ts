@@ -181,7 +181,7 @@ describe('useThemeStore', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
 
-  it('replaces the removed terminal background preference with dots', () => {
+  it('replaces the removed terminal background preference with the default background', () => {
     const colorScheme = createColorSchemeQuery(false)
     stubColorScheme(colorScheme.query)
     localStorage.setItem('background', '"terminal"')
@@ -189,8 +189,22 @@ describe('useThemeStore', () => {
 
     const store = useThemeStore()
 
-    expect(store.background).toBe('dots')
-    expect(localStorage.getItem('background')).toBe('"dots"')
+    expect(store.background).toBe('carmel')
+    expect(localStorage.getItem('background')).toBe('"carmel"')
+  })
+
+  it('moves the old vinyl default to the Carmel artwork once', () => {
+    stubColorScheme(createColorSchemeQuery(false).query)
+    localStorage.setItem('background', '"vinyl"')
+    setActivePinia(createPinia())
+
+    expect(useThemeStore().background).toBe('carmel')
+    expect(document.body.classList.contains('pattern-carmel')).toBe(true)
+
+    localStorage.setItem('background', '"vinyl"')
+    setActivePinia(createPinia())
+
+    expect(useThemeStore().background).toBe('vinyl')
   })
 
   describe('surfaceOpacity', () => {

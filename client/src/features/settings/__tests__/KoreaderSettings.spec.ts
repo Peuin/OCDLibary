@@ -581,7 +581,7 @@ describe('KoreaderSettings', () => {
     const bookResult = wrapper.findAll('button').find((button) => button.text().includes('BookOrbit Title'))!
     await bookResult.trigger('click')
     expect(wrapper.text()).toContain('Confirm KOReader link')
-    expect(wrapper.text()).toContain('Already synced stats will stay on their current BookOrbit book.')
+    expect(wrapper.text()).toContain('Already synced stats will stay on their current OCD Library book.')
 
     await buttonByText(wrapper, 'Confirm link')!.trigger('click')
     await flushPromises()
@@ -778,7 +778,7 @@ describe('KoreaderSettings', () => {
     await buttonByText(wrapper, 'Unlink')!.trigger('click')
 
     expect(wrapper.text()).toContain('Unlink KOReader book?')
-    expect(wrapper.text()).toContain('Already synced stats will stay on their current BookOrbit book.')
+    expect(wrapper.text()).toContain('Already synced stats will stay on their current OCD Library book.')
 
     const unlinkButtons = wrapper.findAll('button').filter((button) => button.text() === 'Unlink')
     await unlinkButtons[unlinkButtons.length - 1]!.trigger('click')

@@ -1,31 +1,46 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, ChevronUp, Columns2, GripVertical, Plus, RotateCcw, Rows3, Trash2 } from '@lucide/vue'
+import { ChevronDown, ChevronUp, Columns2, GripVertical, LibraryBig, Loader2, Plus, RotateCcw, Rows3, Trash2, Users } from '@lucide/vue'
+import { toast } from 'vue-sonner'
 
 import { APP_FEATURES, type ScrollerConfig, type ScrollerType, type WidgetConfig } from '@bookorbit/types'
 import { formatList } from '@/i18n/formatters'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useSmartScopes } from '@/features/smart-scope/composables/useSmartScopes'
 import { useLibraries } from '@/features/library/composables/useLibraries'
-import { DEFAULT_SCROLLERS, SCROLLER_LABELS, SHELF_LAYOUT, useDashboardConfig, type DashboardShelfLayout } from '../composables/useDashboardConfig'
+import { usePermissions } from '@/features/auth/composables/usePermissions'
+import { saveDashboardDefaultLayout } from '../api/dashboard-featured-shelf.api'
+import DashboardFeaturedShelvesManager from './DashboardFeaturedShelvesManager.vue'
+import {
+  DEFAULT_SCROLLERS,
+  FEATURED_SHELF_TYPE,
+  SCROLLER_LABELS,
+  SHELF_LAYOUT,
+  nextScrollerId,
+  useDashboardConfig,
+  type DashboardShelfLayout,
+} from '../composables/useDashboardConfig'
 import { SHELF_ROW_OPTIONS } from '../lib/shelf-rows'
 import { useDashboardLabels } from '../composables/useDashboardLabels'
 import { useDashboardWidgets } from '../composables/useDashboardWidgets'
 import { useDraggableList } from '../composables/useDraggableList'
 
 const props = defineProps<{ open: boolean }>()
-const emit = defineEmits<{ 'update:open': [value: boolean]; saved: [] }>()
+const emit = defineEmits<{ 'update:open': [value: boolean]; saved: []; 'shared-changed': [] }>()
 
 const { t } = useI18n()
 
-const { scrollers, shelfLayout, saveShelfSettings, MAX_SCROLLERS } = useDashboardConfig()
+const { scrollers, shelfLayout, saveShelfSettings, defaultShelfSettings, MAX_SCROLLERS } = useDashboardConfig()
+const { hasPermission } = usePermissions()
+const canManageShared = computed(() => hasPermission('manage_app_settings'))
 const { widgets, libraryIds, saveWidgets, saveLibraryScope, DEFAULT_WIDGETS } = useDashboardWidgets()
 const { smartScopes, fetchSmartScopes } = useSmartScopes()
 const { libraries, fetchLibraries } = useLibraries()
 const { widgetName, shelfTypeName } = useDashboardLabels()
 
-const activeTab = ref<'widgets' | 'shelves'>('shelves')
+const activeTab = ref<'widgets' | 'shelves' | 'featured'>('shelves')
+const savingDefault = ref(false)
 const draft = ref<ScrollerConfig[]>([])
 const shelfLayoutDraft = ref<DashboardShelfLayout>(SHELF_LAYOUT.WIDE)
 const widgetDraft = ref<WidgetConfig[]>([])
@@ -77,6 +92,60 @@ const {
   moveUp: widgetMoveUp,
   moveDown: widgetMoveDown,
 } = useDraggableList(widgetDraft)
+const ownShelfCount = computed(() => draft.value.filter((scroller) => scroller.type !== FEATURED_SHELF_TYPE).length)
+
+function isFeatured(scroller: ScrollerConfig): boolean {
+  return scroller.type === FEATURED_SHELF_TYPE
+}
+
+function selectShelvesTab() {
+  activeTab.value = 'shelves'
+}
+
+function selectWidgetsTab() {
+  activeTab.value = 'widgets'
+}
+
+function selectFeaturedTab() {
+  activeTab.value = 'featured'
+}
+
+function handleSharedChanged() {
+  emit('shared-changed')
+}
+
+function toDefaultScroller(scroller: ScrollerConfig): ScrollerConfig {
+  return {
+    id: scroller.id,
+    type: scroller.type,
+    label: scroller.label,
+    enabled: scroller.enabled,
+    order: scroller.order,
+    limit: scroller.limit,
+    rows: scroller.rows,
+    ...(scroller.smartScopeId === undefined ? {} : { smartScopeId: scroller.smartScopeId }),
+    ...(scroller.featuredShelfId === undefined ? {} : { featuredShelfId: scroller.featuredShelfId }),
+  }
+}
+
+// Smart Scopes belong to whoever made them, so they cannot be part of everyone's default.
+async function handleSaveAsDefault() {
+  if (!window.confirm(t('dashboard.featured.confirmDefault'))) return
+  savingDefault.value = true
+  try {
+    const shelves = draft.value
+      .filter((scroller) => scroller.type !== 'smart-scope')
+      .map((scroller, index) => toDefaultScroller({ ...scroller, order: index + 1 }))
+    await saveDashboardDefaultLayout({ scrollers: shelves, shelfLayout: shelfLayoutDraft.value })
+    toast.success(t('dashboard.featured.toasts.defaultSaved'))
+    emit('shared-changed')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('dashboard.featured.errors.generic'))
+  } finally {
+    savingDefault.value = false
+  }
+}
+
 // ── Add / Remove ─────────────────────────────────────────────
 const ALL_TYPES: ScrollerType[] = [
   'continue-reading',
@@ -90,10 +159,9 @@ const ALL_TYPES: ScrollerType[] = [
 ]
 
 function addScroller() {
-  if (draft.value.length >= MAX_SCROLLERS) return
-  const maxId = Math.max(0, ...draft.value.map((s) => Number(s.id)))
+  if (ownShelfCount.value >= MAX_SCROLLERS) return
   draft.value.push({
-    id: String(maxId + 1),
+    id: nextScrollerId(draft.value),
     type: 'recently-added',
     label: SCROLLER_LABELS['recently-added'],
     enabled: true,
@@ -108,7 +176,7 @@ function setShelfRows(scroller: ScrollerConfig, rows: number) {
 }
 
 function removeScroller(index: number) {
-  if (draft.value.length <= 1) return
+  if (draft.value.length <= 1 || draft.value[index]?.type === FEATURED_SHELF_TYPE) return
   draft.value.splice(index, 1)
 }
 
@@ -183,8 +251,9 @@ function resetToDefault() {
   if (activeTab.value === 'widgets') {
     widgetDraft.value = DEFAULT_WIDGETS.map((w) => ({ ...w }))
   } else {
-    draft.value = DEFAULT_SCROLLERS.map((s) => ({ ...s }))
-    shelfLayoutDraft.value = SHELF_LAYOUT.WIDE
+    const defaults = defaultShelfSettings()
+    draft.value = defaults.scrollers.map((s) => ({ ...s }))
+    shelfLayoutDraft.value = defaults.shelfLayout
   }
 }
 </script>
@@ -206,7 +275,7 @@ function resetToDefault() {
               'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
               activeTab === 'shelves' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
             ]"
-            @click="activeTab = 'shelves'"
+            @click="selectShelvesTab"
           >
             {{ t('dashboard.settings.tabs.shelves') }}
           </button>
@@ -215,16 +284,26 @@ function resetToDefault() {
               'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
               activeTab === 'widgets' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
             ]"
-            @click="activeTab = 'widgets'"
+            @click="selectWidgetsTab"
           >
             {{ t('dashboard.settings.tabs.widgets') }}
+          </button>
+          <button
+            v-if="canManageShared"
+            :class="[
+              'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              activeTab === 'featured' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+            ]"
+            @click="selectFeaturedTab"
+          >
+            {{ t('dashboard.featured.tab') }}
           </button>
         </div>
       </div>
 
       <!-- Body -->
       <div class="flex-1 overflow-y-auto px-5 py-4">
-        <div class="mb-4 rounded-lg border border-border bg-card">
+        <div v-show="activeTab !== 'featured'" class="mb-4 rounded-lg border border-border bg-card">
           <button
             type="button"
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-start transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -375,7 +454,15 @@ function resetToDefault() {
                 </button>
 
                 <!-- Type selector -->
+                <span v-if="isFeatured(scroller)" class="flex h-8 min-w-0 flex-1 items-center gap-1.5 truncate text-sm font-medium text-foreground">
+                  <LibraryBig :size="14" class="shrink-0 text-primary" aria-hidden="true" />
+                  <span class="truncate">{{ scroller.label }}</span>
+                  <span class="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">{{
+                    t('dashboard.featured.badge')
+                  }}</span>
+                </span>
                 <select
+                  v-else
                   v-model="scroller.type"
                   class="h-8 min-w-0 flex-1 appearance-none rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                   @change="onTypeChange(scroller)"
@@ -413,7 +500,8 @@ function resetToDefault() {
                 <!-- Remove -->
                 <button
                   class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-30"
-                  :disabled="draft.length <= 1"
+                  :disabled="draft.length <= 1 || isFeatured(scroller)"
+                  :class="{ invisible: isFeatured(scroller) }"
                   @click="removeScroller(index)"
                 >
                   <Trash2 :size="14" />
@@ -439,13 +527,33 @@ function resetToDefault() {
           <!-- Add shelf -->
           <button
             class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border py-2.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
-            :disabled="draft.length >= MAX_SCROLLERS"
+            :disabled="ownShelfCount >= MAX_SCROLLERS"
             @click="addScroller"
           >
             <Plus :size="15" />
             {{ t('dashboard.settings.addShelf') }}
-            <span class="text-xs opacity-60">({{ draft.length }}/{{ MAX_SCROLLERS }})</span>
+            <span class="text-xs opacity-60">({{ ownShelfCount }}/{{ MAX_SCROLLERS }})</span>
           </button>
+
+          <div v-if="canManageShared" class="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <p class="text-sm font-medium text-foreground">{{ t('dashboard.featured.defaultTitle') }}</p>
+            <p class="mt-1 text-xs text-muted-foreground">{{ t('dashboard.featured.defaultDescription') }}</p>
+            <button
+              type="button"
+              class="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/40 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+              :disabled="savingDefault"
+              @click="handleSaveAsDefault"
+            >
+              <Loader2 v-if="savingDefault" :size="14" class="animate-spin" aria-hidden="true" />
+              <Users v-else :size="14" aria-hidden="true" />
+              {{ t('dashboard.featured.saveAsDefault') }}
+            </button>
+          </div>
+        </div>
+
+        <!-- FEATURED TAB -->
+        <div v-if="canManageShared && activeTab === 'featured'">
+          <DashboardFeaturedShelvesManager @changed="handleSharedChanged" />
         </div>
 
         <!-- WIDGETS TAB -->
@@ -507,7 +615,7 @@ function resetToDefault() {
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between border-t border-border px-5 py-4">
+      <div v-show="activeTab !== 'featured'" class="flex items-center justify-between border-t border-border px-5 py-4">
         <button class="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground" @click="resetToDefault">
           <RotateCcw :size="13" />
           {{ t('dashboard.settings.resetToDefaults') }}

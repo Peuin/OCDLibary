@@ -1,6 +1,7 @@
 import { driver } from 'driver.js'
 import type { DriveStep } from 'driver.js'
 import 'driver.js/dist/driver.css'
+import { i18n } from '@/i18n'
 import { useAuth } from '@/features/auth/composables/useAuth'
 import { api } from '@/lib/api'
 
@@ -15,14 +16,16 @@ export function useOnboardingTour() {
     return user.value?.settings?.onboarding?.tourCompleted === true
   }
 
+  const { t } = i18n.global
+
   function buildSteps(): DriveStep[] {
     const candidates: DriveStep[] = [
       // Left sidebar - top to bottom
       {
         element: '[data-tour="sidebar-libraries"]',
         popover: {
-          title: 'Your libraries live here',
-          description: 'Libraries appear here once created. Use the + button to add your first one, then click any library to browse its books.',
+          title: t('onboarding.tour.librariesTitle'),
+          description: t('onboarding.tour.librariesBody'),
           side: 'right',
           align: 'start',
           showButtons: ['next', 'close'],
@@ -31,9 +34,8 @@ export function useOnboardingTour() {
       {
         element: '[data-tour="sidebar-smartScopes"]',
         popover: {
-          title: 'Smart Scopes - Smart filters',
-          description:
-            'Smart Scopes are saved filter rules that always stay up to date. Define criteria once - like "unread sci-fi" - and browse that slice of your library instantly.',
+          title: t('onboarding.tour.smartScopesTitle'),
+          description: t('onboarding.tour.smartScopesBody'),
           side: 'right',
           align: 'start',
         },
@@ -41,9 +43,8 @@ export function useOnboardingTour() {
       {
         element: '[data-tour="sidebar-collections"]',
         popover: {
-          title: 'Collections - curated lists',
-          description:
-            'Collections are manual lists you build yourself - great for reading orders, recommendations, or syncing a specific set of books to your Kobo.',
+          title: t('onboarding.tour.collectionsTitle'),
+          description: t('onboarding.tour.collectionsBody'),
           side: 'right',
           align: 'start',
         },
@@ -52,8 +53,8 @@ export function useOnboardingTour() {
       {
         element: '[data-tour="global-search"]',
         popover: {
-          title: 'Search your collection',
-          description: 'Use the search bar to instantly find any book, author, or series across your library.',
+          title: t('onboarding.tour.searchTitle'),
+          description: t('onboarding.tour.searchBody'),
           side: 'bottom',
           align: 'start',
         },
@@ -61,8 +62,8 @@ export function useOnboardingTour() {
       {
         element: '[data-tour="book-dock-btn"]',
         popover: {
-          title: 'Book Dock',
-          description: 'Uploaded files wait here. Review metadata, set the target library, then finalize to add them to your collection.',
+          title: t('onboarding.tour.bookDockTitle'),
+          description: t('onboarding.tour.bookDockBody'),
           side: 'bottom',
           align: 'end',
         },
@@ -70,9 +71,8 @@ export function useOnboardingTour() {
       {
         element: '[data-tour="statistics-btn"]',
         popover: {
-          title: 'Reading statistics',
-          description:
-            'Explore 33+ charts covering your reading pace, genre breakdown, session patterns, top authors, and more. Your full reading history at a glance.',
+          title: t('onboarding.tour.statisticsTitle'),
+          description: t('onboarding.tour.statisticsBody'),
           side: 'bottom',
           align: 'end',
         },
@@ -80,8 +80,8 @@ export function useOnboardingTour() {
       {
         element: '[data-tour="upload-button"]',
         popover: {
-          title: 'Upload books',
-          description: 'Upload books directly from your browser. They land in the Book Dock for metadata review before being added to a library.',
+          title: t('onboarding.tour.uploadTitle'),
+          description: t('onboarding.tour.uploadBody'),
           side: 'bottom',
           align: 'end',
         },
@@ -89,8 +89,8 @@ export function useOnboardingTour() {
       {
         element: '[data-tour="appearance-picker"]',
         popover: {
-          title: 'Make it yours',
-          description: 'Customize your theme, accent color, and background from the appearance menu.',
+          title: t('onboarding.tour.appearanceTitle'),
+          description: t('onboarding.tour.appearanceBody'),
           side: 'bottom',
           align: 'end',
         },
@@ -125,10 +125,10 @@ export function useOnboardingTour() {
 
     const driverObj = driver({
       showProgress: true,
-      progressText: '{{current}} of {{total}}',
-      nextBtnText: 'Next',
-      prevBtnText: 'Back',
-      doneBtnText: 'Done',
+      progressText: t('onboarding.tour.progress', { current: '{{current}}', total: '{{total}}' }),
+      nextBtnText: t('onboarding.tour.next'),
+      prevBtnText: t('onboarding.tour.back'),
+      doneBtnText: t('onboarding.tour.done'),
       disableActiveInteraction: true,
       onDestroyed: () => {
         markCompletedLocally()

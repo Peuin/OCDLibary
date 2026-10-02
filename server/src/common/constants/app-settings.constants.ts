@@ -2,6 +2,7 @@ import type { AuthorAutoEnrichmentConfig, DefaultLibraryAccessConfig, OidcAutoPr
 
 export const APP_SETTING_KEYS = {
   ALLOW_REGISTRATION: 'allow_registration',
+  DASHBOARD_DEFAULT_LAYOUT: 'dashboard_default_layout',
   OPDS_ENABLED: 'opds_enabled',
   BOOK_DOCK_PAUSED: 'book_dock_paused',
   BOOK_DOCK_AUTO_FETCH_METADATA: 'book_dock_auto_fetch_metadata',

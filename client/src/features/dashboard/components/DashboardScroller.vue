@@ -2,10 +2,23 @@
 import { computed, ref, useAttrs } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
-import { Aperture, BookMarked, BookmarkPlus, ChevronLeft, ChevronRight, Headphones, ListOrdered, RefreshCw, Shuffle, Sparkles } from '@lucide/vue'
+import {
+  Aperture,
+  BookMarked,
+  BookmarkPlus,
+  ChevronLeft,
+  ChevronRight,
+  Headphones,
+  LibraryBig,
+  ListOrdered,
+  RefreshCw,
+  Shuffle,
+  Sparkles,
+} from '@lucide/vue'
 
 import type { BookCard, BookScrollerType } from '@bookorbit/types'
 import BookCoverCard from '@/features/book/components/BookCoverCard.vue'
+import DashboardSaintCard from './DashboardSaintCard.vue'
 import BookQuickView from '@/features/book/components/BookQuickView.vue'
 import AddToCollectionSheet from '@/features/collection/components/AddToCollectionSheet.vue'
 import DeleteBookDialog from '@/features/book/components/DeleteBookDialog.vue'
@@ -23,6 +36,9 @@ const props = defineProps<{
   limit?: number
   rows?: number
   smartScopeId?: number
+  featuredShelfId?: number
+  /** Present on an administrator's featured shelf: the saint and collection that lead it. */
+  featured?: { saintName: string | null; imageUrl: string | null; collectionId: number } | null
 }>()
 
 const attrs = useAttrs()
@@ -39,7 +55,12 @@ const { books, loading, error, refresh } = useDashboardScroller(
   props.type,
   shelfBookLimit(props.limit ?? DEFAULT_BOOKS_PER_ROW, shelfRows.value),
   props.smartScopeId,
+  props.featuredShelfId,
 )
+
+// Wooden styling marks both an administrator's own shelf and a built-in shelf it decorates.
+const isFeatured = computed(() => props.type === 'featured-shelf' || Boolean(props.featured))
+const showSaintCard = computed(() => Boolean(props.featured && (props.featured.saintName || props.featured.imageUrl)))
 
 const bands = computed(() => chunkIntoBands(books.value, shelfRows.value))
 
@@ -56,6 +77,7 @@ const typeIcon = computed(() => {
   if (props.type === 'up-next-in-series') return ListOrdered
   if (props.type === 'recently-added') return Sparkles
   if (props.type === 'smart-scope') return Aperture
+  if (props.type === 'featured-shelf') return LibraryBig
   return Shuffle
 })
 
@@ -110,14 +132,18 @@ function coverAnimationDelay(index: number): string {
 </script>
 
 <template>
-  <section v-bind="attrs" class="group/scroller overflow-hidden rounded-2xl border border-primary/40 bg-card/30 shadow-sm backdrop-blur-[1px]">
+  <section
+    v-bind="attrs"
+    class="group/scroller overflow-hidden rounded-2xl border shadow-sm"
+    :class="isFeatured ? 'wood-shelf border-primary/60' : 'border-primary/40 bg-card/30 backdrop-blur-[1px]'"
+  >
     <!-- Header -->
     <div class="mb-2 flex items-center justify-between px-5 pt-4">
       <div class="flex items-center gap-2.5">
         <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50">
           <component :is="typeIcon" :size="14" class="text-foreground" />
         </div>
-        <h2 class="text-[15px] font-bold tracking-tight">{{ title }}</h2>
+        <h2 class="text-[15px] font-bold tracking-tight" :class="{ 'wood-shelf-title': isFeatured }">{{ title }}</h2>
         <span
           v-if="!loading && !error && books.length > 0"
           class="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-bold tabular-nums text-foreground"
@@ -141,53 +167,60 @@ function coverAnimationDelay(index: number): string {
       </div>
     </div>
 
-    <!-- Skeleton -->
-    <div v-if="loading" class="flex flex-col gap-5 overflow-hidden px-5 pb-5">
-      <div v-for="(skeletonBand, bandIndex) in skeletonBands" :key="bandIndex" class="flex gap-3">
-        <div v-for="(_, n) in skeletonBand" :key="n" class="w-[120px] shrink-0">
-          <div class="w-full animate-pulse rounded-lg bg-muted" style="aspect-ratio: 2/3" />
+    <div class="flex min-w-0 items-stretch">
+      <div v-if="showSaintCard && featured" class="shrink-0 pb-5 ps-5 pt-1">
+        <DashboardSaintCard :saint-name="featured.saintName" :image-url="featured.imageUrl" :collection-id="featured.collectionId" />
+      </div>
+      <div class="min-w-0 flex-1" :class="{ 'wood-shelf-books': isFeatured }">
+        <!-- Skeleton -->
+        <div v-if="loading" class="flex flex-col gap-5 overflow-hidden px-5 pb-5">
+          <div v-for="(skeletonBand, bandIndex) in skeletonBands" :key="bandIndex" class="flex gap-3">
+            <div v-for="(_, n) in skeletonBand" :key="n" class="w-[120px] shrink-0">
+              <div class="w-full animate-pulse rounded-lg bg-muted" style="aspect-ratio: 2/3" />
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Error -->
-    <div v-else-if="error" class="flex items-center gap-2.5 px-5 pb-4 pt-1 text-sm text-muted-foreground">
-      <span>{{ t('dashboard.scroller.failedToLoad') }}</span>
-      <button class="flex items-center gap-1.5 text-xs text-primary hover:underline" @click="refresh">
-        <RefreshCw :size="12" />
-        {{ t('dashboard.common.retry') }}
-      </button>
-    </div>
+        <!-- Error -->
+        <div v-else-if="error" class="flex items-center gap-2.5 px-5 pb-4 pt-1 text-sm text-muted-foreground">
+          <span>{{ t('dashboard.scroller.failedToLoad') }}</span>
+          <button class="flex items-center gap-1.5 text-xs text-primary hover:underline" @click="refresh">
+            <RefreshCw :size="12" />
+            {{ t('dashboard.common.retry') }}
+          </button>
+        </div>
 
-    <!-- Empty -->
-    <div v-else-if="books.length === 0" class="flex flex-col items-center justify-center py-10 gap-3 text-center animate-fade-up">
-      <div class="h-12 w-12 rounded-full bg-muted flex items-center justify-center animate-scale-in">
-        <component :is="typeIcon" :size="20" class="text-muted-foreground" />
-      </div>
-      <p class="text-sm text-muted-foreground">
-        <template v-if="type === 'continue-reading'">{{ t('dashboard.scroller.empty.continueReading') }}</template>
-        <template v-else-if="type === 'continue-listening'">{{ t('dashboard.scroller.empty.continueListening') }}</template>
-        <template v-else-if="type === 'want-to-read'">{{ t('dashboard.scroller.empty.wantToRead') }}</template>
-        <template v-else-if="type === 'up-next-in-series'">{{ t('dashboard.scroller.empty.upNextInSeries') }}</template>
-        <template v-else-if="type === 'recently-added'">{{ t('dashboard.scroller.empty.recentlyAdded') }}</template>
-        <template v-else-if="type === 'smart-scope'">{{ t('dashboard.scroller.empty.smartScope') }}</template>
-        <template v-else>{{ t('dashboard.scroller.empty.default') }}</template>
-      </p>
-    </div>
+        <!-- Empty -->
+        <div v-else-if="books.length === 0" class="flex flex-col items-center justify-center py-10 gap-3 text-center animate-fade-up">
+          <div class="h-12 w-12 rounded-full bg-muted flex items-center justify-center animate-scale-in">
+            <component :is="typeIcon" :size="20" class="text-muted-foreground" />
+          </div>
+          <p class="text-sm text-muted-foreground">
+            <template v-if="type === 'continue-reading'">{{ t('dashboard.scroller.empty.continueReading') }}</template>
+            <template v-else-if="type === 'continue-listening'">{{ t('dashboard.scroller.empty.continueListening') }}</template>
+            <template v-else-if="type === 'want-to-read'">{{ t('dashboard.scroller.empty.wantToRead') }}</template>
+            <template v-else-if="type === 'up-next-in-series'">{{ t('dashboard.scroller.empty.upNextInSeries') }}</template>
+            <template v-else-if="type === 'recently-added'">{{ t('dashboard.scroller.empty.recentlyAdded') }}</template>
+            <template v-else-if="type === 'smart-scope'">{{ t('dashboard.scroller.empty.smartScope') }}</template>
+            <template v-else>{{ t('dashboard.scroller.empty.default') }}</template>
+          </p>
+        </div>
 
-    <!-- Books rows -->
-    <div v-else ref="scrollEl" class="overflow-x-auto px-5 pb-5 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div class="flex w-max flex-col gap-5">
-        <div v-for="(band, bandIndex) in bands" :key="bandIndex" data-testid="shelf-band" class="flex items-end gap-5">
-          <div
-            v-for="(book, index) in band"
-            :key="book.id"
-            class="shrink-0"
-            :class="coverWidthClass(book)"
-            style="animation: dashboardFadeUp 0.35s ease both"
-            :style="{ animationDelay: coverAnimationDelay(index) }"
-          >
-            <BookCoverCard :book="book" :cover-aspect-ratio="book.coverAspectRatio" @action="handleBookAction(book, $event)" />
+        <!-- Books rows -->
+        <div v-else ref="scrollEl" class="overflow-x-auto px-5 pb-5 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div class="flex w-max flex-col gap-5">
+            <div v-for="(band, bandIndex) in bands" :key="bandIndex" data-testid="shelf-band" class="flex items-end gap-5">
+              <div
+                v-for="(book, index) in band"
+                :key="book.id"
+                class="shrink-0"
+                :class="coverWidthClass(book)"
+                style="animation: dashboardFadeUp 0.35s ease both"
+                :style="{ animationDelay: coverAnimationDelay(index) }"
+              >
+                <BookCoverCard :book="book" :cover-aspect-ratio="book.coverAspectRatio" @action="handleBookAction(book, $event)" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -216,5 +249,36 @@ function coverAnimationDelay(index: number): string {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* A featured shelf reads as a wooden bookcase: warm wood behind the books and a ledge beneath them. */
+.wood-shelf {
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--primary) 18%, transparent), transparent 40%),
+    color-mix(in oklch, var(--primary) 62%, var(--card));
+}
+
+.wood-shelf-title {
+  color: var(--primary-foreground);
+}
+
+.wood-shelf-books {
+  position: relative;
+}
+
+.wood-shelf-books::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0.5rem;
+  height: 0.85rem;
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--primary) 55%, var(--card)) 0%,
+    color-mix(in oklch, var(--primary) 85%, var(--foreground)) 100%
+  );
+  box-shadow: 0 6px 10px -4px color-mix(in oklch, var(--foreground) 45%, transparent);
+  pointer-events: none;
 }
 </style>

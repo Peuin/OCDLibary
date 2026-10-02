@@ -2,7 +2,9 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { X, FolderSync, PackageOpen, Mail, ArrowRightLeft, FileDown, TriangleAlert, BookOpenCheck } from '@lucide/vue'
-import { NOTIFICATION_TYPE_META, NotificationSeverity, type NotificationItem, type NotificationTypeMeta } from '@bookorbit/types'
+import { NOTIFICATION_TYPE_META, NotificationSeverity, NotificationType, type NotificationItem, type NotificationTypeMeta } from '@bookorbit/types'
+import { useI18n } from 'vue-i18n'
+import { localizeAchievementName } from '@/features/achievements/utils/localizeAchievement'
 import { useNotifications } from '../composables/useNotifications'
 import { NOTIFICATION_CATEGORY_ICONS } from '../lib/notification-category-groups'
 
@@ -38,6 +40,19 @@ const icon = computed(
 const isFailed = computed(() => meta.value?.severity === NotificationSeverity.Error)
 const isWarning = computed(() => meta.value?.severity === NotificationSeverity.Warning)
 const relativeTime = computed(() => formatRelativeTime(props.notification.updatedAt))
+
+const { t } = useI18n()
+const isAchievement = computed(() => props.notification.type === NotificationType.AchievementUnlocked)
+const achievementKey = computed(() => {
+  const key = props.notification.meta?.['achievementKey']
+  return typeof key === 'string' ? key : ''
+})
+const displayTitle = computed(() => (isAchievement.value ? t('achievements.unlocked') : props.notification.title))
+const displayMessage = computed(() =>
+  isAchievement.value && achievementKey.value && props.notification.message
+    ? localizeAchievementName(achievementKey.value, props.notification.message)
+    : props.notification.message,
+)
 const occurrences = computed(() => props.notification.count)
 
 function handleClick() {
@@ -85,7 +100,7 @@ function handleDismiss(e: Event) {
       <div class="min-w-0 flex-1">
         <div class="flex items-start justify-between gap-2">
           <p class="truncate text-sm leading-tight" :class="notification.read ? 'text-foreground' : 'font-semibold text-foreground'">
-            {{ notification.title }}
+            {{ displayTitle }}
           </p>
           <div class="flex shrink-0 items-center gap-1.5">
             <span
@@ -98,8 +113,8 @@ function handleDismiss(e: Event) {
             <span class="text-[11px] text-muted-foreground">{{ relativeTime }}</span>
           </div>
         </div>
-        <p v-if="notification.message" class="mt-1 truncate text-xs text-muted-foreground">
-          {{ notification.message }}
+        <p v-if="displayMessage" class="mt-1 truncate text-xs text-muted-foreground">
+          {{ displayMessage }}
         </p>
       </div>
     </button>
