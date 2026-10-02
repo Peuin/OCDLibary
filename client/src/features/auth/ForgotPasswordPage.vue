@@ -7,7 +7,6 @@ import { ACCENT_OPTIONS, ACCENT_ROWS, RADIUS_OPTIONS, BACKGROUND_OPTIONS, useThe
 import { api } from '@/lib/api'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLogo from '@/components/AppLogo.vue'
-import PublicLegalNotices from '@/components/legal/PublicLegalNotices.vue'
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
@@ -245,7 +244,6 @@ async function handleSubmit() {
         <RouterLink to="/login" class="text-primary hover:underline">{{ t('auth.backToSignIn') }}</RouterLink>
       </p>
     </div>
-    <PublicLegalNotices />
   </div>
 </template>
 

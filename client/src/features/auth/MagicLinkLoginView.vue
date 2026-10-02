@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { Loader2, AlertCircle } from '@lucide/vue'
 import { useAuth } from '@/features/auth/composables/useAuth'
-import PublicLegalNotices from '@/components/legal/PublicLegalNotices.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -65,6 +64,5 @@ function goToLogin() {
         </button>
       </div>
     </div>
-    <PublicLegalNotices />
   </div>
 </template>

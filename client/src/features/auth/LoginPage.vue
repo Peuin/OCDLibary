@@ -12,7 +12,6 @@ import { useSetupStatus } from './composables/useSetupStatus'
 import { useLoginOptions } from './composables/useLoginOptions'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLogo from '@/components/AppLogo.vue'
-import PublicLegalNotices from '@/components/legal/PublicLegalNotices.vue'
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
@@ -341,7 +340,6 @@ async function handleOidcLogin(provider: OidcProviderPublic) {
         <RouterLink to="/register" class="text-primary hover:underline">{{ t('auth.login.signUp') }}</RouterLink>
       </p>
     </div>
-    <PublicLegalNotices />
   </div>
 </template>
 

@@ -5,7 +5,6 @@ import { useI18n } from 'vue-i18n'
 import { Moon, Sun, Wallpaper } from '@lucide/vue'
 import { ACCENT_OPTIONS, ACCENT_ROWS, RADIUS_OPTIONS, BACKGROUND_OPTIONS, useThemeStore } from '@/stores/theme'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import PublicLegalNotices from '@/components/legal/PublicLegalNotices.vue'
 import { RegisterError, useAuth } from './composables/useAuth'
 import { checkIdentityText } from './lib/identity-text'
 
@@ -332,7 +331,6 @@ async function handleSubmit() {
         </RouterLink>
       </p>
     </div>
-    <PublicLegalNotices />
   </div>
 </template>
 

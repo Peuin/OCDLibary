@@ -6,7 +6,6 @@ import type { OidcCallbackResponse } from '@bookorbit/types'
 import { OidcErrorCode } from '@bookorbit/types'
 import { setAccessToken } from '@/lib/api'
 import AppLogo from '@/components/AppLogo.vue'
-import PublicLegalNotices from '@/components/legal/PublicLegalNotices.vue'
 import { useAuth } from './composables/useAuth'
 import { useOidc, OidcLoginError } from './composables/useOidc'
 
@@ -101,6 +100,5 @@ onMounted(async () => {
         <RouterLink to="/login" class="text-sm text-primary hover:underline">{{ t('auth.oidc.tryAgain') }}</RouterLink>
       </div>
     </div>
-    <PublicLegalNotices />
   </div>
 </template>
