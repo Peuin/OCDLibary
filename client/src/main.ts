@@ -6,6 +6,7 @@ import { createPinia } from 'pinia'
 import { INITIAL_LOCALE } from '@bookorbit/types'
 
 import App from './App.vue'
+import { registerServiceWorker } from './lib/service-worker'
 import router from './router'
 import { i18n } from './i18n'
 import { useLocaleStore } from './stores/locale'
@@ -67,6 +68,8 @@ if (needsSetup.value !== true) {
 
 app.use(router)
 app.mount('#app')
+
+registerServiceWorker()
 
 function prefetchPdfReader() {
   void Promise.all([import('./features/reader/pdf-v4/PdfV4ReaderView.vue'), import('@embedpdf/pdfium/pdfium.wasm?url')]).then(([, wasm]) => {

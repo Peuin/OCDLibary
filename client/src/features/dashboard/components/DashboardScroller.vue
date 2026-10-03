@@ -58,8 +58,6 @@ const { books, loading, error, refresh } = useDashboardScroller(
   props.featuredShelfId,
 )
 
-// Wooden styling marks both an administrator's own shelf and a built-in shelf it decorates.
-const isFeatured = computed(() => props.type === 'featured-shelf' || Boolean(props.featured))
 const showSaintCard = computed(() => Boolean(props.featured && (props.featured.saintName || props.featured.imageUrl)))
 
 const bands = computed(() => chunkIntoBands(books.value, shelfRows.value))
@@ -85,6 +83,11 @@ const SKELETONS_PER_BAND = 8
 const skeletonBands = computed(() => Array.from({ length: shelfRows.value }, () => Array.from({ length: SKELETONS_PER_BAND })))
 const PORTRAIT_COVER_WIDTH_CLASS = 'w-[120px]'
 const SQUARE_COVER_WIDTH_CLASS = 'w-[150px]'
+// Beside a saint card the covers grow to 300px tall so the row sits level with the card:
+// 2:3 portraits at 200px wide, square covers at the full height.
+const SAINT_PORTRAIT_COVER_WIDTH_CLASS = 'w-[200px]'
+const SAINT_SQUARE_COVER_WIDTH_CLASS = 'w-[300px]'
+const skeletonWidthClass = computed(() => (showSaintCard.value ? SAINT_PORTRAIT_COVER_WIDTH_CLASS : PORTRAIT_COVER_WIDTH_CLASS))
 
 // 'move-to-library' is part of the shared card contract; this view does not
 // opt in, so it never fires here.
@@ -123,7 +126,9 @@ function handleBookAction(book: BookCard, action: BookActionType) {
 }
 
 function coverWidthClass(book: BookCard): string {
-  return book.coverAspectRatio === '1/1' ? SQUARE_COVER_WIDTH_CLASS : PORTRAIT_COVER_WIDTH_CLASS
+  const square = book.coverAspectRatio === '1/1'
+  if (showSaintCard.value) return square ? SAINT_SQUARE_COVER_WIDTH_CLASS : SAINT_PORTRAIT_COVER_WIDTH_CLASS
+  return square ? SQUARE_COVER_WIDTH_CLASS : PORTRAIT_COVER_WIDTH_CLASS
 }
 
 function coverAnimationDelay(index: number): string {
@@ -132,18 +137,14 @@ function coverAnimationDelay(index: number): string {
 </script>
 
 <template>
-  <section
-    v-bind="attrs"
-    class="group/scroller overflow-hidden rounded-2xl border shadow-sm"
-    :class="isFeatured ? 'wood-shelf border-primary/60' : 'border-primary/40 bg-card/30 backdrop-blur-[1px]'"
-  >
+  <section v-bind="attrs" class="group/scroller overflow-hidden rounded-2xl border border-primary/40 bg-card/30 shadow-sm backdrop-blur-[1px]">
     <!-- Header -->
     <div class="mb-2 flex items-center justify-between px-5 pt-4">
       <div class="flex items-center gap-2.5">
         <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50">
           <component :is="typeIcon" :size="14" class="text-foreground" />
         </div>
-        <h2 class="text-[15px] font-bold tracking-tight" :class="{ 'wood-shelf-title': isFeatured }">{{ title }}</h2>
+        <h2 class="text-[15px] font-bold tracking-tight">{{ title }}</h2>
         <span
           v-if="!loading && !error && books.length > 0"
           class="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-bold tabular-nums text-foreground"
@@ -168,14 +169,15 @@ function coverAnimationDelay(index: number): string {
     </div>
 
     <div class="flex min-w-0 items-stretch">
-      <div v-if="showSaintCard && featured" class="shrink-0 pb-5 ps-5 pt-1">
+      <!-- The saint card stands on the bottom edge of the shelf, beside the books. -->
+      <div v-if="showSaintCard && featured" class="flex shrink-0 ps-5 pt-1">
         <DashboardSaintCard :saint-name="featured.saintName" :image-url="featured.imageUrl" :collection-id="featured.collectionId" />
       </div>
-      <div class="min-w-0 flex-1" :class="{ 'wood-shelf-books': isFeatured }">
+      <div class="min-w-0 flex-1">
         <!-- Skeleton -->
         <div v-if="loading" class="flex flex-col gap-5 overflow-hidden px-5 pb-5">
           <div v-for="(skeletonBand, bandIndex) in skeletonBands" :key="bandIndex" class="flex gap-3">
-            <div v-for="(_, n) in skeletonBand" :key="n" class="w-[120px] shrink-0">
+            <div v-for="(_, n) in skeletonBand" :key="n" class="shrink-0" :class="skeletonWidthClass">
               <div class="w-full animate-pulse rounded-lg bg-muted" style="aspect-ratio: 2/3" />
             </div>
           </div>
@@ -208,8 +210,8 @@ function coverAnimationDelay(index: number): string {
 
         <!-- Books rows -->
         <div v-else ref="scrollEl" class="overflow-x-auto px-5 pb-5 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div class="flex w-max flex-col gap-5">
-            <div v-for="(band, bandIndex) in bands" :key="bandIndex" data-testid="shelf-band" class="flex items-end gap-5">
+          <div class="flex w-max min-w-full flex-col gap-6">
+            <div v-for="(band, bandIndex) in bands" :key="bandIndex" data-testid="shelf-band" class="shelf-band flex items-end gap-5">
               <div
                 v-for="(book, index) in band"
                 :key="book.id"
@@ -251,34 +253,37 @@ function coverAnimationDelay(index: number): string {
   }
 }
 
-/* A featured shelf reads as a wooden bookcase: warm wood behind the books and a ledge beneath them. */
-.wood-shelf {
-  background:
-    linear-gradient(180deg, color-mix(in oklch, var(--primary) 18%, transparent), transparent 40%),
-    color-mix(in oklch, var(--primary) 62%, var(--card));
-}
-
-.wood-shelf-title {
-  color: var(--primary-foreground);
-}
-
-.wood-shelf-books {
+/* Each row of books stands on a thin wooden ledge, like a book stand. The ledge is tinted from
+   the accent over the card colour, so it reads as wood without turning into a dark band. */
+.shelf-band {
   position: relative;
+  padding-inline: 0.75rem;
+  padding-bottom: 0.875rem;
 }
 
-.wood-shelf-books::after {
+.shelf-band::after {
   content: '';
   position: absolute;
   inset-inline: 0;
-  bottom: 0.5rem;
-  height: 0.85rem;
-  border-radius: 2px;
+  bottom: 0;
+  height: 0.875rem;
+  border-radius: 3px;
   background: linear-gradient(
     180deg,
-    color-mix(in oklch, var(--primary) 55%, var(--card)) 0%,
-    color-mix(in oklch, var(--primary) 85%, var(--foreground)) 100%
+    color-mix(in oklch, var(--primary) 32%, var(--card)) 0,
+    color-mix(in oklch, var(--primary) 32%, var(--card)) 0.3rem,
+    color-mix(in oklch, var(--primary) 52%, var(--card)) 0.3rem,
+    color-mix(in oklch, var(--primary) 44%, var(--card)) 100%
   );
-  box-shadow: 0 6px 10px -4px color-mix(in oklch, var(--foreground) 45%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--card) 70%, transparent),
+    0 10px 14px -10px color-mix(in oklch, var(--primary) 70%, transparent);
   pointer-events: none;
+}
+
+.shelf-band > * {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 6px 6px color-mix(in oklch, var(--primary) 22%, transparent));
 }
 </style>

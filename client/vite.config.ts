@@ -24,7 +24,8 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      // Registered from src/lib/service-worker.ts, which also reloads the page onto a new build.
+      injectRegister: false,
       includeAssets: [
         'favicon.ico',
         'apple-touch-icon-180x180.png',
