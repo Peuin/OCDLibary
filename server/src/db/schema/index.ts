@@ -43,3 +43,4 @@ export * from './tts';
 export * from './upload-sessions';
 export * from './podcasts';
 export * from './dashboard-featured-shelves';
+export * from './dashboard-shelf-books';

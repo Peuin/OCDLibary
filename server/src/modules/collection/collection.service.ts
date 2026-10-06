@@ -400,22 +400,6 @@ export class CollectionService {
     }
   }
 
-  /** Name, owner and visibility of each collection, for features that reference collections by id. */
-  findSummariesByIds(ids: number[]) {
-    return this.collectionRepo.findSummariesByIds([...new Set(ids)]);
-  }
-
-  /**
-   * The first books of a collection in its own order, limited to what this viewer may see. Throws
-   * when the viewer cannot read the collection, so a shelf pointing at a private one fails loudly.
-   */
-  async getShelfBookIds(id: number, user: RequestUser, limit: number, accessibleLibraryIds: number[]): Promise<number[]> {
-    const collection = await this.getReadableCollectionOrThrow(id, user);
-    if (collection.mediaType !== 'books') return [];
-    const visibleBooksWhere = await this.buildViewerBookWhere(user);
-    return this.collectionRepo.findFirstBookIds(id, accessibleLibraryIds, limit, visibleBooksWhere);
-  }
-
   async getBooks(id: number, user: RequestUser, page: number, size: number, collapseSeries?: boolean, q?: string): Promise<BooksPage> {
     return this.queryBooks(id, user, {
       sort: [{ field: 'collectionOrder', dir: 'asc' }],

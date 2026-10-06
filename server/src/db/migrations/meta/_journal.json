@@ -701,6 +701,34 @@
       "when": 1790957662513,
       "tag": "0099_add_featured_shelf_attach_to",
       "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1791298408096,
+      "tag": "0100_remove_featured_shelf_collection",
+      "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1791299595273,
+      "tag": "0101_add_dashboard_shelf_books",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1791301691692,
+      "tag": "0102_dashboard_custom_shelves",
+      "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1791301705154,
+      "tag": "0103_dashboard_shelves_drop_type_columns",
+      "breakpoints": true
     }
   ]
 }

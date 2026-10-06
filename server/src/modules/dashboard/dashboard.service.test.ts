@@ -50,8 +50,18 @@ function makeService() {
     findOne: vi.fn().mockResolvedValue({ mediaType: 'books' }),
   };
 
-  const service = new DashboardService(dashboardRepo as never, bookReadService as never, libraryService as never, smartScopeService as never);
-  return { service, dashboardRepo, bookReadService, libraryService, smartScopeService };
+  const shelfBookService = {
+    findVisibleBookIds: vi.fn().mockResolvedValue([]),
+  };
+
+  const service = new DashboardService(
+    dashboardRepo as never,
+    bookReadService as never,
+    libraryService as never,
+    smartScopeService as never,
+    shelfBookService as never,
+  );
+  return { service, dashboardRepo, bookReadService, libraryService, smartScopeService, shelfBookService };
 }
 
 function makeFindCardsResult(idsInRowOrder: number[]) {
@@ -84,6 +94,20 @@ function makeFindCardsResult(idsInRowOrder: number[]) {
 describe('DashboardService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('serves a dashboard shelf only the books added to it, in shelf order', async () => {
+    const { service, dashboardRepo, bookReadService, libraryService, shelfBookService } = makeService();
+    const user = makeUser({ id: 7 });
+    libraryService.findAccessibleLibraryIds.mockResolvedValue([10]);
+    shelfBookService.findVisibleBookIds.mockResolvedValue([3, 1]);
+    bookReadService.findCardsByBookIds.mockResolvedValue(makeFindCardsResult([1, 3]));
+
+    const result = await service.getScrollers({ items: [{ id: 'a', type: ScrollerType.FEATURED_SHELF, limit: 50, featuredShelfId: 4 }] }, user);
+
+    expect(shelfBookService.findVisibleBookIds).toHaveBeenCalledWith(4, [10], 50, user.contentFilters);
+    expect(result.items[0]?.books.map((book) => book.id)).toEqual([3, 1]);
+    expect(dashboardRepo.findRecentlyAddedBookIds).not.toHaveBeenCalled();
   });
 
   it('rejects smartScope scroller calls when smartScopeId is missing or invalid', async () => {

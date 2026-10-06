@@ -1,86 +1,46 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { DASHBOARD_SHELF_BOOKS_MAX } from '@bookorbit/types'
 import { AlertTriangle, Loader2, RefreshCw, Settings2, Sparkles } from '@lucide/vue'
-import { isPodcastScrollerType, type BookScrollerType } from '@bookorbit/types'
 
 import { useAuth } from '@/features/auth/composables/useAuth'
 import { getDashboardGreetingLabel } from '@/features/dashboard/lib/greeting'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { useLibraries } from '@/features/library/composables/useLibraries'
-import DashboardPodcastScroller from '@/features/dashboard/components/DashboardPodcastScroller.vue'
 import DashboardScroller from '@/features/dashboard/components/DashboardScroller.vue'
 import DashboardSettingsSheet from '@/features/dashboard/components/DashboardSettingsSheet.vue'
 import DashboardWelcome from '@/features/dashboard/components/DashboardWelcome.vue'
 import DashboardWidgetRow from '@/features/dashboard/components/DashboardWidgetRow.vue'
 import { SHELF_LAYOUT, useDashboardConfig } from '@/features/dashboard/composables/useDashboardConfig'
-import { useDashboardLabels } from '@/features/dashboard/composables/useDashboardLabels'
 import { useDashboardSharedConfig } from '@/features/dashboard/composables/useDashboardSharedConfig'
 import { useOnboardingTour } from '@/features/onboarding/composables/useOnboardingTour'
-import { useSmartScopes } from '@/features/smart-scope/composables/useSmartScopes'
 
 const { t } = useI18n()
 const { hasPermission } = usePermissions()
 const { user } = useAuth()
 const { libraries, loading: librariesLoading, loaded: librariesLoaded, error: librariesError, fetchLibraries } = useLibraries()
-const { scrollers, shelfLayout, pruneDeletedSmartScopeScrollers, applySharedConfig } = useDashboardConfig()
-const { featuredShelves, defaultLayout, load: loadSharedConfig, featuredShelfById, featuredShelfAttachedTo } = useDashboardSharedConfig()
-const { shelfTitle } = useDashboardLabels()
+const { shelfLayout, applySharedConfig } = useDashboardConfig()
+const { featuredShelves, orderedShelves: shelves, defaultLayout, loaded: sharedLoaded, load: loadSharedConfig } = useDashboardSharedConfig()
 const { maybeStartTour } = useOnboardingTour()
-const { smartScopes, loaded: smartScopesLoaded, fetchSmartScopes } = useSmartScopes()
 
 const settingsOpen = ref(false)
 const dashboardRevision = ref(0)
 const now = ref(new Date())
 let greetingTimer: number | null = null
 
-const enabledScrollers = computed(() =>
-  (Array.isArray(scrollers.value) ? scrollers.value : []).filter((s) => s.enabled).sort((a, b) => a.order - b.order),
-)
+// Every dashboard shelf can hold up to this many books, so a shelf always loads all of them.
+const SHELF_BOOK_LIMIT = DASHBOARD_SHELF_BOOKS_MAX
 
-// Book shelves and the podcast shelf render through different components and load from different
-// endpoints, so the split resolves here rather than as a type check in the template.
-type DashboardShelf =
-  | { kind: 'podcast'; key: string; title: string; limit: number }
-  | {
-      kind: 'book'
-      key: string
-      title: string
-      limit: number
-      rows: number
-      type: BookScrollerType
-      smartScopeId?: number
-      featuredShelfId?: number
-      featured?: { saintName: string | null; imageUrl: string | null; collectionId: number } | null
-    }
+const isTwoColumns = computed(() => shelfLayout.value === SHELF_LAYOUT.TWO_COLUMNS)
+// Shelves in a row stretch to the taller one, so a pair always lines up.
+const shelfLayoutClass = computed(() => (isTwoColumns.value ? 'grid min-w-0 items-stretch gap-5 xl:grid-cols-2' : 'space-y-5'))
 
-function featuredDetails(type: BookScrollerType, featuredShelfId: number | undefined) {
-  const shelf = type === 'featured-shelf' ? featuredShelfById(featuredShelfId) : featuredShelfAttachedTo(type)
-  return shelf ? { saintName: shelf.saintName, imageUrl: shelf.imageUrl, collectionId: shelf.collectionId } : null
+// Two columns pair the shelves up; a shelf left without a partner keeps the full width.
+function shelfSpanClass(index: number): string {
+  const count = shelves.value.length
+  return isTwoColumns.value && count % 2 === 1 && index === count - 1 ? 'xl:col-span-2' : ''
 }
-
-const shelves = computed<DashboardShelf[]>(() =>
-  enabledScrollers.value.map((scroller) => {
-    const key = `${scroller.id}-${scroller.type}-${scroller.smartScopeId ?? 0}-${scroller.featuredShelfId ?? 0}-${scroller.rows}`
-    const title = shelfTitle(scroller)
-    if (isPodcastScrollerType(scroller.type)) return { kind: 'podcast', key, title, limit: scroller.limit }
-    return {
-      kind: 'book',
-      key,
-      title,
-      limit: scroller.limit,
-      rows: scroller.rows,
-      type: scroller.type,
-      smartScopeId: scroller.smartScopeId,
-      featuredShelfId: scroller.featuredShelfId,
-      featured: featuredDetails(scroller.type, scroller.featuredShelfId),
-    }
-  }),
-)
-
-const shelfLayoutClass = computed(() =>
-  shelfLayout.value === SHELF_LAYOUT.TWO_COLUMNS ? 'grid min-w-0 items-start gap-5 xl:grid-cols-2' : 'space-y-5',
-)
 
 const libraryState = computed(() => {
   if (librariesLoaded.value) return libraries.value.length === 0 ? 'empty' : 'ready'
@@ -94,15 +54,6 @@ const greetingName = computed(() => {
   if (fullName) return fullName.split(/\s+/)[0] ?? fullName
   return user.value?.username?.trim() || t('views.dashboard.greeting.fallbackName')
 })
-
-watch(
-  [smartScopesLoaded, smartScopes],
-  ([isLoaded, allSmartScopes]) => {
-    if (!isLoaded) return
-    pruneDeletedSmartScopeScrollers(allSmartScopes.map((smartScope) => smartScope.id))
-  },
-  { immediate: true },
-)
 
 function handleRetryLibraries() {
   void fetchLibraries()
@@ -123,7 +74,6 @@ async function refreshSharedConfig() {
 
 onMounted(() => {
   void fetchLibraries()
-  void fetchSmartScopes()
   void refreshSharedConfig()
   greetingTimer = window.setInterval(() => {
     now.value = new Date()
@@ -191,32 +141,26 @@ onUnmounted(() => {
           </div>
 
           <DashboardWidgetRow :key="`widgets-${dashboardRevision}`" class="animate-fade-up" />
-          <div v-if="enabledScrollers.length > 0" :class="shelfLayoutClass">
-            <template v-for="(shelf, index) in shelves" :key="`${dashboardRevision}-${shelf.key}`">
-              <DashboardPodcastScroller
-                v-if="shelf.kind === 'podcast'"
-                :title="shelf.title"
-                :limit="shelf.limit"
-                class="min-w-0 animate-fade-up"
-                :style="{ animationDelay: `${index * 100}ms` }"
-              />
-              <DashboardScroller
-                v-else
-                :type="shelf.type"
-                :title="shelf.title"
-                :limit="shelf.limit"
-                :rows="shelf.rows"
-                :smartScope-id="shelf.smartScopeId"
-                :featured-shelf-id="shelf.featuredShelfId"
-                :featured="shelf.featured"
-                class="min-w-0 animate-fade-up"
-                :style="{ animationDelay: `${index * 100}ms` }"
-              />
-            </template>
+          <div v-if="shelves.length > 0" :class="shelfLayoutClass">
+            <DashboardScroller
+              v-for="(shelf, index) in shelves"
+              :key="`${dashboardRevision}-${shelf.id}`"
+              type="featured-shelf"
+              :featured-shelf-id="shelf.id"
+              :title="shelf.title"
+              :limit="SHELF_BOOK_LIMIT"
+              :rows="shelf.rows"
+              :featured="shelf"
+              class="min-w-0 animate-fade-up"
+              :class="shelfSpanClass(index)"
+              :style="{ animationDelay: `${index * 100}ms` }"
+            />
           </div>
-          <div v-if="enabledScrollers.length === 0" class="px-2 py-12 text-center">
-            <p class="text-sm text-muted-foreground">{{ t('views.dashboard.allShelvesHidden') }}</p>
-            <button class="mt-2 text-sm text-primary hover:underline" @click="handleOpenSettings">{{ t('views.dashboard.customize') }}</button>
+          <div v-else-if="sharedLoaded" class="px-2 py-12 text-center">
+            <p class="text-sm text-muted-foreground">{{ t('views.dashboard.noShelves') }}</p>
+            <button v-if="hasPermission('manage_app_settings')" class="mt-2 text-sm text-primary hover:underline" @click="handleOpenSettings">
+              {{ t('views.dashboard.customize') }}
+            </button>
           </div>
         </template>
       </div>

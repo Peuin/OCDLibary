@@ -106,6 +106,11 @@ describe('chunkIntoBands', () => {
     ])
   })
 
+  it('splits evenly and gives the odd book to the first row', () => {
+    expect(chunkIntoBands([1, 2], 2)).toEqual([[1], [2]])
+    expect(chunkIntoBands([1, 2, 3], 2)).toEqual([[1, 2], [3]])
+  })
+
   it('drops bands that would render empty', () => {
     expect(chunkIntoBands([1, 2], 3)).toEqual([[1], [2]])
     expect(chunkIntoBands([], 3)).toEqual([])

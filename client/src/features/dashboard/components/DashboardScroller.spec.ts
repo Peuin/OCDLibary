@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick, ref, type Ref } from 'vue'
 import type { BookCard, BookScrollerType } from '@bookorbit/types'
 
@@ -36,14 +36,15 @@ const deleteMocks = vi.hoisted(() => ({
 vi.mock('@/features/book/components/BookCoverCard.vue', () => ({
   default: {
     name: 'BookCoverCard',
-    props: ['book', 'coverAspectRatio'],
-    emits: ['action'],
+    props: ['book', 'coverAspectRatio', 'removableFromShelf'],
+    emits: ['action', 'remove-from-shelf'],
     template: `
       <div class="book-card" :data-aspect="coverAspectRatio">
         <span>{{ book.title }}</span>
         <button class="quick-action" @click="$emit('action', 'quick-view')" />
         <button class="collection-action" @click="$emit('action', 'add-to-collection')" />
         <button class="delete-action" @click="$emit('action', 'delete')" />
+        <button v-if="removableFromShelf" data-testid="shelf-book-remove" @click="$emit('remove-from-shelf')" />
       </div>
     `,
   },
@@ -81,6 +82,37 @@ vi.mock('@/features/book/composables/useDeleteBook', () => ({
     cancelDelete: deleteMocks.cancelDelete,
     confirmDelete: deleteMocks.confirmDelete,
   })),
+}))
+
+const curation = vi.hoisted(() => ({
+  isAdmin: false,
+  removeShelfBook: vi.fn<(shelfId: number, bookId: number) => Promise<void>>(),
+}))
+
+vi.mock('@/features/auth/composables/usePermissions', () => ({
+  usePermissions: () => ({ hasPermission: (name: string) => curation.isAdmin && name === 'manage_app_settings' }),
+}))
+
+vi.mock('../api/dashboard-featured-shelf.api', () => ({
+  removeDashboardShelfBook: curation.removeShelfBook,
+}))
+
+vi.mock('./DashboardShelfBookPicker.vue', () => ({
+  default: {
+    name: 'DashboardShelfBookPicker',
+    props: ['open', 'title', 'shelfId', 'shelvedBookIds'],
+    emits: ['update:open', 'added'],
+    template: '<div class="shelf-book-picker" :data-open="String(open)" />',
+  },
+}))
+
+vi.mock('./DashboardShelfDialog.vue', () => ({
+  default: {
+    name: 'DashboardShelfDialog',
+    props: ['open', 'title', 'icon', 'count', 'bands', 'featured', 'showSaintCard'],
+    emits: ['update:open', 'action'],
+    template: '<div class="shelf-dialog" :data-open="String(open)" />',
+  },
 }))
 
 vi.mock('../composables/useDashboardScroller', () => ({
@@ -159,14 +191,72 @@ function mountScroller({
   })
 }
 
+function mountShelf(books: BookCard[] = []) {
+  mockUseDashboardScroller.mockReturnValue({
+    books: ref(books),
+    loading: ref(false),
+    error: ref(false),
+    refresh: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  })
+  return mount(DashboardScroller, { props: { type: 'featured-shelf', title: 'Shelf', limit: 50, featuredShelfId: 7 } })
+}
+
 function bandTitles(wrapper: ReturnType<typeof mountScroller>): string[][] {
   return wrapper.findAll('[data-testid="shelf-band"]').map((band) => band.findAll('.book-card').map((card) => card.text()))
+}
+
+function dialogBandTitles(wrapper: ReturnType<typeof mountScroller>): string[][] {
+  const bands = wrapper.findComponent({ name: 'DashboardShelfDialog' }).props('bands') as BookCard[][]
+  return bands.map((band) => band.map((book) => book.title ?? ''))
 }
 
 describe('DashboardScroller', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     setCompactViewport(false)
+    curation.isAdmin = false
+    curation.removeShelfBook.mockResolvedValue(undefined)
+  })
+
+  it('offers an administrator a button to fill an empty shelf', async () => {
+    curation.isAdmin = true
+    const wrapper = mountShelf()
+
+    expect(wrapper.text()).not.toContain('This shelf has no books yet.')
+    await wrapper.get('[data-testid="shelf-empty-add"]').trigger('click')
+
+    expect(wrapper.get('.shelf-book-picker').attributes('data-open')).toBe('true')
+  })
+
+  it('tells readers an empty shelf has no books yet', () => {
+    const wrapper = mountShelf()
+
+    expect(wrapper.text()).toContain('This shelf has no books yet.')
+    expect(wrapper.find('[data-testid="shelf-empty-add"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="shelf-add-books"]').exists()).toBe(false)
+  })
+
+  it('loads the books of its own shelf', () => {
+    mountShelf()
+
+    expect(mockUseDashboardScroller).toHaveBeenCalledWith('featured-shelf', 50, undefined, 7)
+  })
+
+  it('removes a book from the shelf', async () => {
+    curation.isAdmin = true
+    const wrapper = mountShelf([makeBook(1, 'epub'), makeBook(2, 'epub')])
+
+    await wrapper.findAll('[data-testid="shelf-book-remove"]')[0]?.trigger('click')
+    await flushPromises()
+
+    expect(curation.removeShelfBook).toHaveBeenCalledWith(7, 1)
+    expect(bandTitles(wrapper)).toEqual([['Book 2']])
+  })
+
+  it('offers no shelf editing to readers', () => {
+    const wrapper = mountShelf([makeBook(1, 'epub')])
+
+    expect(wrapper.find('[data-testid="shelf-book-remove"]').exists()).toBe(false)
   })
 
   it.each([
@@ -234,43 +324,99 @@ describe('DashboardScroller', () => {
     expect(bandTitles(wrapper)).toEqual([['Book 1', 'Book 2', 'Book 3']])
   })
 
-  it('fills bands left to right so reading order survives extra rows', () => {
-    const books = Array.from({ length: 6 }, (_, index) => makeBook(index + 1, 'epub'))
+  it('merges every configured row into a single band on the dashboard', () => {
+    const books = Array.from({ length: 4 }, (_, index) => makeBook(index + 1, 'epub'))
+
+    const wrapper = mountScroller({ type: 'continue-reading', books, rows: 2 })
+
+    expect(bandTitles(wrapper)).toEqual([['Book 1', 'Book 2', 'Book 3', 'Book 4']])
+  })
+
+  it('opens the full shelf from view all', async () => {
+    const wrapper = mountScroller({ type: 'continue-reading', books: [makeBook(1, 'epub')] })
+
+    expect(wrapper.get('.shelf-dialog').attributes('data-open')).toBe('false')
+    await wrapper.get('[data-testid="shelf-view-all"]').trigger('click')
+
+    expect(wrapper.get('.shelf-dialog').attributes('data-open')).toBe('true')
+  })
+
+  it('opens the full shelf from the saint card', async () => {
+    mockUseDashboardScroller.mockReturnValue({
+      books: ref([makeBook(1, 'epub')]),
+      loading: ref(false),
+      error: ref(false),
+      refresh: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    })
+    const wrapper = mount(DashboardScroller, {
+      props: { type: 'recently-added', title: 'Shelf', featured: { saintName: 'Thánh Gioan Thánh Giá', imageUrl: null } },
+    })
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('View works'))
+      ?.trigger('click')
+
+    expect(wrapper.get('.shelf-dialog').attributes('data-open')).toBe('true')
+  })
+
+  it.each<[string, { books?: BookCard[]; loading?: boolean; error?: boolean }]>([
+    ['empty', { books: [] }],
+    ['loading', { loading: true }],
+    ['failed', { error: true }],
+  ])('keeps the shelf ledge while the shelf is %s', (_, state) => {
+    const wrapper = mountScroller({ type: 'continue-reading', ...state })
+
+    expect(wrapper.find('[data-testid="shelf-band-empty"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="shelf-band"]')).toHaveLength(0)
+  })
+
+  it('hides view all while the shelf has no books', () => {
+    expect(mountScroller({ type: 'continue-reading' }).find('[data-testid="shelf-view-all"]').exists()).toBe(false)
+  })
+
+  it('fills the view all bands left to right so reading order survives extra rows', () => {
+    const books = Array.from({ length: 12 }, (_, index) => makeBook(index + 1, 'epub'))
 
     const wrapper = mountScroller({ type: 'continue-reading', books, rows: 3 })
 
-    expect(bandTitles(wrapper)).toEqual([
-      ['Book 1', 'Book 2'],
-      ['Book 3', 'Book 4'],
-      ['Book 5', 'Book 6'],
+    expect(dialogBandTitles(wrapper)).toEqual([
+      ['Book 1', 'Book 2', 'Book 3', 'Book 4'],
+      ['Book 5', 'Book 6', 'Book 7', 'Book 8'],
+      ['Book 9', 'Book 10', 'Book 11', 'Book 12'],
     ])
+  })
+
+  it('splits a small shelf evenly across the chosen rows, odd book on the first', () => {
+    const two = Array.from({ length: 2 }, (_, index) => makeBook(index + 1, 'epub'))
+    const three = Array.from({ length: 3 }, (_, index) => makeBook(index + 1, 'epub'))
+
+    expect(dialogBandTitles(mountScroller({ type: 'continue-reading', books: two, rows: 2 }))).toEqual([['Book 1'], ['Book 2']])
+    expect(dialogBandTitles(mountScroller({ type: 'continue-reading', books: three, rows: 2 }))).toEqual([['Book 1', 'Book 2'], ['Book 3']])
   })
 
   it('caps a three-row shelf at two bands below the sm breakpoint', () => {
     setCompactViewport(true)
-    const books = Array.from({ length: 6 }, (_, index) => makeBook(index + 1, 'epub'))
+    const books = Array.from({ length: 12 }, (_, index) => makeBook(index + 1, 'epub'))
 
     const wrapper = mountScroller({ type: 'continue-reading', books, rows: 3 })
 
-    expect(bandTitles(wrapper)).toEqual([
-      ['Book 1', 'Book 2', 'Book 3'],
-      ['Book 4', 'Book 5', 'Book 6'],
+    expect(dialogBandTitles(wrapper)).toEqual([
+      ['Book 1', 'Book 2', 'Book 3', 'Book 4', 'Book 5', 'Book 6'],
+      ['Book 7', 'Book 8', 'Book 9', 'Book 10', 'Book 11', 'Book 12'],
     ])
   })
 
   it('re-flows its bands when the viewport crosses the sm breakpoint', async () => {
-    const books = Array.from({ length: 6 }, (_, index) => makeBook(index + 1, 'epub'))
+    const books = Array.from({ length: 12 }, (_, index) => makeBook(index + 1, 'epub'))
     const wrapper = mountScroller({ type: 'continue-reading', books, rows: 3 })
 
-    expect(bandTitles(wrapper)).toHaveLength(3)
+    expect(dialogBandTitles(wrapper)).toHaveLength(3)
 
     setCompactViewport(true)
     await nextTick()
 
-    expect(bandTitles(wrapper)).toEqual([
-      ['Book 1', 'Book 2', 'Book 3'],
-      ['Book 4', 'Book 5', 'Book 6'],
-    ])
+    expect(dialogBandTitles(wrapper)).toHaveLength(2)
   })
 
   it('requests more books as rows are added', () => {
@@ -293,10 +439,10 @@ describe('DashboardScroller', () => {
     expect(mockUseDashboardScroller).toHaveBeenCalledWith('recently-added', 40, undefined, undefined)
   })
 
-  it('scales loading skeletons with the row count', () => {
+  it('keeps a single row of loading skeletons whatever the row count', () => {
     const wrapper = mountScroller({ type: 'recently-added', rows: 2, loading: true })
 
-    expect(wrapper.findAll('.animate-pulse')).toHaveLength(16)
+    expect(wrapper.findAll('.animate-pulse')).toHaveLength(8)
   })
 
   it('opens related book actions from card events', async () => {

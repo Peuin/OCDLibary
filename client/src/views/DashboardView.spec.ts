@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, shallowMount, type VueWrapper } from '@vue/test-utils'
 import { ref, type Ref } from 'vue'
-import type { Library, SmartScope } from '@bookorbit/types'
+import type { DashboardFeaturedShelf, Library } from '@bookorbit/types'
 
 import DashboardView from './DashboardView.vue'
 import DashboardScroller from '@/features/dashboard/components/DashboardScroller.vue'
@@ -16,12 +16,9 @@ const mocks = vi.hoisted(() => ({
   librariesLoaded: null as unknown as Ref<boolean>,
   librariesError: null as unknown as Ref<string | null>,
   fetchLibraries: vi.fn<() => Promise<void>>(),
-  smartScopes: null as unknown as Ref<SmartScope[]>,
-  smartScopesLoaded: null as unknown as Ref<boolean>,
-  fetchSmartScopes: vi.fn<() => Promise<void>>(),
-  scrollers: null as unknown as Ref<never[]>,
+  shelves: null as unknown as Ref<DashboardFeaturedShelf[]>,
+  sharedLoaded: null as unknown as Ref<boolean>,
   shelfLayout: null as unknown as Ref<string>,
-  pruneDeletedSmartScopeScrollers: vi.fn<(ids: number[]) => void>(),
   maybeStartTour: vi.fn<() => void>(),
 }))
 
@@ -43,30 +40,31 @@ vi.mock('@/features/library/composables/useLibraries', () => ({
   }),
 }))
 
-vi.mock('@/features/smart-scope/composables/useSmartScopes', () => ({
-  useSmartScopes: () => ({
-    smartScopes: mocks.smartScopes,
-    loaded: mocks.smartScopesLoaded,
-    fetchSmartScopes: mocks.fetchSmartScopes,
-  }),
-}))
-
 vi.mock('@/features/dashboard/composables/useDashboardConfig', () => ({
   SHELF_LAYOUT: { WIDE: 'wide', TWO_COLUMNS: 'two-columns' },
   useDashboardConfig: () => ({
-    scrollers: mocks.scrollers,
     shelfLayout: mocks.shelfLayout,
-    pruneDeletedSmartScopeScrollers: mocks.pruneDeletedSmartScopeScrollers,
+    applySharedConfig: vi.fn<() => void>(),
   }),
 }))
 
-vi.mock('@/features/dashboard/composables/useDashboardLabels', () => ({
-  useDashboardLabels: () => ({ shelfTitle: () => '' }),
+vi.mock('@/features/dashboard/composables/useDashboardSharedConfig', () => ({
+  useDashboardSharedConfig: () => ({
+    featuredShelves: mocks.shelves,
+    orderedShelves: mocks.shelves,
+    defaultLayout: ref(null),
+    loaded: mocks.sharedLoaded,
+    load: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  }),
 }))
 
 vi.mock('@/features/onboarding/composables/useOnboardingTour', () => ({
   useOnboardingTour: () => ({ maybeStartTour: mocks.maybeStartTour }),
 }))
+
+function shelf(id: number, title: string): DashboardFeaturedShelf {
+  return { id, title, saintName: null, imageUrl: null, rows: 1, displayOrder: id }
+}
 
 async function mountView(): Promise<VueWrapper> {
   const wrapper = shallowMount(DashboardView)
@@ -84,13 +82,10 @@ describe('DashboardView library loading states', () => {
     mocks.librariesLoading = ref(false)
     mocks.librariesLoaded = ref(false)
     mocks.librariesError = ref(null)
-    mocks.smartScopes = ref([])
-    mocks.smartScopesLoaded = ref(false)
-    mocks.scrollers = ref([])
+    mocks.shelves = ref([])
+    mocks.sharedLoaded = ref(true)
     mocks.shelfLayout = ref('wide')
     mocks.fetchLibraries.mockReset().mockResolvedValue()
-    mocks.fetchSmartScopes.mockReset().mockResolvedValue()
-    mocks.pruneDeletedSmartScopeScrollers.mockReset()
     mocks.maybeStartTour.mockReset()
   })
 
@@ -170,26 +165,38 @@ describe('DashboardView library loading states', () => {
     expect(wrapper.findComponent(DashboardSettingsSheet).props('open')).toBe(true)
   })
 
-  it('remounts a shelf when its row count changes so it refetches enough books', async () => {
+  it('renders the shared shelves in order, each loading its own books', async () => {
     mocks.libraries.value = [{ id: 7 } as Library]
     mocks.librariesLoaded.value = true
-    mocks.scrollers = ref([{ id: '1', type: 'recently-added', label: 'Recently Added', enabled: true, order: 1, limit: 20, rows: 1 }]) as Ref<never[]>
+    mocks.shelves.value = [shelf(4, 'Linh đạo Cát Minh'), shelf(9, 'Sách Thánh Gioan')]
     wrapper = await mountView()
 
-    const shelf = wrapper.findComponent(DashboardScroller)
-    expect(shelf.props('rows')).toBe(1)
-    const before = shelf.element
+    const rendered = wrapper.findAllComponents(DashboardScroller)
+    expect(rendered.map((item) => [item.props('featuredShelfId'), item.props('title'), item.props('type')])).toEqual([
+      [4, 'Linh đạo Cát Minh', 'featured-shelf'],
+      [9, 'Sách Thánh Gioan', 'featured-shelf'],
+    ])
+  })
 
-    mocks.scrollers.value = [
-      { id: '1', type: 'recently-added', label: 'Recently Added', enabled: true, order: 1, limit: 20, rows: 3 },
-    ] as unknown as never[]
-    await flushPromises()
+  it('pairs shelves in two columns and lets an odd last shelf take the full width', async () => {
+    mocks.libraries.value = [{ id: 7 } as Library]
+    mocks.librariesLoaded.value = true
+    mocks.shelfLayout.value = 'two-columns'
+    mocks.shelves.value = [shelf(1, 'A'), shelf(2, 'B'), shelf(3, 'C')]
+    wrapper = await mountView()
 
-    const after = wrapper.findComponent(DashboardScroller)
-    expect(after.props('rows')).toBe(3)
-    // A shelf snapshots its fetch limit on setup, so the row count has to be part
-    // of the key or three rows would re-flow the books fetched for one.
-    expect(after.element).not.toBe(before)
+    const rendered = wrapper.findAllComponents(DashboardScroller)
+    expect(rendered.map((item) => item.classes().includes('xl:col-span-2'))).toEqual([false, false, true])
+    expect(rendered[0]?.element.parentElement?.classList.contains('items-stretch')).toBe(true)
+  })
+
+  it('says when there are no shelves yet', async () => {
+    mocks.libraries.value = [{ id: 7 } as Library]
+    mocks.librariesLoaded.value = true
+    wrapper = await mountView()
+
+    expect(wrapper.findComponent(DashboardScroller).exists()).toBe(false)
+    expect(wrapper.text()).toContain('No shelves yet.')
   })
 
   it('moves from the error state to dashboard content after a successful retry', async () => {

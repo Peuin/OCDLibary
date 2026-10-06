@@ -5,6 +5,7 @@ import { getFormatColor } from '../lib/format-colors'
 import { computed, inject, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  BookMinus,
   BookOpen,
   BookText,
   Check,
@@ -68,6 +69,8 @@ const props = defineProps<{
   coverAspectRatio?: CoverAspectRatio
   /** Opt-in: only views that host the destination sheet should offer this. */
   allowMoveToLibrary?: boolean
+  /** Opt-in: a dashboard shelf whose books were picked by hand offers to take this one off. */
+  removableFromShelf?: boolean
 }>()
 
 type BookActionType = 'quick-view' | 'add-to-collection' | 'move-to-library' | 'delete'
@@ -75,7 +78,12 @@ const emit = defineEmits<{
   action: [type: BookActionType]
   select: [event: MouseEvent]
   'update:book': [updated: BookCard]
+  'remove-from-shelf': []
 }>()
+
+function handleRemoveFromShelf() {
+  emit('remove-from-shelf')
+}
 
 const authorLine = computed(() => props.book.authors.join(', ') || null)
 const authorQuery = computed(() => props.book.authors[0] ?? null)
@@ -739,7 +747,11 @@ const secondaryLabelText = computed(() => resolveBookLabel(gridCardSecondaryLabe
                     <Send class="size-4 mr-2" />
                     {{ t('book.actions.sendViaEmail') }}
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator v-if="hasPermission('email_send') || hasPermission('library_delete_books')" />
+                  <DropdownMenuSeparator v-if="hasPermission('email_send') || hasPermission('library_delete_books') || removableFromShelf" />
+                  <DropdownMenuItem v-if="removableFromShelf" data-testid="remove-from-shelf" @click="handleRemoveFromShelf">
+                    <BookMinus class="size-4 mr-2" />
+                    {{ t('dashboard.shelfBooks.remove') }}
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     v-if="hasPermission('library_delete_books')"
                     class="text-destructive focus:text-destructive"
@@ -873,7 +885,11 @@ const secondaryLabelText = computed(() => resolveBookLabel(gridCardSecondaryLabe
               <Send class="size-4 mr-2" />
               {{ t('book.actions.sendViaEmail') }}
             </DropdownMenuItem>
-            <DropdownMenuSeparator v-if="hasPermission('email_send') || hasPermission('library_delete_books')" />
+            <DropdownMenuSeparator v-if="hasPermission('email_send') || hasPermission('library_delete_books') || removableFromShelf" />
+            <DropdownMenuItem v-if="removableFromShelf" data-testid="remove-from-shelf" @click="handleRemoveFromShelf">
+              <BookMinus class="size-4 mr-2" />
+              {{ t('dashboard.shelfBooks.remove') }}
+            </DropdownMenuItem>
             <DropdownMenuItem
               v-if="hasPermission('library_delete_books')"
               class="text-destructive focus:text-destructive"

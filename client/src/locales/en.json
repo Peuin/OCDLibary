@@ -8186,8 +8186,11 @@
         "upNextInSeries": "No next-in-series picks yet. Finish a volume to surface the next one.",
         "recentlyAdded": "No books in your library yet.",
         "smartScope": "No books match this smartScope.",
-        "default": "No books found."
-      }
+        "default": "No books found.",
+        "shelf": "This shelf has no books yet."
+      },
+      "viewAll": "View all",
+      "viewAllDescription": "All books on the {title} shelf"
     },
     "settings": {
       "title": "Customize Dashboard",
@@ -8218,7 +8221,7 @@
         "upNextInSeries": "Up Next in Series",
         "random": "Discover Something New",
         "smartScope": "Smart Scope",
-        "featuredShelf": "Shared shelf"
+        "featuredShelf": "Shelf"
       },
       "shelfLayout": {
         "title": "Shelf layout",
@@ -8355,43 +8358,49 @@
       }
     },
     "featured": {
-      "tab": "Shared shelves",
-      "badge": "Shared",
-      "description": "Entries you pin here appear on everyone's dashboard. Each one is either its own shelf showing a public collection, or a saint card leading a built-in shelf such as Recently Added. Readers only see books in libraries they can access. Changes apply right away.",
-      "empty": "No shared shelves yet. Pin a collection below.",
-      "addTitle": "Pin a collection",
-      "chooseCollection": "Choose a public collection",
-      "titleLabel": "Shelf title",
-      "titlePlaceholder": "Shelf title (defaults to the collection name)",
-      "collectionLabel": "Collection",
-      "add": "Add shelf",
       "uploadImage": "Upload portrait (shown in an arched frame)",
       "removeImage": "Remove",
-      "moveUp": "Move up",
-      "moveDown": "Move down",
-      "delete": "Delete shelf",
-      "unavailableCollection": "Collection unavailable",
-      "noPublicCollections": "No public collections yet. Mark a collection as public to pin it here.",
-      "privateHint": "{count, plural, one {1 private collection is hidden. Make it public to pin it.} other {# private collections are hidden. Make them public to pin them.}}",
-      "confirmDelete": "Remove the shared shelf \"{title}\" from everyone's dashboard?",
+      "delete": "Remove saint card",
+      "confirmDelete": "Remove the saint card from this shelf for everyone?",
       "defaultTitle": "Default for everyone",
       "defaultDescription": "Save this layout and shelf order as the default for users who have not customized their dashboard. Smart Scope shelves are left out because they belong to you.",
       "saveAsDefault": "Set as default for everyone",
       "confirmDefault": "Use this layout as the default dashboard for every user who has not customized theirs?",
       "toasts": {
-        "created": "Shared shelf added",
         "defaultSaved": "Default dashboard saved for everyone"
       },
       "errors": {
         "generic": "Something went wrong. Try again."
       },
       "viewWorks": "View works",
-      "portraitLabel": "Portrait",
       "saintNameLabel": "Saint name",
       "saintNamePlaceholder": "Saint name, e.g. St. Teresa of Avila - Doctor of the Church",
-      "attachLabel": "Show on",
-      "attachStandalone": "Its own shelf (the collection's books)",
-      "attachOption": "Lead the \"{shelf}\" shelf"
+      "cardLabel": "Saint card",
+      "sharedHint": "Shown at the head of this shelf for everyone. Saved immediately."
+    },
+    "shelfBooks": {
+      "addToShelf": "Add to shelf",
+      "pickerTitle": "Add books to {title}",
+      "pickerDescription": "Picked books replace this shelf's automatic selection for everyone, in the order you add them.",
+      "searchPlaceholder": "Search books by title or author",
+      "searchHint": "Type at least 2 characters to search.",
+      "noResults": "No books found.",
+      "add": "Add",
+      "added": "Added",
+      "loadMore": "Load more",
+      "remove": "Remove",
+      "removeAria": "Remove {title} from this shelf"
+    },
+    "shelves": {
+      "hint": "Shelves are the same for everyone. Name them freely; a shelf holds only the books you add to it. Changes save immediately. Rows set how many rows the books take in \"View all\".",
+      "empty": "No shelves yet. Add one below.",
+      "newTitle": "New shelf",
+      "titleLabel": "Shelf name",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "delete": "Delete shelf",
+      "confirmDelete": "Delete the shelf \"{title}\" for everyone? The books stay in your library.",
+      "readOnlyHint": "Shelves are set up by an administrator for everyone."
     }
   },
   "email": {
@@ -10956,7 +10965,8 @@
         "afternoon": "Good afternoon,",
         "evening": "Good evening,",
         "fallbackName": "there"
-      }
+      },
+      "noShelves": "No shelves yet."
     },
     "bookDetail": {
       "title": "Book",

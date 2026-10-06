@@ -2,6 +2,7 @@
 import { computed, ref, useAttrs } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
+import { toast } from 'vue-sonner'
 import {
   Aperture,
   BookMarked,
@@ -11,18 +12,22 @@ import {
   Headphones,
   LibraryBig,
   ListOrdered,
+  Plus,
   RefreshCw,
   Shuffle,
   Sparkles,
 } from '@lucide/vue'
 
-import type { BookCard, BookScrollerType } from '@bookorbit/types'
-import BookCoverCard from '@/features/book/components/BookCoverCard.vue'
-import DashboardSaintCard from './DashboardSaintCard.vue'
+import type { BookCard, BookScrollerType, DashboardFeaturedShelf } from '@bookorbit/types'
+import { usePermissions } from '@/features/auth/composables/usePermissions'
+import DashboardShelfBookPicker from './DashboardShelfBookPicker.vue'
+import DashboardShelfDialog from './DashboardShelfDialog.vue'
+import DashboardShelfRows, { type ShelfBookAction } from './DashboardShelfRows.vue'
 import BookQuickView from '@/features/book/components/BookQuickView.vue'
 import AddToCollectionSheet from '@/features/collection/components/AddToCollectionSheet.vue'
 import DeleteBookDialog from '@/features/book/components/DeleteBookDialog.vue'
 import { useDashboardScroller } from '../composables/useDashboardScroller'
+import { removeDashboardShelfBook } from '../api/dashboard-featured-shelf.api'
 import { useDeleteBook } from '@/features/book/composables/useDeleteBook'
 import { MIN_SHELF_ROWS, chunkIntoBands, effectiveShelfRows, shelfBookLimit } from '../lib/shelf-rows'
 
@@ -36,9 +41,10 @@ const props = defineProps<{
   limit?: number
   rows?: number
   smartScopeId?: number
+  /** The administrator's dashboard shelf this scroller shows, when `type` is `featured-shelf`. */
   featuredShelfId?: number
-  /** Present on an administrator's featured shelf: the saint and collection that lead it. */
-  featured?: { saintName: string | null; imageUrl: string | null; collectionId: number } | null
+  /** The saint card an administrator set to lead this shelf. */
+  featured?: Pick<DashboardFeaturedShelf, 'saintName' | 'imageUrl'> | null
 }>()
 
 const attrs = useAttrs()
@@ -60,12 +66,54 @@ const { books, loading, error, refresh } = useDashboardScroller(
 
 const showSaintCard = computed(() => Boolean(props.featured && (props.featured.saintName || props.featured.imageUrl)))
 
+// The dashboard shows every shelf as a single row; the configured rows lay out the full shelf in "view all".
+const homeBands = computed(() => (books.value.length > 0 ? [books.value] : []))
 const bands = computed(() => chunkIntoBands(books.value, shelfRows.value))
 
-const scrollEl = ref<HTMLElement | null>(null)
+const viewAllOpen = ref(false)
+
+const rowsRef = ref<InstanceType<typeof DashboardShelfRows> | null>(null)
 
 function scrollBy(delta: number) {
-  scrollEl.value?.scrollBy({ left: delta, behavior: 'smooth' })
+  rowsRef.value?.scrollBy(delta)
+}
+
+function handleScrollBack() {
+  scrollBy(-560)
+}
+
+function handleScrollForward() {
+  scrollBy(560)
+}
+
+function handleViewAll() {
+  viewAllOpen.value = true
+}
+
+// A dashboard shelf holds only the books an administrator added, and they add or remove them here.
+const { hasPermission } = usePermissions()
+const curatableShelfId = computed(() =>
+  props.type === 'featured-shelf' && props.featuredShelfId !== undefined && hasPermission('manage_app_settings') ? props.featuredShelfId : null,
+)
+const shelvedBookIds = computed(() => books.value.map((book) => book.id))
+const pickerOpen = ref(false)
+
+function handleOpenPicker() {
+  pickerOpen.value = true
+}
+
+async function handleBooksAdded() {
+  await refresh()
+}
+
+async function handleRemoveFromShelf(book: BookCard) {
+  if (curatableShelfId.value === null) return
+  try {
+    await removeDashboardShelfBook(curatableShelfId.value, book.id)
+    books.value = books.value.filter((item) => item.id !== book.id)
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('dashboard.featured.errors.generic'))
+  }
 }
 
 const typeIcon = computed(() => {
@@ -79,19 +127,9 @@ const typeIcon = computed(() => {
   return Shuffle
 })
 
-const SKELETONS_PER_BAND = 8
-const skeletonBands = computed(() => Array.from({ length: shelfRows.value }, () => Array.from({ length: SKELETONS_PER_BAND })))
-const PORTRAIT_COVER_WIDTH_CLASS = 'w-[120px]'
-const SQUARE_COVER_WIDTH_CLASS = 'w-[150px]'
-// Beside a saint card the covers grow to 300px tall so the row sits level with the card:
-// 2:3 portraits at 200px wide, square covers at the full height.
-const SAINT_PORTRAIT_COVER_WIDTH_CLASS = 'w-[200px]'
-const SAINT_SQUARE_COVER_WIDTH_CLASS = 'w-[300px]'
-const skeletonWidthClass = computed(() => (showSaintCard.value ? SAINT_PORTRAIT_COVER_WIDTH_CLASS : PORTRAIT_COVER_WIDTH_CLASS))
-
-// 'move-to-library' is part of the shared card contract; this view does not
-// opt in, so it never fires here.
-type BookActionType = 'quick-view' | 'edit-metadata' | 'add-to-collection' | 'move-to-library' | 'delete'
+const SKELETON_COUNT = 8
+const skeletons = Array.from({ length: SKELETON_COUNT })
+const skeletonWidthClass = computed(() => (showSaintCard.value ? 'w-[200px]' : 'w-[120px]'))
 
 const quickViewBookId = ref<number | null>(null)
 const quickViewOpen = ref(false)
@@ -109,7 +147,9 @@ const {
   books.value = books.value.filter((b) => b.id !== id)
 })
 
-function handleBookAction(book: BookCard, action: BookActionType) {
+// 'move-to-library' is part of the shared card contract; this view does not
+// opt in, so it never fires here.
+function handleBookAction(book: BookCard, action: ShelfBookAction) {
   if (action === 'quick-view') {
     quickViewBookId.value = book.id
     quickViewOpen.value = true
@@ -124,20 +164,13 @@ function handleBookAction(book: BookCard, action: BookActionType) {
     promptDelete(book.id)
   }
 }
-
-function coverWidthClass(book: BookCard): string {
-  const square = book.coverAspectRatio === '1/1'
-  if (showSaintCard.value) return square ? SAINT_SQUARE_COVER_WIDTH_CLASS : SAINT_PORTRAIT_COVER_WIDTH_CLASS
-  return square ? SQUARE_COVER_WIDTH_CLASS : PORTRAIT_COVER_WIDTH_CLASS
-}
-
-function coverAnimationDelay(index: number): string {
-  return `${index * 35}ms`
-}
 </script>
 
 <template>
-  <section v-bind="attrs" class="group/scroller overflow-hidden rounded-2xl border border-primary/40 bg-card/30 shadow-sm backdrop-blur-[1px]">
+  <section
+    v-bind="attrs"
+    class="group/scroller flex h-full flex-col overflow-hidden rounded-2xl border border-primary/40 bg-card/30 shadow-sm backdrop-blur-[1px]"
+  >
     <!-- Header -->
     <div class="mb-2 flex items-center justify-between px-5 pt-4">
       <div class="flex items-center gap-2.5">
@@ -152,39 +185,71 @@ function coverAnimationDelay(index: number): string {
           {{ books.length }}
         </span>
       </div>
-      <div class="flex items-center gap-0.5 opacity-0 transition-opacity duration-200 group-hover/scroller:opacity-100">
+      <div class="flex shrink-0 items-center gap-1">
+        <div class="hidden items-center gap-0.5 opacity-0 transition-opacity duration-200 group-hover/scroller:opacity-100 sm:flex">
+          <button
+            type="button"
+            :aria-label="t('common.previous')"
+            class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            @click="handleScrollBack"
+          >
+            <ChevronLeft :size="16" />
+          </button>
+          <button
+            type="button"
+            :aria-label="t('common.next')"
+            class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            @click="handleScrollForward"
+          >
+            <ChevronRight :size="16" />
+          </button>
+        </div>
         <button
-          class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          @click="scrollBy(-560)"
+          v-if="curatableShelfId !== null"
+          type="button"
+          data-testid="shelf-add-books"
+          class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          :aria-label="t('dashboard.shelfBooks.addToShelf')"
+          :title="t('dashboard.shelfBooks.addToShelf')"
+          @click="handleOpenPicker"
         >
-          <ChevronLeft :size="16" />
+          <Plus :size="16" />
         </button>
         <button
-          class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          @click="scrollBy(560)"
+          v-if="!loading && !error && books.length > 0"
+          type="button"
+          data-testid="shelf-view-all"
+          class="rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-muted hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          @click="handleViewAll"
         >
-          <ChevronRight :size="16" />
+          {{ t('dashboard.scroller.viewAll') }}
         </button>
       </div>
     </div>
 
-    <div class="flex min-w-0 items-stretch">
-      <!-- The saint card stands on the bottom edge of the shelf, beside the books. -->
-      <div v-if="showSaintCard && featured" class="flex shrink-0 ps-5 pt-1">
-        <DashboardSaintCard :saint-name="featured.saintName" :image-url="featured.imageUrl" :collection-id="featured.collectionId" />
-      </div>
-      <div class="min-w-0 flex-1">
+    <!-- Pushed to the bottom so the ledges of two shelves side by side line up. -->
+    <DashboardShelfRows
+      ref="rowsRef"
+      class="mt-auto"
+      :bands="loading || error ? [] : homeBands"
+      :featured="featured"
+      :show-saint-card="showSaintCard"
+      saint-action
+      :removable="curatableShelfId !== null"
+      @action="handleBookAction"
+      @view-all="handleViewAll"
+      @remove="handleRemoveFromShelf"
+    >
+      <template #empty>
         <!-- Skeleton -->
-        <div v-if="loading" class="flex flex-col gap-5 overflow-hidden px-5 pb-5">
-          <div v-for="(skeletonBand, bandIndex) in skeletonBands" :key="bandIndex" class="flex gap-3">
-            <div v-for="(_, n) in skeletonBand" :key="n" class="shrink-0" :class="skeletonWidthClass">
-              <div class="w-full animate-pulse rounded-lg bg-muted" style="aspect-ratio: 2/3" />
-            </div>
+        <div v-if="loading" class="flex gap-3 overflow-hidden pb-3">
+          <div v-for="(_, n) in skeletons" :key="n" class="shrink-0" :class="skeletonWidthClass">
+            <div class="w-full animate-pulse rounded-lg bg-muted" style="aspect-ratio: 2/3" />
           </div>
         </div>
 
         <!-- Error -->
-        <div v-else-if="error" class="flex items-center gap-2.5 px-5 pb-4 pt-1 text-sm text-muted-foreground">
+        <div v-else-if="error" class="flex w-full items-center gap-2.5 pb-4 pt-1 text-sm text-muted-foreground">
           <span>{{ t('dashboard.scroller.failedToLoad') }}</span>
           <button class="flex items-center gap-1.5 text-xs text-primary hover:underline" @click="refresh">
             <RefreshCw :size="12" />
@@ -192,9 +257,22 @@ function coverAnimationDelay(index: number): string {
           </button>
         </div>
 
+        <!-- Empty: an administrator can fill the shelf from here -->
+        <div v-else-if="curatableShelfId !== null" class="flex w-full animate-fade-up flex-col items-center justify-center gap-3 py-10 text-center">
+          <button
+            type="button"
+            data-testid="shelf-empty-add"
+            class="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/40 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            @click="handleOpenPicker"
+          >
+            <Plus :size="16" aria-hidden="true" />
+            {{ t('dashboard.shelfBooks.addToShelf') }}
+          </button>
+        </div>
+
         <!-- Empty -->
-        <div v-else-if="books.length === 0" class="flex flex-col items-center justify-center py-10 gap-3 text-center animate-fade-up">
-          <div class="h-12 w-12 rounded-full bg-muted flex items-center justify-center animate-scale-in">
+        <div v-else class="flex w-full animate-fade-up flex-col items-center justify-center gap-3 py-10 text-center">
+          <div class="flex h-12 w-12 animate-scale-in items-center justify-center rounded-full bg-muted">
             <component :is="typeIcon" :size="20" class="text-muted-foreground" />
           </div>
           <p class="text-sm text-muted-foreground">
@@ -204,30 +282,35 @@ function coverAnimationDelay(index: number): string {
             <template v-else-if="type === 'up-next-in-series'">{{ t('dashboard.scroller.empty.upNextInSeries') }}</template>
             <template v-else-if="type === 'recently-added'">{{ t('dashboard.scroller.empty.recentlyAdded') }}</template>
             <template v-else-if="type === 'smart-scope'">{{ t('dashboard.scroller.empty.smartScope') }}</template>
+            <template v-else-if="type === 'featured-shelf'">{{ t('dashboard.scroller.empty.shelf') }}</template>
             <template v-else>{{ t('dashboard.scroller.empty.default') }}</template>
           </p>
         </div>
-
-        <!-- Books rows -->
-        <div v-else ref="scrollEl" class="overflow-x-auto px-5 pb-5 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div class="flex w-max min-w-full flex-col gap-6">
-            <div v-for="(band, bandIndex) in bands" :key="bandIndex" data-testid="shelf-band" class="shelf-band flex items-end gap-5">
-              <div
-                v-for="(book, index) in band"
-                :key="book.id"
-                class="shrink-0"
-                :class="coverWidthClass(book)"
-                style="animation: dashboardFadeUp 0.35s ease both"
-                :style="{ animationDelay: coverAnimationDelay(index) }"
-              >
-                <BookCoverCard :book="book" :cover-aspect-ratio="book.coverAspectRatio" @action="handleBookAction(book, $event)" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      </template>
+    </DashboardShelfRows>
   </section>
+
+  <DashboardShelfDialog
+    v-model:open="viewAllOpen"
+    :title="title"
+    :icon="typeIcon"
+    :count="books.length"
+    :bands="bands"
+    :featured="featured"
+    :show-saint-card="showSaintCard"
+    :removable="curatableShelfId !== null"
+    @action="handleBookAction"
+    @remove="handleRemoveFromShelf"
+  />
+
+  <DashboardShelfBookPicker
+    v-if="curatableShelfId !== null"
+    v-model:open="pickerOpen"
+    :title="title"
+    :shelf-id="curatableShelfId"
+    :shelved-book-ids="shelvedBookIds"
+    @added="handleBooksAdded"
+  />
 
   <BookQuickView :book-id="quickViewBookId" :open="quickViewOpen" @update:open="quickViewOpen = $event" />
 
@@ -240,50 +323,3 @@ function coverAnimationDelay(index: number): string {
 
   <DeleteBookDialog :open="deleteBookId !== null" :deleting="deletingBook" @confirm="confirmDelete" @cancel="cancelDelete" />
 </template>
-
-<style scoped>
-@keyframes dashboardFadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Each row of books stands on a thin wooden ledge, like a book stand. The ledge is tinted from
-   the accent over the card colour, so it reads as wood without turning into a dark band. */
-.shelf-band {
-  position: relative;
-  padding-inline: 0.75rem;
-  padding-bottom: 0.875rem;
-}
-
-.shelf-band::after {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  height: 0.875rem;
-  border-radius: 3px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--primary) 32%, var(--card)) 0,
-    color-mix(in oklch, var(--primary) 32%, var(--card)) 0.3rem,
-    color-mix(in oklch, var(--primary) 52%, var(--card)) 0.3rem,
-    color-mix(in oklch, var(--primary) 44%, var(--card)) 100%
-  );
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklch, var(--card) 70%, transparent),
-    0 10px 14px -10px color-mix(in oklch, var(--primary) 70%, transparent);
-  pointer-events: none;
-}
-
-.shelf-band > * {
-  position: relative;
-  z-index: 1;
-  filter: drop-shadow(0 6px 6px color-mix(in oklch, var(--primary) 22%, transparent));
-}
-</style>

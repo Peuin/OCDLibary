@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DASHBOARD_WIDGET_BATCH_MAX = exports.WIDGET_TYPES = exports.WIDGET_TYPE = exports.DASHBOARD_FEATURED_SHELF_IMAGE_MAX_BYTES = exports.DASHBOARD_ATTACHABLE_SHELF_TYPES = exports.DASHBOARD_FEATURED_SHELF_SAINT_NAME_MAX = exports.DASHBOARD_FEATURED_SHELF_TITLE_MAX = exports.DASHBOARD_FEATURED_SHELF_MAX = exports.DASHBOARD_SHELF_LAYOUTS = exports.DASHBOARD_SCROLLER_MAX_LIMIT = exports.DASHBOARD_SCROLLER_BATCH_MAX = exports.PODCAST_SCROLLER_TYPES = exports.BOOK_SCROLLER_TYPES = exports.BOOK_SCROLLER_TYPE = exports.SCROLLER_TYPES = exports.SCROLLER_TYPE = void 0;
+exports.DASHBOARD_WIDGET_BATCH_MAX = exports.WIDGET_TYPES = exports.WIDGET_TYPE = exports.DASHBOARD_SHELF_BOOKS_MAX = exports.DASHBOARD_FEATURED_SHELF_IMAGE_MAX_BYTES = exports.DASHBOARD_FEATURED_SHELF_ROWS_MAX = exports.DASHBOARD_FEATURED_SHELF_SAINT_NAME_MAX = exports.DASHBOARD_FEATURED_SHELF_TITLE_MAX = exports.DASHBOARD_FEATURED_SHELF_MAX = exports.DASHBOARD_SHELF_LAYOUTS = exports.DASHBOARD_SCROLLER_MAX_LIMIT = exports.DASHBOARD_SCROLLER_BATCH_MAX = exports.PODCAST_SCROLLER_TYPES = exports.BOOK_SCROLLER_TYPES = exports.BOOK_SCROLLER_TYPE = exports.SCROLLER_TYPES = exports.SCROLLER_TYPE = void 0;
 exports.isPodcastScrollerType = isPodcastScrollerType;
 exports.SCROLLER_TYPE = {
     RECENTLY_ADDED: "recently-added",
@@ -41,20 +41,16 @@ exports.DASHBOARD_SCROLLER_BATCH_MAX = 8;
 // multi-row shelf without guessing the ceiling it will be validated against.
 exports.DASHBOARD_SCROLLER_MAX_LIMIT = 50;
 exports.DASHBOARD_SHELF_LAYOUTS = ["wide", "two-columns"];
-/** Shelves an administrator pins for every user, each backed by one public book collection. */
-exports.DASHBOARD_FEATURED_SHELF_MAX = 8;
+/**
+ * Dashboard shelves an administrator builds for every user. A shelf has a free-form title, an
+ * optional saint card at its head, and only the books someone added to it by hand.
+ */
+exports.DASHBOARD_FEATURED_SHELF_MAX = 12;
 exports.DASHBOARD_FEATURED_SHELF_TITLE_MAX = 80;
 exports.DASHBOARD_FEATURED_SHELF_SAINT_NAME_MAX = 120;
-/** Built-in book shelves a featured entry can decorate with its saint card instead of adding its own shelf. */
-exports.DASHBOARD_ATTACHABLE_SHELF_TYPES = [
-    exports.SCROLLER_TYPE.RECENTLY_ADDED,
-    exports.SCROLLER_TYPE.RANDOM,
-    exports.SCROLLER_TYPE.CONTINUE_READING,
-    exports.SCROLLER_TYPE.CONTINUE_LISTENING,
-    exports.SCROLLER_TYPE.WANT_TO_READ,
-    exports.SCROLLER_TYPE.UP_NEXT_IN_SERIES,
-];
+exports.DASHBOARD_FEATURED_SHELF_ROWS_MAX = 3;
 exports.DASHBOARD_FEATURED_SHELF_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+exports.DASHBOARD_SHELF_BOOKS_MAX = 50;
 exports.WIDGET_TYPE = {
     READING_STREAK: "reading-streak",
     CURRENTLY_READING: "currently-reading",

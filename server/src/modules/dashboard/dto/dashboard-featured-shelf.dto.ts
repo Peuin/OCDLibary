@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayUnique,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsIn,
@@ -12,55 +13,47 @@ import {
   MaxLength,
   Min,
   MinLength,
-  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
 import {
-  DASHBOARD_ATTACHABLE_SHELF_TYPES,
   DASHBOARD_FEATURED_SHELF_MAX,
+  DASHBOARD_FEATURED_SHELF_ROWS_MAX,
   DASHBOARD_FEATURED_SHELF_SAINT_NAME_MAX,
   DASHBOARD_FEATURED_SHELF_TITLE_MAX,
   DASHBOARD_SCROLLER_MAX_LIMIT,
+  DASHBOARD_SHELF_BOOKS_MAX,
   DASHBOARD_SHELF_LAYOUTS,
   SCROLLER_TYPES,
-  type DashboardAttachableShelfType,
   type DashboardShelfLayoutValue,
   type ScrollerType,
 } from '@bookorbit/types';
 
-const MAX_DEFAULT_LAYOUT_SHELVES = DASHBOARD_FEATURED_SHELF_MAX + 8;
+const MAX_DEFAULT_LAYOUT_SHELVES = 16;
 const MAX_SHELF_ROWS = 3;
 
 export class CreateDashboardFeaturedShelfDto {
-  @IsInt()
-  @Min(1)
-  collectionId!: number;
-
-  @IsOptional()
   @IsString()
+  @MinLength(1)
   @MaxLength(DASHBOARD_FEATURED_SHELF_TITLE_MAX)
-  title?: string;
+  title!: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(DASHBOARD_FEATURED_SHELF_SAINT_NAME_MAX)
   saintName?: string;
 
-  // null is meaningful here: it detaches the entry, so only undefined skips validation.
-  @ValidateIf((_, value) => value !== undefined && value !== null)
-  @IsIn(DASHBOARD_ATTACHABLE_SHELF_TYPES)
-  attachTo?: DashboardAttachableShelfType | null;
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(DASHBOARD_FEATURED_SHELF_ROWS_MAX)
+  rows?: number;
 }
 
 export class UpdateDashboardFeaturedShelfDto {
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  collectionId?: number;
-
-  @IsOptional()
   @IsString()
+  @MinLength(1)
   @MaxLength(DASHBOARD_FEATURED_SHELF_TITLE_MAX)
   title?: string;
 
@@ -69,10 +62,11 @@ export class UpdateDashboardFeaturedShelfDto {
   @MaxLength(DASHBOARD_FEATURED_SHELF_SAINT_NAME_MAX)
   saintName?: string;
 
-  // null is meaningful here: it detaches the entry, so only undefined skips validation.
-  @ValidateIf((_, value) => value !== undefined && value !== null)
-  @IsIn(DASHBOARD_ATTACHABLE_SHELF_TYPES)
-  attachTo?: DashboardAttachableShelfType | null;
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(DASHBOARD_FEATURED_SHELF_ROWS_MAX)
+  rows?: number;
 }
 
 export class ReorderDashboardFeaturedShelvesDto {
@@ -82,6 +76,27 @@ export class ReorderDashboardFeaturedShelvesDto {
   @IsInt({ each: true })
   @Min(1, { each: true })
   ids!: number[];
+}
+
+export class DashboardShelfBookParamDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  id!: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  bookId!: number;
+}
+
+export class AddDashboardShelfBooksDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(DASHBOARD_SHELF_BOOKS_MAX)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  bookIds!: number[];
 }
 
 export class DashboardDefaultScrollerDto {
@@ -118,11 +133,6 @@ export class DashboardDefaultScrollerDto {
   @IsInt()
   @Min(1)
   smartScopeId?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  featuredShelfId?: number;
 }
 
 export class DashboardDefaultLayoutDto {

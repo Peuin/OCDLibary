@@ -5,10 +5,17 @@ import { BookOpen, UserRound } from '@lucide/vue'
 defineProps<{
   saintName: string | null
   imageUrl: string | null
-  collectionId: number
+  /** Hidden where the card already sits inside the full shelf it would open. */
+  showAction?: boolean
 }>()
 
+const emit = defineEmits<{ 'view-works': [] }>()
+
 const { t } = useI18n()
+
+function handleViewWorks() {
+  emit('view-works')
+}
 </script>
 
 <template>
@@ -26,13 +33,15 @@ const { t } = useI18n()
       {{ saintName }}
     </p>
     <span class="min-h-2 flex-1" aria-hidden="true" />
-    <RouterLink
-      :to="{ name: 'collection', params: { id: collectionId } }"
+    <button
+      v-if="showAction"
+      type="button"
       class="saint-action mt-auto inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      @click="handleViewWorks"
     >
       <BookOpen :size="12" aria-hidden="true" />
       {{ t('dashboard.featured.viewWorks') }}
-    </RouterLink>
+    </button>
   </article>
 </template>
 

@@ -336,6 +336,20 @@ describe('BookCoverCard - present state', () => {
     expect(wrapper.findAll('[data-test="dropdown-separator"]')).toHaveLength(0)
   })
 
+  it('offers removing from the shelf only where the host opts in', async () => {
+    expect(mountCard(presentBook).find('[data-testid="remove-from-shelf"]').exists()).toBe(false)
+
+    const wrapper = mount(BookCoverCard, {
+      props: { book: presentBook, removableFromShelf: true },
+      global: { ...globalStubs, provide: { [COVER_ASPECT_RATIO_KEY as symbol]: ref('2/3') } },
+    })
+    const item = wrapper.find('[data-testid="remove-from-shelf"]')
+    expect(item.text()).toContain('Remove')
+    await item.trigger('click')
+
+    expect(wrapper.emitted('remove-from-shelf')).toHaveLength(1)
+  })
+
   it('renders an orange lock pill when lock-status overlay is enabled and metadata is locked', () => {
     cardOverlays.value = ['lock-status']
 

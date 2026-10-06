@@ -6,11 +6,10 @@ import { mapWithConcurrency } from '../../common/utils/batch.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { BookReadService } from '../book/book-read.service';
 import { assembleBookCards } from '../book/utils/assemble-book-cards';
-import { CollectionService } from '../collection/collection.service';
 import { SmartScopeService } from '../smart-scope/smart-scope.service';
 import { LibraryService } from '../library/library.service';
-import { DashboardFeaturedShelfService } from './dashboard-featured-shelf.service';
 import { DashboardRepository } from './dashboard.repository';
+import { DashboardShelfBookService } from './dashboard-shelf-book.service';
 import { resolveDashboardLibraryIds } from './dashboard-library-scope';
 import { DASHBOARD_SCROLLER_MAX_LIMIT, type DashboardScrollerBatchDto, type DashboardScrollerBatchItemDto } from './dto/dashboard-scroller-batch.dto';
 import { ScrollerType } from './dto/scroller-type.enum';
@@ -26,8 +25,7 @@ export class DashboardService {
     private readonly bookReadService: BookReadService,
     private readonly libraryService: LibraryService,
     private readonly smartScopeService: SmartScopeService,
-    private readonly collectionService: CollectionService,
-    private readonly featuredShelfService: DashboardFeaturedShelfService,
+    private readonly shelfBookService: DashboardShelfBookService,
   ) {}
 
   private async loadCardsByIds(bookIds: number[], userId: number): Promise<BookCard[]> {
@@ -107,7 +105,9 @@ export class DashboardService {
       const smartScopeId = this.assertSmartScopeId(item.smartScopeId);
       bookIds = await this.smartScopeService.executeSmartScopeBookIds(smartScopeId, user, item.limit, accessibleLibraryIds);
     } else if (item.type === ScrollerType.FEATURED_SHELF) {
-      bookIds = await this.findFeaturedShelfBookIds(item.featuredShelfId, user, item.limit, accessibleLibraryIds);
+      const shelfId = this.assertFeaturedShelfId(item.featuredShelfId);
+      const contentFilters = user.isSuperuser ? undefined : user.contentFilters;
+      bookIds = await this.shelfBookService.findVisibleBookIds(shelfId, accessibleLibraryIds, item.limit, contentFilters);
     } else {
       bookIds = await this.findScrollerBookIdsForLibraries(item.type, user, item.limit, accessibleLibraryIds);
     }
@@ -131,7 +131,7 @@ export class DashboardService {
     }
 
     if (type === ScrollerType.FEATURED_SHELF) {
-      throw new BadRequestException('Featured shelves are served through the scroller batch endpoint');
+      throw new BadRequestException('Dashboard shelves are served through the scroller batch endpoint');
     }
 
     // Resolved once and handed to both halves. The selection and the count have to agree about
@@ -196,14 +196,11 @@ export class DashboardService {
     return result.items.map((item) => item.id);
   }
 
-  private async findFeaturedShelfBookIds(
-    featuredShelfId: number | undefined,
-    user: RequestUser,
-    limit: number,
-    accessibleLibraryIds: number[],
-  ): Promise<number[]> {
-    const collectionId = await this.featuredShelfService.resolveCollectionId(featuredShelfId);
-    return this.collectionService.getShelfBookIds(collectionId, user, limit, accessibleLibraryIds);
+  private assertFeaturedShelfId(featuredShelfId?: number): number {
+    if (!featuredShelfId || featuredShelfId <= 0) {
+      throw new BadRequestException('featuredShelfId is required and must be a positive integer when scroller type is featured-shelf');
+    }
+    return featuredShelfId;
   }
 
   private assertSmartScopeId(smartScopeId?: number): number {

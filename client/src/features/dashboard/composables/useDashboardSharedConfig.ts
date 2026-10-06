@@ -1,6 +1,6 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
-import type { DashboardDefaultLayout, DashboardFeaturedShelf, ScrollerType } from '@bookorbit/types'
+import type { DashboardDefaultLayout, DashboardFeaturedShelf } from '@bookorbit/types'
 import { fetchDashboardSharedConfig } from '../api/dashboard-featured-shelf.api'
 
 // Module-level so the dashboard, its shelves and the settings sheet read one copy.
@@ -8,6 +8,8 @@ const featuredShelves = ref<DashboardFeaturedShelf[]>([])
 const defaultLayout = ref<DashboardDefaultLayout | null>(null)
 const loaded = ref(false)
 let inflight: Promise<void> | null = null
+
+const orderedShelves = computed(() => [...featuredShelves.value].sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id))
 
 export function useDashboardSharedConfig() {
   function load(): Promise<void> {
@@ -18,7 +20,7 @@ export function useDashboardSharedConfig() {
         loaded.value = true
       })
       .catch(() => {
-        // The dashboard still works from the user's own shelves when this fails.
+        // The dashboard still renders, without shelves, when this fails.
         loaded.value = true
       })
       .finally(() => {
@@ -27,13 +29,19 @@ export function useDashboardSharedConfig() {
     return inflight
   }
 
-  function featuredShelfById(id: number | undefined): DashboardFeaturedShelf | undefined {
-    return id === undefined ? undefined : featuredShelves.value.find((shelf) => shelf.id === id)
+  // Shelf edits are saved on the spot, so the dashboard behind the settings sheet follows them at once.
+  function upsertShelf(shelf: DashboardFeaturedShelf) {
+    const others = featuredShelves.value.filter((item) => item.id !== shelf.id)
+    featuredShelves.value = [...others, shelf]
   }
 
-  function featuredShelfAttachedTo(type: ScrollerType): DashboardFeaturedShelf | undefined {
-    return featuredShelves.value.find((shelf) => shelf.attachTo === type)
+  function removeShelf(id: number) {
+    featuredShelves.value = featuredShelves.value.filter((shelf) => shelf.id !== id)
   }
 
-  return { featuredShelves, defaultLayout, loaded, load, featuredShelfById, featuredShelfAttachedTo }
+  function replaceShelves(shelves: DashboardFeaturedShelf[]) {
+    featuredShelves.value = shelves
+  }
+
+  return { featuredShelves, orderedShelves, defaultLayout, loaded, load, upsertShelf, removeShelf, replaceShelves }
 }

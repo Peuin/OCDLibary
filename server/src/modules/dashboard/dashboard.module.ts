@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 
 import { AppSettingsModule } from '../app-settings/app-settings.module';
 import { BookModule } from '../book/book.module';
-import { CollectionModule } from '../collection/collection.module';
 import { SmartScopeModule } from '../smart-scope/smart-scope.module';
 import { LibraryModule } from '../library/library.module';
 import { DashboardController } from './dashboard.controller';
@@ -11,12 +10,14 @@ import { DashboardFeaturedShelfImageStorage } from './dashboard-featured-shelf-i
 import { DashboardFeaturedShelfRepository } from './dashboard-featured-shelf.repository';
 import { DashboardFeaturedShelfService } from './dashboard-featured-shelf.service';
 import { DashboardRepository } from './dashboard.repository';
+import { DashboardShelfBookRepository } from './dashboard-shelf-book.repository';
+import { DashboardShelfBookService } from './dashboard-shelf-book.service';
 import { DashboardService } from './dashboard.service';
 import { DashboardWidgetRepository } from './dashboard-widget.repository';
 import { DashboardWidgetService } from './dashboard-widget.service';
 
 @Module({
-  imports: [BookModule, LibraryModule, SmartScopeModule, CollectionModule, AppSettingsModule],
+  imports: [BookModule, LibraryModule, SmartScopeModule, AppSettingsModule],
   controllers: [DashboardController, DashboardFeaturedShelfController],
   providers: [
     DashboardService,
@@ -26,6 +27,8 @@ import { DashboardWidgetService } from './dashboard-widget.service';
     DashboardFeaturedShelfService,
     DashboardFeaturedShelfRepository,
     DashboardFeaturedShelfImageStorage,
+    DashboardShelfBookService,
+    DashboardShelfBookRepository,
   ],
   exports: [DashboardService, DashboardWidgetService],
 })

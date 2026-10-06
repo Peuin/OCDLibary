@@ -1,10 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 
-import { EMPTY_CONTENT_FILTER_RULES } from '@bookorbit/types';
+import { DASHBOARD_FEATURED_SHELF_MAX, EMPTY_CONTENT_FILTER_RULES } from '@bookorbit/types';
 import type { RequestUser } from '../../common/types/request-user';
 import type { DashboardFeaturedShelfRow } from '../../db/schema';
 import { AppSettingsService } from '../app-settings/app-settings.service';
-import { CollectionService } from '../collection/collection.service';
 import { DashboardFeaturedShelfImageStorage } from './dashboard-featured-shelf-image.storage';
 import { DashboardFeaturedShelfRepository } from './dashboard-featured-shelf.repository';
 import { DashboardFeaturedShelfService } from './dashboard-featured-shelf.service';
@@ -31,21 +30,16 @@ function makeUser(overrides: Partial<RequestUser> = {}): RequestUser {
 function shelfRow(overrides: Partial<DashboardFeaturedShelfRow> = {}): DashboardFeaturedShelfRow {
   return {
     id: 1,
-    collectionId: 10,
-    title: 'Carmelite spirituality',
+    title: 'Linh đạo Cát Minh',
     saintName: null,
-    attachTo: null,
     imageVersion: 0,
     displayOrder: 1,
+    rows: 1,
     createdByUserId: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
   };
-}
-
-function collection(id: number, overrides: Partial<{ userId: number; name: string; mediaType: 'books' | 'podcasts'; isPublic: boolean }> = {}) {
-  return { id, userId: 1, name: `Collection ${id}`, mediaType: 'books' as const, isPublic: true, ...overrides };
 }
 
 function makeService() {
@@ -60,70 +54,73 @@ function makeService() {
     updateDisplayOrders: vi.fn(),
   };
   const imageStorage = { save: vi.fn(), delete: vi.fn(), getPathIfExists: vi.fn() };
-  const collectionService = { findSummariesByIds: vi.fn().mockResolvedValue([]) };
   const appSettings = { getValue: vi.fn().mockResolvedValue(null), setValue: vi.fn() };
   const service = new DashboardFeaturedShelfService(
     repo as unknown as DashboardFeaturedShelfRepository,
     imageStorage as unknown as DashboardFeaturedShelfImageStorage,
-    collectionService as unknown as CollectionService,
     appSettings as unknown as AppSettingsService,
   );
-  return { service, repo, imageStorage, collectionService, appSettings };
+  return { service, repo, imageStorage, appSettings };
 }
 
 describe('DashboardFeaturedShelfService', () => {
-  it('refuses to feature a private collection, since every user would see the shelf', async () => {
-    const { service, collectionService, repo } = makeService();
-    collectionService.findSummariesByIds.mockResolvedValue([collection(10, { isPublic: false })]);
+  it('creates a shelf with a trimmed free-form title at the end of the order', async () => {
+    const { service, repo } = makeService();
+    repo.count.mockResolvedValue(2);
+    repo.insert.mockImplementation((values: Partial<DashboardFeaturedShelfRow>) => Promise.resolve(shelfRow({ id: 5, ...values })));
 
-    await expect(service.create({ collectionId: 10 }, makeUser())).rejects.toBeInstanceOf(BadRequestException);
+    const created = await service.create({ title: '  Sách Thánh Gioan  ', saintName: '  Thánh Gioan Thánh Giá ' }, makeUser({ id: 1 }));
+
+    expect(repo.insert).toHaveBeenCalledWith({
+      title: 'Sách Thánh Gioan',
+      saintName: 'Thánh Gioan Thánh Giá',
+      rows: 1,
+      displayOrder: 3,
+      createdByUserId: 1,
+    });
+    expect(created).toEqual({ id: 5, title: 'Sách Thánh Gioan', saintName: 'Thánh Gioan Thánh Giá', imageUrl: null, rows: 1, displayOrder: 3 });
+  });
+
+  it('refuses a blank title', async () => {
+    const { service, repo } = makeService();
+
+    await expect(service.create({ title: '   ' }, makeUser())).rejects.toBeInstanceOf(BadRequestException);
     expect(repo.insert).not.toHaveBeenCalled();
   });
 
-  it('titles a new shelf after its collection when no title is given', async () => {
-    const { service, collectionService, repo } = makeService();
-    collectionService.findSummariesByIds.mockResolvedValue([collection(10, { name: 'Lectio Divina' })]);
-    repo.insert.mockImplementation((values: Partial<DashboardFeaturedShelfRow>) => Promise.resolve(shelfRow({ ...values, id: 5 })));
+  it('refuses a shelf beyond the dashboard limit', async () => {
+    const { service, repo } = makeService();
+    repo.count.mockResolvedValue(DASHBOARD_FEATURED_SHELF_MAX);
 
-    const created = await service.create({ collectionId: 10, title: '   ' }, makeUser({ id: 1 }));
-
-    expect(created).toMatchObject({ id: 5, title: 'Lectio Divina', collectionId: 10, imageUrl: null });
+    await expect(service.create({ title: 'One more' }, makeUser())).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('hides shelves whose collection went private from everyone but its owner', async () => {
-    const { service, repo, collectionService } = makeService();
-    repo.findAll.mockResolvedValue([shelfRow({ id: 1, collectionId: 10 }), shelfRow({ id: 2, collectionId: 11, imageVersion: 3 })]);
-    collectionService.findSummariesByIds.mockResolvedValue([collection(10, { isPublic: false, userId: 7 }), collection(11)]);
+  it('shares every shelf with a versioned portrait url', async () => {
+    const { service, repo } = makeService();
+    repo.findAll.mockResolvedValue([shelfRow({ id: 2, imageVersion: 3, saintName: 'Edith Stein', rows: 2 })]);
 
-    const forReader = await service.getSharedConfig(makeUser({ id: 42 }));
-    const forOwner = await service.getSharedConfig(makeUser({ id: 7 }));
+    const config = await service.getSharedConfig();
 
-    expect(forReader.featuredShelves.map((shelf) => shelf.id)).toEqual([2]);
-    expect(forReader.featuredShelves[0]?.imageUrl).toBe('/api/v1/dashboard/featured-shelves/2/image?v=3');
-    expect(forOwner.featuredShelves.map((shelf) => shelf.id)).toEqual([1, 2]);
+    expect(config.featuredShelves).toEqual([
+      {
+        id: 2,
+        title: 'Linh đạo Cát Minh',
+        saintName: 'Edith Stein',
+        imageUrl: '/api/v1/dashboard/featured-shelves/2/image?v=3',
+        rows: 2,
+        displayOrder: 1,
+      },
+    ]);
   });
 
-  it('keeps a trimmed saint name and clears it when sent empty', async () => {
-    const { service, collectionService, repo } = makeService();
-    collectionService.findSummariesByIds.mockResolvedValue([collection(10)]);
-    repo.insert.mockImplementation((values: Partial<DashboardFeaturedShelfRow>) => Promise.resolve(shelfRow({ ...values, id: 5 })));
-    repo.findById.mockResolvedValue(shelfRow({ id: 5, saintName: 'Thánh Gioan Thánh Giá' }));
-    repo.update.mockImplementation((_id: number, values: Partial<DashboardFeaturedShelfRow>) => Promise.resolve(shelfRow({ id: 5, ...values })));
+  it('clears the saint name when given an empty string and keeps the rest', async () => {
+    const { service, repo } = makeService();
+    repo.findById.mockResolvedValue(shelfRow({ id: 3, saintName: 'Old', rows: 2 }));
+    repo.update.mockImplementation((_id: number, values: Partial<DashboardFeaturedShelfRow>) => Promise.resolve(shelfRow({ id: 3, ...values })));
 
-    const created = await service.create({ collectionId: 10, saintName: '  Thánh Têrêsa Avila  ' }, makeUser());
-    const cleared = await service.update(5, { saintName: '' }, makeUser());
+    await service.update(3, { saintName: '   ' }, makeUser());
 
-    expect(created.saintName).toBe('Thánh Têrêsa Avila');
-    expect(cleared.saintName).toBeNull();
-  });
-
-  it('lets only one entry decorate each built-in shelf', async () => {
-    const { service, collectionService, repo } = makeService();
-    collectionService.findSummariesByIds.mockResolvedValue([collection(10)]);
-    repo.findAll.mockResolvedValue([shelfRow({ id: 1, attachTo: 'recently-added' })]);
-
-    await expect(service.create({ collectionId: 10, attachTo: 'recently-added' }, makeUser())).rejects.toBeInstanceOf(BadRequestException);
-    expect(repo.insert).not.toHaveBeenCalled();
+    expect(repo.update).toHaveBeenCalledWith(3, { title: 'Linh đạo Cát Minh', saintName: null, rows: 2 });
   });
 
   it('requires a reorder to list every shelf exactly once', async () => {

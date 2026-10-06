@@ -8186,8 +8186,11 @@
         "upNextInSeries": "Chưa có gợi ý tập tiếp theo. Đọc xong một tập để thấy tập kế tiếp.",
         "recentlyAdded": "Thư viện của bạn chưa có sách.",
         "smartScope": "Không có sách khớp với bộ lọc thông minh này.",
-        "default": "Không tìm thấy sách."
-      }
+        "default": "Không tìm thấy sách.",
+        "shelf": "Kệ này chưa có sách."
+      },
+      "viewAll": "Xem tất cả",
+      "viewAllDescription": "Tất cả sách trên kệ {title}"
     },
     "settings": {
       "title": "Tùy chỉnh trang tổng quan",
@@ -8218,7 +8221,7 @@
         "upNextInSeries": "Tập tiếp theo trong bộ sách",
         "random": "Khám phá sách mới",
         "smartScope": "Bộ lọc thông minh",
-        "featuredShelf": "Kệ chung"
+        "featuredShelf": "Kệ sách"
       },
       "shelfLayout": {
         "title": "Bố cục kệ sách",
@@ -8355,43 +8358,49 @@
       }
     },
     "featured": {
-      "tab": "Kệ chung",
-      "badge": "Chung",
-      "description": "Mục bạn ghim ở đây sẽ hiển thị trên trang tổng quan của mọi người. Mỗi mục là một kệ riêng hiển thị bộ sưu tập công khai, hoặc một thẻ Thánh đặt ở đầu kệ có sẵn như Mới thêm. Mỗi người chỉ thấy sách thuộc thư viện họ có quyền truy cập. Thay đổi được áp dụng ngay.",
-      "empty": "Chưa có kệ chung nào. Hãy ghim một bộ sưu tập ở bên dưới.",
-      "addTitle": "Ghim bộ sưu tập",
-      "chooseCollection": "Chọn bộ sưu tập công khai",
-      "titleLabel": "Tên kệ",
-      "titlePlaceholder": "Tên kệ (mặc định là tên bộ sưu tập)",
-      "collectionLabel": "Bộ sưu tập",
-      "add": "Thêm kệ",
       "uploadImage": "Tải ảnh chân dung (hiển thị trong khung vòm)",
       "removeImage": "Gỡ ảnh",
-      "moveUp": "Lên trên",
-      "moveDown": "Xuống dưới",
-      "delete": "Xóa kệ",
-      "unavailableCollection": "Bộ sưu tập không còn khả dụng",
-      "noPublicCollections": "Chưa có bộ sưu tập công khai nào. Hãy bật Công khai cho bộ sưu tập để ghim lên đây.",
-      "privateHint": "{count, plural, other {Đang ẩn # bộ sưu tập riêng tư. Bật Công khai để ghim lên đây.}}",
-      "confirmDelete": "Gỡ kệ chung \"{title}\" khỏi trang tổng quan của mọi người?",
+      "delete": "Gỡ thẻ Thánh",
+      "confirmDelete": "Gỡ thẻ Thánh khỏi kệ này cho mọi người?",
       "defaultTitle": "Mặc định cho mọi người",
       "defaultDescription": "Lưu bố cục và thứ tự kệ này làm mặc định cho những người chưa tự tùy chỉnh trang tổng quan. Kệ Bộ lọc thông minh không được đưa vào vì đó là bộ lọc riêng của bạn.",
       "saveAsDefault": "Đặt làm mặc định cho mọi người",
       "confirmDefault": "Dùng bố cục này làm trang tổng quan mặc định cho mọi người chưa tự tùy chỉnh?",
       "toasts": {
-        "created": "Đã thêm kệ chung",
         "defaultSaved": "Đã lưu trang tổng quan mặc định cho mọi người"
       },
       "errors": {
         "generic": "Đã có lỗi xảy ra. Hãy thử lại."
       },
       "viewWorks": "Xem tác phẩm",
-      "portraitLabel": "Ảnh chân dung",
       "saintNameLabel": "Tên Thánh",
       "saintNamePlaceholder": "Tên Thánh, ví dụ: Thánh Têrêsa Avila - Tiến sĩ Hội Thánh",
-      "attachLabel": "Hiển thị trên",
-      "attachStandalone": "Kệ riêng (sách trong bộ sưu tập)",
-      "attachOption": "Đặt ở đầu kệ \"{shelf}\""
+      "cardLabel": "Thẻ Thánh",
+      "sharedHint": "Hiển thị ở đầu kệ này cho mọi người. Lưu ngay khi thay đổi."
+    },
+    "shelfBooks": {
+      "addToShelf": "Thêm vào kệ sách",
+      "pickerTitle": "Thêm sách vào kệ {title}",
+      "pickerDescription": "Sách bạn chọn sẽ thay cho phần tự động của kệ này, hiển thị cho mọi người theo thứ tự thêm vào.",
+      "searchPlaceholder": "Tìm sách theo tên hoặc tác giả",
+      "searchHint": "Nhập ít nhất 2 ký tự để tìm.",
+      "noResults": "Không tìm thấy sách.",
+      "add": "Thêm",
+      "added": "Đã thêm",
+      "loadMore": "Tải thêm",
+      "remove": "Bỏ khỏi kệ",
+      "removeAria": "Bỏ {title} khỏi kệ này"
+    },
+    "shelves": {
+      "hint": "Kệ sách dùng chung cho mọi người. Đặt tên tùy ý; kệ chỉ chứa những sách bạn tự thêm vào. Thay đổi được lưu ngay. Số hàng là số hàng sách khi bấm \"Xem tất cả\".",
+      "empty": "Chưa có kệ sách nào. Hãy thêm kệ ở bên dưới.",
+      "newTitle": "Kệ sách mới",
+      "titleLabel": "Tên kệ sách",
+      "moveUp": "Lên trên",
+      "moveDown": "Xuống dưới",
+      "delete": "Xóa kệ",
+      "confirmDelete": "Xóa kệ \"{title}\" khỏi trang tổng quan của mọi người? Sách vẫn còn trong thư viện.",
+      "readOnlyHint": "Kệ sách do quản trị viên sắp xếp cho mọi người."
     }
   },
   "email": {
@@ -10956,7 +10965,8 @@
         "afternoon": "Chào buổi chiều,",
         "evening": "Chào buổi tối,",
         "fallbackName": "bạn"
-      }
+      },
+      "noShelves": "Chưa có kệ sách nào."
     },
     "bookDetail": {
       "title": "Sách",

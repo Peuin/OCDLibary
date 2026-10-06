@@ -113,62 +113,58 @@ export interface ScrollerConfig {
   limit: number;
   rows: number;
   smartScopeId?: number;
-  featuredShelfId?: number;
 }
 
 export const DASHBOARD_SHELF_LAYOUTS = ["wide", "two-columns"] as const;
 export type DashboardShelfLayoutValue =
   (typeof DASHBOARD_SHELF_LAYOUTS)[number];
 
-/** Shelves an administrator pins for every user, each backed by one public book collection. */
-export const DASHBOARD_FEATURED_SHELF_MAX = 8;
+/**
+ * Dashboard shelves an administrator builds for every user. A shelf has a free-form title, an
+ * optional saint card at its head, and only the books someone added to it by hand.
+ */
+export const DASHBOARD_FEATURED_SHELF_MAX = 12;
 export const DASHBOARD_FEATURED_SHELF_TITLE_MAX = 80;
 export const DASHBOARD_FEATURED_SHELF_SAINT_NAME_MAX = 120;
-
-/** Built-in book shelves a featured entry can decorate with its saint card instead of adding its own shelf. */
-export const DASHBOARD_ATTACHABLE_SHELF_TYPES = [
-  SCROLLER_TYPE.RECENTLY_ADDED,
-  SCROLLER_TYPE.RANDOM,
-  SCROLLER_TYPE.CONTINUE_READING,
-  SCROLLER_TYPE.CONTINUE_LISTENING,
-  SCROLLER_TYPE.WANT_TO_READ,
-  SCROLLER_TYPE.UP_NEXT_IN_SERIES,
-] as const;
-export type DashboardAttachableShelfType = (typeof DASHBOARD_ATTACHABLE_SHELF_TYPES)[number];
+export const DASHBOARD_FEATURED_SHELF_ROWS_MAX = 3;
 export const DASHBOARD_FEATURED_SHELF_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+export const DASHBOARD_SHELF_BOOKS_MAX = 50;
 
 export interface DashboardFeaturedShelf {
   id: number;
   title: string;
-  collectionId: number;
-  collectionName: string;
-  /** Name shown under the portrait at the head of the shelf, or null for a plain shelf. */
+  /** Name shown under the portrait, or null for a portrait alone. */
   saintName: string | null;
-  /** The built-in shelf this entry decorates, or null when it is a shelf of its own. */
-  attachTo: DashboardAttachableShelfType | null;
-  /** Versioned URL of the shelf portrait (3:4), or null when none was attached. */
+  /** Versioned URL of the portrait (3:4), or null when none was attached. */
   imageUrl: string | null;
+  /** Rows the books take in the shelf's "view all" layout. */
+  rows: number;
   displayOrder: number;
 }
 
 export interface CreateDashboardFeaturedShelfRequest {
-  collectionId: number;
-  title?: string;
+  title: string;
   saintName?: string;
-  attachTo?: DashboardAttachableShelfType | null;
+  rows?: number;
 }
 
 export interface UpdateDashboardFeaturedShelfRequest {
-  collectionId?: number;
   title?: string;
   /** An empty string clears the name. */
   saintName?: string;
-  /** null turns the entry back into a shelf of its own. */
-  attachTo?: DashboardAttachableShelfType | null;
+  rows?: number;
 }
 
 export interface ReorderDashboardFeaturedShelvesRequest {
   ids: number[];
+}
+
+export interface AddDashboardShelfBooksRequest {
+  bookIds: number[];
+}
+
+export interface AddDashboardShelfBooksResponse {
+  added: number;
 }
 
 /** The shelf arrangement an administrator saved for users who have not customized their own. */

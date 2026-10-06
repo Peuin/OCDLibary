@@ -23,26 +23,26 @@ import { RequirePermission } from '../../common/decorators/require-permission.de
 import type { MultipartRequest } from '../../common/types/multipart-request';
 import type { RequestUser } from '../../common/types/request-user';
 import { DashboardFeaturedShelfService } from './dashboard-featured-shelf.service';
+import { DashboardShelfBookService } from './dashboard-shelf-book.service';
 import {
+  AddDashboardShelfBooksDto,
   CreateDashboardFeaturedShelfDto,
   DashboardDefaultLayoutDto,
+  DashboardShelfBookParamDto,
   ReorderDashboardFeaturedShelvesDto,
   UpdateDashboardFeaturedShelfDto,
 } from './dto/dashboard-featured-shelf.dto';
 
 @Controller('dashboard')
 export class DashboardFeaturedShelfController {
-  constructor(private readonly featuredShelfService: DashboardFeaturedShelfService) {}
+  constructor(
+    private readonly featuredShelfService: DashboardFeaturedShelfService,
+    private readonly shelfBookService: DashboardShelfBookService,
+  ) {}
 
   @Get('shared-config')
-  getSharedConfig(@CurrentUser() user: RequestUser) {
-    return this.featuredShelfService.getSharedConfig(user);
-  }
-
-  @Get('featured-shelves')
-  @RequirePermission(Permission.ManageAppSettings)
-  listFeaturedShelves() {
-    return this.featuredShelfService.listAll();
+  getSharedConfig() {
+    return this.featuredShelfService.getSharedConfig();
   }
 
   @Post('featured-shelves')
@@ -103,6 +103,19 @@ export class DashboardFeaturedShelfController {
     reply.header('Cache-Control', 'private, max-age=31536000, immutable');
     reply.type('image/jpeg');
     reply.send(createReadStream(path));
+  }
+
+  @Post('featured-shelves/:id/books')
+  @RequirePermission(Permission.ManageAppSettings)
+  addShelfBooks(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number, @Body() dto: AddDashboardShelfBooksDto) {
+    return this.shelfBookService.addBooks(id, dto.bookIds, user);
+  }
+
+  @Delete('featured-shelves/:id/books/:bookId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermission(Permission.ManageAppSettings)
+  async removeShelfBook(@CurrentUser() user: RequestUser, @Param() params: DashboardShelfBookParamDto) {
+    await this.shelfBookService.removeBook(params.id, params.bookId, user);
   }
 
   @Put('default-layout')

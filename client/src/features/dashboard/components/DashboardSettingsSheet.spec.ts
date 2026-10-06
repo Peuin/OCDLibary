@@ -12,20 +12,6 @@ import pt from '@/locales/pt.json'
 // assert `undefined` against rendered English the first time Portuguese lags
 // behind a new dashboard key.
 const PT_WIDGET_NAMES = { ...en.dashboard.settings.widgetNames, ...pt.dashboard.settings.widgetNames }
-const PT_SHELF_NAMES = { ...en.dashboard.settings.shelfNames, ...pt.dashboard.settings.shelfNames }
-const ENABLED_EN_SHELF_NAMES = Object.entries(en.dashboard.settings.shelfNames)
-  // Podcasts are off in this build, and featured shelves are pinned by an administrator rather than picked.
-  .filter(([key]) => key !== 'continuePodcasts' && key !== 'featuredShelf')
-  .map(([, label]) => label)
-const ENABLED_PT_SHELF_NAMES = Object.entries(PT_SHELF_NAMES)
-  .filter(([key]) => key !== 'continuePodcasts' && key !== 'featuredShelf')
-  .map(([, label]) => label)
-
-type UseSmartScopesMock = () => {
-  smartScopes: Ref<unknown[]>
-  fetchSmartScopes: () => void
-}
-
 type UseDashboardWidgetsMock = () => {
   widgets: Ref<WidgetConfig[]>
   libraryIds: Ref<number[] | null>
@@ -39,6 +25,7 @@ const libraryIdsRef = ref<number[] | null>(null)
 const librariesRef = ref<Library[]>([])
 const saveWidgetsMock = vi.fn<(widgets: WidgetConfig[], libraryIds?: readonly number[] | null) => Promise<void>>()
 const saveLibraryScopeMock = vi.fn<(libraryIds: readonly number[] | null) => Promise<void>>()
+const permissions = vi.hoisted(() => ({ admin: false }))
 
 vi.mock('@/components/ui/sheet', () => {
   const passthrough = { template: '<div><slot /></div>' }
@@ -49,13 +36,6 @@ vi.mock('@/components/ui/sheet', () => {
     SheetTitle: passthrough,
   }
 })
-
-vi.mock('@/features/smart-scope/composables/useSmartScopes', () => ({
-  useSmartScopes: vi.fn<UseSmartScopesMock>(() => ({
-    smartScopes: ref<unknown[]>([]),
-    fetchSmartScopes: vi.fn<() => void>(),
-  })),
-}))
 
 vi.mock('@/features/library/composables/useLibraries', () => ({
   useLibraries: () => ({
@@ -74,8 +54,15 @@ vi.mock('../composables/useDashboardWidgets', () => ({
   })),
 }))
 
+vi.mock('@/features/auth/composables/usePermissions', () => ({
+  usePermissions: () => ({ hasPermission: (name: string) => permissions.admin && name === 'manage_app_settings' }),
+}))
+
+vi.mock('./DashboardShelvesManager.vue', () => ({
+  default: { name: 'DashboardShelvesManager', template: '<div data-testid="shelves-manager" />' },
+}))
+
 import DashboardSettingsSheet from './DashboardSettingsSheet.vue'
-import { useDashboardConfig } from '../composables/useDashboardConfig'
 
 const ALL_WIDGETS: WidgetConfig[] = WIDGET_TYPES.map((type, index) => ({
   id: String(index + 1),
@@ -100,30 +87,10 @@ function widgetRowLabels(wrapper: VueWrapper): string[] {
   return wrapper.findAll('span.flex-1').map((span) => span.text())
 }
 
-function rowButtons(wrapper: VueWrapper, shelfIndex = 0) {
-  const group = wrapper.findAll('[data-testid="shelf-rows"]')[shelfIndex]
-  return group?.findAll('button') ?? []
-}
-
-function storedRows(): number[] {
-  const raw = localStorage.getItem('bookorbit:dashboard:config')
-  const parsed = JSON.parse(raw ?? '{}') as { scrollers?: { rows: number }[] }
-  return (parsed.scrollers ?? []).map((scroller) => scroller.rows)
-}
-
-function shelfOptionLabels(wrapper: VueWrapper): string[] {
-  return wrapper
-    .find('select')
-    .findAll('option')
-    .map((option) => option.text())
-}
-
 beforeEach(async () => {
   vi.clearAllMocks()
   localStorage.clear()
-  // useDashboardConfig keeps module-level state, so a shelf edit in one test
-  // would otherwise seed the next test's draft.
-  useDashboardConfig().reset()
+  permissions.admin = false
   widgetsRef.value = []
   libraryIdsRef.value = null
   librariesRef.value = [{ id: 1, name: 'Books' } as Library, { id: 2, name: 'Comics' } as Library]
@@ -196,23 +163,6 @@ describe('DashboardSettingsSheet', () => {
     expect(wrapper.text()).toContain(en.dashboard.settings.libraryScope.required)
   })
 
-  it('includes continue-listening and want-to-read in the shelf selector', async () => {
-    const wrapper = await openSheet()
-    await openShelvesTab(wrapper)
-
-    const optionLabels = shelfOptionLabels(wrapper)
-
-    expect(optionLabels).toContain(en.dashboard.settings.shelfNames.continueListening)
-    expect(optionLabels).toContain(en.dashboard.settings.shelfNames.wantToRead)
-  })
-
-  it('lists every shelf type in the selector using catalog names', async () => {
-    const wrapper = await openSheet()
-    await openShelvesTab(wrapper)
-
-    expect(shelfOptionLabels(wrapper).sort()).toEqual(ENABLED_EN_SHELF_NAMES.sort())
-  })
-
   it('offers wide-row and two-column shelf layouts', async () => {
     const wrapper = await openSheet()
     await openShelvesTab(wrapper)
@@ -230,14 +180,35 @@ describe('DashboardSettingsSheet', () => {
     expect(twoColumnButton?.attributes('aria-pressed')).toBe('false')
   })
 
-  it('translates the shelf selector when the locale changes', async () => {
+  it('saves the chosen layout', async () => {
     const wrapper = await openSheet()
     await openShelvesTab(wrapper)
 
-    await setI18nLocale('pt')
-    await nextTick()
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes(en.dashboard.settings.shelfLayout.wide))
+      ?.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === en.common.save)
+      ?.trigger('click')
 
-    expect(shelfOptionLabels(wrapper).sort()).toEqual(ENABLED_PT_SHELF_NAMES.sort())
+    expect(JSON.parse(localStorage.getItem('bookorbit:dashboard:config') ?? '{}')).toEqual({ shelfLayout: 'wide' })
+  })
+
+  it('lets an administrator manage the shelves', async () => {
+    permissions.admin = true
+    const wrapper = await openSheet()
+
+    expect(wrapper.find('[data-testid="shelves-manager"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain(en.dashboard.featured.saveAsDefault)
+  })
+
+  it('shows readers that the shelves are set up for them', async () => {
+    const wrapper = await openSheet()
+
+    expect(wrapper.find('[data-testid="shelves-manager"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain(en.dashboard.shelves.readOnlyHint)
   })
 
   it('opens on the shelves tab and lists it before widgets', async () => {
@@ -253,58 +224,6 @@ describe('DashboardSettingsSheet', () => {
     const widgetsTab = wrapper.findAll('button').find((button) => button.text() === en.dashboard.settings.tabs.widgets)
     expect(shelvesTab?.classes()).toContain('bg-background')
     expect(widgetsTab?.classes()).not.toContain('bg-background')
-  })
-
-  it('offers one, two and three rows per shelf and starts on one', async () => {
-    const wrapper = await openSheet()
-    await openShelvesTab(wrapper)
-
-    const buttons = rowButtons(wrapper)
-
-    expect(buttons.map((button) => button.text())).toEqual(['1', '2', '3'])
-    expect(buttons.map((button) => button.attributes('aria-pressed'))).toEqual(['true', 'false', 'false'])
-  })
-
-  it('labels each row choice for assistive technology', async () => {
-    const wrapper = await openSheet()
-    await openShelvesTab(wrapper)
-
-    expect(rowButtons(wrapper).map((button) => button.attributes('aria-label'))).toEqual(['One row of books', '2 rows of books', '3 rows of books'])
-  })
-
-  it('selects a row count without touching the other shelves', async () => {
-    const wrapper = await openSheet()
-    await openShelvesTab(wrapper)
-
-    await rowButtons(wrapper)[2]?.trigger('click')
-
-    expect(rowButtons(wrapper).map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'false', 'true'])
-    expect(rowButtons(wrapper, 1).map((button) => button.attributes('aria-pressed'))).toEqual(['true', 'false', 'false'])
-  })
-
-  it('persists the chosen row count on save', async () => {
-    const wrapper = await openSheet()
-    await openShelvesTab(wrapper)
-
-    await rowButtons(wrapper)[1]?.trigger('click')
-    const saveButton = wrapper.findAll('button').find((button) => button.text() === en.common.save)
-    await saveButton?.trigger('click')
-
-    expect(storedRows()[0]).toBe(2)
-    expect(storedRows().slice(1)).toEqual([1, 1, 1, 1, 1])
-  })
-
-  it('discards a row change when the sheet is cancelled and reopened', async () => {
-    const wrapper = await openSheet()
-    await openShelvesTab(wrapper)
-
-    await rowButtons(wrapper)[2]?.trigger('click')
-    await wrapper.setProps({ open: false })
-    await wrapper.setProps({ open: true })
-    await nextTick()
-    await openShelvesTab(wrapper)
-
-    expect(rowButtons(wrapper).map((button) => button.attributes('aria-pressed'))).toEqual(['true', 'false', 'false'])
   })
 
   it('renders every widget name from the catalog rather than a hardcoded map', async () => {
