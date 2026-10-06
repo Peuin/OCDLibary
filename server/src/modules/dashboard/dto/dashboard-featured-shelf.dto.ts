@@ -13,6 +13,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -48,6 +49,12 @@ export class CreateDashboardFeaturedShelfDto {
   @Min(1)
   @Max(DASHBOARD_FEATURED_SHELF_ROWS_MAX)
   rows?: number;
+
+  // null unlinks the shelf, so only undefined skips validation.
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsInt()
+  @Min(1)
+  collectionId?: number | null;
 }
 
 export class UpdateDashboardFeaturedShelfDto {
@@ -67,6 +74,12 @@ export class UpdateDashboardFeaturedShelfDto {
   @Min(1)
   @Max(DASHBOARD_FEATURED_SHELF_ROWS_MAX)
   rows?: number;
+
+  // null unlinks the shelf, so only undefined skips validation.
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsInt()
+  @Min(1)
+  collectionId?: number | null;
 }
 
 export class ReorderDashboardFeaturedShelvesDto {

@@ -8389,7 +8389,8 @@
       "added": "Added",
       "loadMore": "Load more",
       "remove": "Remove",
-      "removeAria": "Remove {title} from this shelf"
+      "removeAria": "Remove {title} from this shelf",
+      "addSlot": "Add book"
     },
     "shelves": {
       "hint": "Shelves are the same for everyone. Name them freely; a shelf holds only the books you add to it. Changes save immediately. Rows set how many rows the books take in \"View all\".",
@@ -8400,7 +8401,12 @@
       "moveDown": "Move down",
       "delete": "Delete shelf",
       "confirmDelete": "Delete the shelf \"{title}\" for everyone? The books stay in your library.",
-      "readOnlyHint": "Shelves are set up by an administrator for everyone."
+      "readOnlyHint": "Shelves are set up by an administrator for everyone.",
+      "collectionLabel": "Link to a collection (optional)",
+      "collectionNone": "Not linked: books added by hand",
+      "noCollections": "No public book collections. Make a collection public to link it.",
+      "collectionUnavailable": "Linked collection is no longer public",
+      "collectionHint": "A linked shelf shows the collection's books and follows every change to the collection. Books you add on the shelf stay on the shelf only, and removing a collection book here only hides it from the shelf."
     }
   },
   "email": {

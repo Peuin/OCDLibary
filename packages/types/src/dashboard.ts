@@ -140,12 +140,18 @@ export interface DashboardFeaturedShelf {
   /** Rows the books take in the shelf's "view all" layout. */
   rows: number;
   displayOrder: number;
+  /**
+   * The public book collection the shelf is linked to, or null. A linked shelf shows that
+   * collection's books, and adding or removing a book on either side changes both.
+   */
+  collectionId: number | null;
 }
 
 export interface CreateDashboardFeaturedShelfRequest {
   title: string;
   saintName?: string;
   rows?: number;
+  collectionId?: number | null;
 }
 
 export interface UpdateDashboardFeaturedShelfRequest {
@@ -153,6 +159,8 @@ export interface UpdateDashboardFeaturedShelfRequest {
   /** An empty string clears the name. */
   saintName?: string;
   rows?: number;
+  /** null unlinks the shelf; it keeps a copy of the collection's books as its own. */
+  collectionId?: number | null;
 }
 
 export interface ReorderDashboardFeaturedShelvesRequest {

@@ -100,7 +100,7 @@ function isSortableColumn(col: ColumnDef): boolean {
                 background: 'var(--muted)',
               }
             : {}),
-          ...(col.pinned === 'right' ? { position: 'sticky', right: '0', zIndex: 20 } : {}),
+          ...(col.pinned === 'right' ? { position: 'sticky', right: '0', zIndex: 20, background: 'var(--muted)' } : {}),
         }"
         :draggable="!isReadOnly && col.pinned === null"
         @dragstart="emit('colDragStart', $event, col.id)"

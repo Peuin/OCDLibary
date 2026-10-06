@@ -210,7 +210,7 @@ describe('useTableCellHelpers', () => {
     it('returns base background for normal cell', () => {
       const book = makeBook({ title: 'Dune' })
       const bg = helpers.getPinnedCellBackground(book, 'title', false)
-      expect(bg).toBe('var(--background)')
+      expect(bg).toBe('var(--card)')
     })
 
     it('returns primary tinted background for selected cell', () => {

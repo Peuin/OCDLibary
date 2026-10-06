@@ -105,7 +105,7 @@ describe('DashboardService', () => {
 
     const result = await service.getScrollers({ items: [{ id: 'a', type: ScrollerType.FEATURED_SHELF, limit: 50, featuredShelfId: 4 }] }, user);
 
-    expect(shelfBookService.findVisibleBookIds).toHaveBeenCalledWith(4, [10], 50, user.contentFilters);
+    expect(shelfBookService.findVisibleBookIds).toHaveBeenCalledWith(4, user, [10], 50, user.contentFilters);
     expect(result.items[0]?.books.map((book) => book.id)).toEqual([3, 1]);
     expect(dashboardRepo.findRecentlyAddedBookIds).not.toHaveBeenCalled();
   });

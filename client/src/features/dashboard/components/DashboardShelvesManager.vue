@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { ChevronDown, ChevronUp, GripVertical, Loader2, Plus, Trash2 } from '@lucide/vue'
 
 import { DASHBOARD_FEATURED_SHELF_MAX, DASHBOARD_FEATURED_SHELF_TITLE_MAX, type DashboardFeaturedShelf } from '@bookorbit/types'
+import { useCollections } from '@/features/collection/composables/useCollections'
 import { createFeaturedShelf, deleteFeaturedShelf, reorderFeaturedShelves, updateFeaturedShelf } from '../api/dashboard-featured-shelf.api'
 import { useDashboardSharedConfig } from '../composables/useDashboardSharedConfig'
 import { useDraggableList } from '../composables/useDraggableList'
@@ -12,7 +13,8 @@ import { SHELF_ROW_OPTIONS } from '../lib/shelf-rows'
 import DashboardSaintCardEditor from './DashboardSaintCardEditor.vue'
 
 const { t } = useI18n()
-const { orderedShelves, upsertShelf, removeShelf, replaceShelves } = useDashboardSharedConfig()
+const { orderedShelves, upsertShelf, removeShelf, replaceShelves, markShelfBooksChanged } = useDashboardSharedConfig()
+const { bookCollections, fetchCollections } = useCollections()
 
 // A local copy the drag handlers can reorder; a changed order is saved, then the server's copy wins.
 const list = ref<DashboardFeaturedShelf[]>([])
@@ -28,6 +30,12 @@ const { draggedIndex, dragOverIndex, onDragStart, onDragOver, onDrop, onDragEnd,
 
 const busyId = ref<number | null>(null)
 const creating = ref(false)
+// Only public book collections can be linked, since every user sees the shelf.
+const linkableCollections = computed(() => bookCollections.value.filter((collection) => collection.isPublic))
+
+onMounted(() => {
+  void fetchCollections()
+})
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : t('dashboard.featured.errors.generic')
@@ -77,6 +85,26 @@ async function handleDelete(shelf: DashboardFeaturedShelf) {
     removeShelf(shelf.id)
   } catch (error) {
     toast.error(errorMessage(error))
+  } finally {
+    busyId.value = null
+  }
+}
+
+function linkedCollectionMissing(shelf: DashboardFeaturedShelf): boolean {
+  return shelf.collectionId !== null && !linkableCollections.value.some((collection) => collection.id === shelf.collectionId)
+}
+
+async function handleCollectionLink(shelf: DashboardFeaturedShelf, event: Event) {
+  const value = Number((event.target as HTMLSelectElement).value)
+  const collectionId = Number.isFinite(value) && value > 0 ? value : null
+  if (collectionId === shelf.collectionId) return
+  busyId.value = shelf.id
+  try {
+    upsertShelf(await updateFeaturedShelf(shelf.id, { collectionId }))
+    markShelfBooksChanged(shelf.id)
+  } catch (error) {
+    toast.error(errorMessage(error))
+    list.value = [...orderedShelves.value]
   } finally {
     busyId.value = null
   }
@@ -189,6 +217,29 @@ async function handleAddShelf() {
 
         <div class="border-t border-border/50 px-3 pb-2.5 pt-2">
           <DashboardSaintCardEditor :shelf="shelf" />
+        </div>
+
+        <div class="border-t border-border/50 px-3 pb-2.5 pt-2" data-testid="shelf-collection-link">
+          <label :for="`shelf-collection-${shelf.id}`" class="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+            {{ t('dashboard.shelves.collectionLabel') }}
+            <Loader2 v-if="busyId === shelf.id" :size="11" class="animate-spin" aria-hidden="true" />
+          </label>
+          <select
+            :id="`shelf-collection-${shelf.id}`"
+            :value="shelf.collectionId ?? ''"
+            class="h-8 w-full appearance-none rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            :disabled="busyId === shelf.id"
+            @change="handleCollectionLink(shelf, $event)"
+          >
+            <option value="">{{ t('dashboard.shelves.collectionNone') }}</option>
+            <option v-if="linkedCollectionMissing(shelf)" :value="shelf.collectionId ?? ''" disabled>
+              {{ t('dashboard.shelves.collectionUnavailable') }}
+            </option>
+            <option v-for="collection in linkableCollections" :key="collection.id" :value="collection.id">{{ collection.name }}</option>
+          </select>
+          <p class="mt-1 text-[10px] text-muted-foreground">
+            {{ linkableCollections.length === 0 ? t('dashboard.shelves.noCollections') : t('dashboard.shelves.collectionHint') }}
+          </p>
         </div>
       </div>
     </div>

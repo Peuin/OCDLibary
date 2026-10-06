@@ -681,7 +681,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="relative flex-1 min-h-0 flex flex-col overflow-hidden rounded-md border border-border">
+  <div class="relative flex-1 min-h-0 flex flex-col overflow-hidden rounded-md border border-border bg-card">
     <!-- Screen-reader live region for dynamic announcements -->
     <div aria-live="polite" aria-atomic="true" class="sr-only">
       <span v-if="selectionMode && selectedCount != null && selectedCount > 0">{{
@@ -724,7 +724,7 @@ defineExpose({
       {{ t('book.tableView.readOnlyNotice') }}
     </div>
 
-    <div ref="scrollContainerRef" class="relative flex-1 min-h-0 overflow-auto" tabindex="0" @keydown="handleKeydownWithShortcuts">
+    <div ref="scrollContainerRef" class="relative flex-1 min-h-0 overflow-auto bg-card" tabindex="0" @keydown="handleKeydownWithShortcuts">
       <table role="grid" class="w-full border-collapse text-sm" style="table-layout: fixed">
         <BookTableHeader
           :display-columns="displayColumns"
@@ -754,7 +754,7 @@ defineExpose({
 
         <!-- Skeleton loading rows -->
         <tbody v-if="!initialized && loading" role="rowgroup">
-          <tr v-for="i in SKELETON_ROW_COUNT" :key="`skeleton-${i}`" role="row" class="border-b border-border/50">
+          <tr v-for="i in SKELETON_ROW_COUNT" :key="`skeleton-${i}`" role="row" class="border-b border-border/50 bg-card">
             <td v-if="selectionMode" role="gridcell" class="px-2 align-middle" :class="rowPaddingClass" :style="{ width: '36px', minWidth: '36px' }">
               <div class="mx-auto h-4 w-4 rounded bg-muted animate-pulse" />
             </td>
@@ -783,7 +783,7 @@ defineExpose({
           </tr>
 
           <template v-for="vItem in virtualItems" :key="String(vItem.key)">
-            <tr v-if="isPlaceholderRow(vItem.index)" role="row" class="border-b border-border/50" :data-row-index="vItem.index">
+            <tr v-if="isPlaceholderRow(vItem.index)" role="row" class="border-b border-border/50 bg-card" :data-row-index="vItem.index">
               <td v-if="selectionMode" role="gridcell" class="px-2" :class="rowPaddingClass" :style="{ width: '36px', minWidth: '36px' }" />
               <td
                 v-for="col in displayColumns"
@@ -800,14 +800,14 @@ defineExpose({
               v-else
               role="row"
               :aria-label="rowBook(vItem.index).title ?? undefined"
-              class="group border-b border-border/50 transition-colors"
+              class="group border-b border-border/50 bg-card transition-colors"
               :class="[
-                selectionMode && isSelected?.(rowBook(vItem.index).id) ? 'bg-primary/8' : 'hover:bg-muted/40',
+                selectionMode && isSelected?.(rowBook(vItem.index).id) ? 'bg-primary/8' : 'hover:bg-muted',
                 selectionMode ? 'cursor-pointer' : '',
                 isBookFileMissing(rowBook(vItem.index)) ? 'bg-destructive/5' : '',
                 isRowRefreshing(rowBook(vItem.index).id) ? 'opacity-85' : '',
                 focusedRowIndex === vItem.index && !editor.activeCellKey.value ? 'ring-1 ring-inset ring-primary/40' : '',
-                tableZebraStriping && vItem.index % 2 === 1 && !(selectionMode && isSelected?.(rowBook(vItem.index).id)) ? 'bg-muted/20' : '',
+                tableZebraStriping && vItem.index % 2 === 1 && !(selectionMode && isSelected?.(rowBook(vItem.index).id)) ? 'bg-muted' : '',
               ]"
               @click="handleRowClick(rowBook(vItem.index), $event)"
               @contextmenu.prevent="(event) => handleRowContextMenu(event, rowBook(vItem.index))"
@@ -816,7 +816,7 @@ defineExpose({
               <td
                 v-if="selectionMode"
                 role="gridcell"
-                class="overflow-hidden px-2 bg-background"
+                class="overflow-hidden bg-card px-2"
                 :class="rowPaddingClass"
                 :style="{ width: '36px', minWidth: '36px', position: 'sticky', left: '0px', zIndex: 20 }"
               >

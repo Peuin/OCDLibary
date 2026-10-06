@@ -223,7 +223,8 @@ describe('DashboardScroller', () => {
     const wrapper = mountShelf()
 
     expect(wrapper.text()).not.toContain('This shelf has no books yet.')
-    await wrapper.get('[data-testid="shelf-empty-add"]').trigger('click')
+    expect(wrapper.get('[data-testid="shelf-add-slot"]').text()).toContain('Add book')
+    await wrapper.get('[data-testid="shelf-add-slot"]').trigger('click')
 
     expect(wrapper.get('.shelf-book-picker').attributes('data-open')).toBe('true')
   })
@@ -232,8 +233,7 @@ describe('DashboardScroller', () => {
     const wrapper = mountShelf()
 
     expect(wrapper.text()).toContain('This shelf has no books yet.')
-    expect(wrapper.find('[data-testid="shelf-empty-add"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="shelf-add-books"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="shelf-add-slot"]').exists()).toBe(false)
   })
 
   it('loads the books of its own shelf', () => {
@@ -251,6 +251,17 @@ describe('DashboardScroller', () => {
 
     expect(curation.removeShelfBook).toHaveBeenCalledWith(7, 1)
     expect(bandTitles(wrapper)).toEqual([['Book 2']])
+  })
+
+  it('ends a shelf with a slot to add books for an administrator', async () => {
+    curation.isAdmin = true
+    const wrapper = mountShelf([makeBook(1, 'epub'), makeBook(2, 'epub')])
+
+    const slot = wrapper.get('[data-testid="shelf-band"] [data-testid="shelf-add-slot"]')
+    expect(slot.element.previousElementSibling?.textContent).toContain('Book 2')
+    await slot.trigger('click')
+
+    expect(wrapper.get('.shelf-book-picker').attributes('data-open')).toBe('true')
   })
 
   it('offers no shelf editing to readers', () => {

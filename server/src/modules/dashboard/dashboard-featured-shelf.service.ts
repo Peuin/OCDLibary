@@ -19,6 +19,7 @@ import type { DashboardFeaturedShelfRow } from '../../db/schema';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { DashboardFeaturedShelfImageStorage } from './dashboard-featured-shelf-image.storage';
 import { DashboardFeaturedShelfRepository } from './dashboard-featured-shelf.repository';
+import { DashboardShelfBookService } from './dashboard-shelf-book.service';
 import type {
   CreateDashboardFeaturedShelfDto,
   DashboardDefaultLayoutDto,
@@ -39,6 +40,7 @@ export class DashboardFeaturedShelfService {
     private readonly repo: DashboardFeaturedShelfRepository,
     private readonly imageStorage: DashboardFeaturedShelfImageStorage,
     private readonly appSettings: AppSettingsService,
+    private readonly shelfBookService: DashboardShelfBookService,
   ) {}
 
   async getSharedConfig(): Promise<DashboardSharedConfig> {
@@ -60,8 +62,11 @@ export class DashboardFeaturedShelfService {
       if (count >= DASHBOARD_FEATURED_SHELF_MAX) {
         throw new BadRequestException(`A dashboard holds at most ${DASHBOARD_FEATURED_SHELF_MAX} shelves`);
       }
+      const collectionId = dto.collectionId ?? null;
+      if (collectionId !== null) await this.shelfBookService.assertLinkable(collectionId);
       const row = await this.repo.insert({
         title: this.resolveTitle(dto.title),
+        collectionId,
         saintName: this.resolveSaintName(dto.saintName),
         rows: this.resolveRows(dto.rows),
         displayOrder: count + 1,
@@ -81,7 +86,9 @@ export class DashboardFeaturedShelfService {
     this.logger.log(`[${event}] [start] userId=${user.id} shelfId=${id} - shelf update started`);
     try {
       const existing = await this.getShelfOrThrow(id);
+      if (dto.collectionId !== undefined) await this.shelfBookService.relink(existing, dto.collectionId, user);
       const row = await this.repo.update(id, {
+        collectionId: dto.collectionId !== undefined ? dto.collectionId : existing.collectionId,
         title: dto.title !== undefined ? this.resolveTitle(dto.title) : existing.title,
         saintName: dto.saintName !== undefined ? this.resolveSaintName(dto.saintName) : existing.saintName,
         rows: dto.rows !== undefined ? this.resolveRows(dto.rows) : existing.rows,
@@ -213,6 +220,7 @@ export class DashboardFeaturedShelfService {
       imageUrl: row.imageVersion > 0 ? `/api/v1/dashboard/featured-shelves/${row.id}/image?v=${row.imageVersion}` : null,
       rows: row.rows,
       displayOrder: row.displayOrder,
+      collectionId: row.collectionId,
     };
   }
 

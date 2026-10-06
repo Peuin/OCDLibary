@@ -9,6 +9,20 @@ const api = vi.hoisted(() => ({
   deleteFeaturedShelf: vi.fn<(id: number) => Promise<void>>(),
 }))
 
+vi.mock('@/features/collection/composables/useCollections', async () => {
+  const { ref } = await import('vue')
+  return {
+    useCollections: () => ({
+      bookCollections: ref([
+        { id: 30, name: 'Linh đạo Cát Minh', isPublic: true },
+        { id: 31, name: 'Thánh Gioan', isPublic: true },
+        { id: 32, name: 'Riêng tư', isPublic: false },
+      ]),
+      fetchCollections: vi.fn<() => Promise<void>>(),
+    }),
+  }
+})
+
 vi.mock('../api/dashboard-featured-shelf.api', () => api)
 vi.mock('./DashboardSaintCardEditor.vue', () => ({ default: { name: 'DashboardSaintCardEditor', props: ['shelf'], template: '<div />' } }))
 
@@ -16,7 +30,7 @@ import DashboardShelvesManager from './DashboardShelvesManager.vue'
 import { useDashboardSharedConfig } from '../composables/useDashboardSharedConfig'
 
 function shelf(id: number, title: string, overrides: Partial<DashboardFeaturedShelf> = {}): DashboardFeaturedShelf {
-  return { id, title, saintName: null, imageUrl: null, rows: 1, displayOrder: id, ...overrides }
+  return { id, title, saintName: null, imageUrl: null, rows: 1, displayOrder: id, collectionId: null, ...overrides }
 }
 
 function titles(wrapper: ReturnType<typeof mount>): string[] {
@@ -77,6 +91,36 @@ describe('DashboardShelvesManager', () => {
 
     expect(api.reorderFeaturedShelves).toHaveBeenCalledWith([2, 1])
     expect(titles(wrapper)).toEqual(['Sách Thánh Gioan', 'Linh đạo'])
+  })
+
+  it('links a shelf to a public collection as soon as one is chosen', async () => {
+    api.updateFeaturedShelf.mockResolvedValue(shelf(2, 'Sách Thánh Gioan', { collectionId: 31 }))
+    const wrapper = mount(DashboardShelvesManager)
+    const link = wrapper.findAll('[data-testid="shelf-collection-link"]')[1]!
+
+    expect(link.findAll('option').map((option) => option.text())).not.toContain('Riêng tư')
+    await link.get('select').setValue('31')
+    await flushPromises()
+
+    expect(api.updateFeaturedShelf).toHaveBeenCalledWith(2, { collectionId: 31 })
+    expect(useDashboardSharedConfig().shelfBookRevision(2)).toBeGreaterThan(0)
+  })
+
+  it('unlinks a shelf when no collection is chosen', async () => {
+    useDashboardSharedConfig().replaceShelves([shelf(1, 'Linh đạo', { collectionId: 30 })])
+    api.updateFeaturedShelf.mockResolvedValue(shelf(1, 'Linh đạo'))
+    const wrapper = mount(DashboardShelvesManager)
+
+    await wrapper.get('[data-testid="shelf-collection-link"] select').setValue('')
+    await flushPromises()
+
+    expect(api.updateFeaturedShelf).toHaveBeenCalledWith(1, { collectionId: null })
+  })
+
+  it('leaves the collection optional', () => {
+    const wrapper = mount(DashboardShelvesManager)
+
+    expect(wrapper.findAll('[data-testid="shelf-collection-link"]')[0]!.get('select').element.value).toBe('')
   })
 
   it('deletes a shelf after confirmation', async () => {

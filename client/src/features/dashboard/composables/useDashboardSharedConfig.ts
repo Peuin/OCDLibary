@@ -7,6 +7,8 @@ import { fetchDashboardSharedConfig } from '../api/dashboard-featured-shelf.api'
 const featuredShelves = ref<DashboardFeaturedShelf[]>([])
 const defaultLayout = ref<DashboardDefaultLayout | null>(null)
 const loaded = ref(false)
+// Bumped per shelf when its books change outside the shelf itself, so the shelf on the dashboard reloads.
+const shelfBookRevisions = ref<Record<number, number>>({})
 let inflight: Promise<void> | null = null
 
 const orderedShelves = computed(() => [...featuredShelves.value].sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id))
@@ -43,5 +45,24 @@ export function useDashboardSharedConfig() {
     featuredShelves.value = shelves
   }
 
-  return { featuredShelves, orderedShelves, defaultLayout, loaded, load, upsertShelf, removeShelf, replaceShelves }
+  function markShelfBooksChanged(id: number) {
+    shelfBookRevisions.value = { ...shelfBookRevisions.value, [id]: (shelfBookRevisions.value[id] ?? 0) + 1 }
+  }
+
+  function shelfBookRevision(id: number | undefined): number {
+    return id === undefined ? 0 : (shelfBookRevisions.value[id] ?? 0)
+  }
+
+  return {
+    featuredShelves,
+    orderedShelves,
+    defaultLayout,
+    loaded,
+    load,
+    upsertShelf,
+    removeShelf,
+    replaceShelves,
+    markShelfBooksChanged,
+    shelfBookRevision,
+  }
 }

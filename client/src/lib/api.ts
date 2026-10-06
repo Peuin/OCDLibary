@@ -114,7 +114,7 @@ async function rawFetch(input: RequestInfo | URL, init?: RequestInit): Promise<R
   const headers = new Headers(init?.headers)
   if (_accessToken) headers.set('Authorization', `Bearer ${_accessToken}`)
   try {
-    return await fetch(input, { ...init, headers, credentials: 'include' })
+    return await fetch(input, { cache: 'no-store', ...init, headers, credentials: 'include' })
   } catch (reason) {
     if (reason instanceof TypeError) throw new NetworkError(reason.message)
     throw reason

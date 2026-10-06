@@ -729,6 +729,20 @@
       "when": 1791301705154,
       "tag": "0103_dashboard_shelves_drop_type_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1791306662365,
+      "tag": "0104_dashboard_shelf_collection_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1791307353087,
+      "tag": "0105_dashboard_shelf_books_hidden",
+      "breakpoints": true
     }
   ]
 }

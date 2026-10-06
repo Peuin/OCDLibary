@@ -107,7 +107,7 @@ export class DashboardService {
     } else if (item.type === ScrollerType.FEATURED_SHELF) {
       const shelfId = this.assertFeaturedShelfId(item.featuredShelfId);
       const contentFilters = user.isSuperuser ? undefined : user.contentFilters;
-      bookIds = await this.shelfBookService.findVisibleBookIds(shelfId, accessibleLibraryIds, item.limit, contentFilters);
+      bookIds = await this.shelfBookService.findVisibleBookIds(shelfId, user, accessibleLibraryIds, item.limit, contentFilters);
     } else {
       bookIds = await this.findScrollerBookIdsForLibraries(item.type, user, item.limit, accessibleLibraryIds);
     }

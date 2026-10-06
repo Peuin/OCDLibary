@@ -63,7 +63,7 @@ vi.mock('@/features/onboarding/composables/useOnboardingTour', () => ({
 }))
 
 function shelf(id: number, title: string): DashboardFeaturedShelf {
-  return { id, title, saintName: null, imageUrl: null, rows: 1, displayOrder: id }
+  return { id, title, saintName: null, imageUrl: null, rows: 1, displayOrder: id, collectionId: null }
 }
 
 async function mountView(): Promise<VueWrapper> {

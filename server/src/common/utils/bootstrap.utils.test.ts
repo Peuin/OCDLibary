@@ -14,6 +14,7 @@ import {
   shouldInjectEmptyJsonBody,
   isSecureProtocol,
   applyConditionalHsts,
+  applyDefaultApiCacheControl,
   registerConditionalHsts,
   isStaticAssetPath,
   shouldServeSpaFallback,
@@ -43,6 +44,39 @@ describe('SPA fallback routing', () => {
   it('ignores the query string and hash when deciding', () => {
     expect(shouldServeSpaFallback('/assets/app-abc123.js?import&t=1')).toBe(false);
     expect(shouldServeSpaFallback('/dashboard?tab=recent#top')).toBe(true);
+  });
+});
+
+describe('API cache control', () => {
+  function makeReply(existing?: string) {
+    return {
+      getHeader: vi.fn((name: string) => (name.toLowerCase() === 'cache-control' ? existing : undefined)),
+      header: vi.fn(),
+    };
+  }
+
+  it('adds no-store to API v1 responses without an explicit cache policy', () => {
+    const reply = makeReply();
+
+    applyDefaultApiCacheControl({ url: '/api/v1/books?page=1' }, reply);
+
+    expect(reply.header).toHaveBeenCalledWith('Cache-Control', 'private, no-store');
+  });
+
+  it('preserves explicit API cache policies', () => {
+    const reply = makeReply('private, max-age=86400');
+
+    applyDefaultApiCacheControl({ url: '/api/v1/books/1/cover' }, reply);
+
+    expect(reply.header).not.toHaveBeenCalled();
+  });
+
+  it('does not touch non-API routes', () => {
+    const reply = makeReply();
+
+    applyDefaultApiCacheControl({ url: '/assets/index.js' }, reply);
+
+    expect(reply.header).not.toHaveBeenCalled();
   });
 });
 

@@ -1,0 +1,1 @@
+ALTER TABLE "dashboard_shelf_books" ADD COLUMN "hidden" boolean DEFAULT false NOT NULL;

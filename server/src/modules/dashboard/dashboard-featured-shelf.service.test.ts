@@ -7,6 +7,7 @@ import { AppSettingsService } from '../app-settings/app-settings.service';
 import { DashboardFeaturedShelfImageStorage } from './dashboard-featured-shelf-image.storage';
 import { DashboardFeaturedShelfRepository } from './dashboard-featured-shelf.repository';
 import { DashboardFeaturedShelfService } from './dashboard-featured-shelf.service';
+import { DashboardShelfBookService } from './dashboard-shelf-book.service';
 
 function makeUser(overrides: Partial<RequestUser> = {}): RequestUser {
   return {
@@ -35,6 +36,7 @@ function shelfRow(overrides: Partial<DashboardFeaturedShelfRow> = {}): Dashboard
     imageVersion: 0,
     displayOrder: 1,
     rows: 1,
+    collectionId: null,
     createdByUserId: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -55,12 +57,14 @@ function makeService() {
   };
   const imageStorage = { save: vi.fn(), delete: vi.fn(), getPathIfExists: vi.fn() };
   const appSettings = { getValue: vi.fn().mockResolvedValue(null), setValue: vi.fn() };
+  const shelfBookService = { assertLinkable: vi.fn().mockResolvedValue(undefined), relink: vi.fn().mockResolvedValue(undefined) };
   const service = new DashboardFeaturedShelfService(
     repo as unknown as DashboardFeaturedShelfRepository,
     imageStorage as unknown as DashboardFeaturedShelfImageStorage,
     appSettings as unknown as AppSettingsService,
+    shelfBookService as unknown as DashboardShelfBookService,
   );
-  return { service, repo, imageStorage, appSettings };
+  return { service, repo, imageStorage, appSettings, shelfBookService };
 }
 
 describe('DashboardFeaturedShelfService', () => {
@@ -73,12 +77,21 @@ describe('DashboardFeaturedShelfService', () => {
 
     expect(repo.insert).toHaveBeenCalledWith({
       title: 'Sách Thánh Gioan',
+      collectionId: null,
       saintName: 'Thánh Gioan Thánh Giá',
       rows: 1,
       displayOrder: 3,
       createdByUserId: 1,
     });
-    expect(created).toEqual({ id: 5, title: 'Sách Thánh Gioan', saintName: 'Thánh Gioan Thánh Giá', imageUrl: null, rows: 1, displayOrder: 3 });
+    expect(created).toEqual({
+      id: 5,
+      title: 'Sách Thánh Gioan',
+      saintName: 'Thánh Gioan Thánh Giá',
+      imageUrl: null,
+      rows: 1,
+      displayOrder: 3,
+      collectionId: null,
+    });
   });
 
   it('refuses a blank title', async () => {
@@ -109,6 +122,7 @@ describe('DashboardFeaturedShelfService', () => {
         imageUrl: '/api/v1/dashboard/featured-shelves/2/image?v=3',
         rows: 2,
         displayOrder: 1,
+        collectionId: null,
       },
     ]);
   });
@@ -120,7 +134,20 @@ describe('DashboardFeaturedShelfService', () => {
 
     await service.update(3, { saintName: '   ' }, makeUser());
 
-    expect(repo.update).toHaveBeenCalledWith(3, { title: 'Linh đạo Cát Minh', saintName: null, rows: 2 });
+    expect(repo.update).toHaveBeenCalledWith(3, { collectionId: null, title: 'Linh đạo Cát Minh', saintName: null, rows: 2 });
+  });
+
+  it('links a shelf to a collection through the shelf books, which moves its books', async () => {
+    const { service, repo, shelfBookService } = makeService();
+    const user = makeUser();
+    const existing = shelfRow({ id: 3 });
+    repo.findById.mockResolvedValue(existing);
+    repo.update.mockImplementation((_id: number, values: Partial<DashboardFeaturedShelfRow>) => Promise.resolve(shelfRow({ id: 3, ...values })));
+
+    const updated = await service.update(3, { collectionId: 30 }, user);
+
+    expect(shelfBookService.relink).toHaveBeenCalledWith(existing, 30, user);
+    expect(updated.collectionId).toBe(30);
   });
 
   it('requires a reorder to list every shelf exactly once', async () => {

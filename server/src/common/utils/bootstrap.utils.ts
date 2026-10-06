@@ -152,6 +152,12 @@ export function applyConditionalHsts(request: Pick<FastifyRequest, 'protocol'>, 
   }
 }
 
+export function applyDefaultApiCacheControl(request: Pick<FastifyRequest, 'url'>, reply: Pick<FastifyReply, 'getHeader' | 'header'>): void {
+  if (!request.url.startsWith('/api/v1/')) return;
+  if (reply.getHeader('Cache-Control') !== undefined) return;
+  reply.header('Cache-Control', 'private, no-store');
+}
+
 export function registerConditionalHsts(fastify: FastifyInstance): void {
   fastify.addHook('onSend', (request, reply, payload, done) => {
     applyConditionalHsts(request, reply);

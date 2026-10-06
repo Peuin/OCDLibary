@@ -400,6 +400,34 @@ export class CollectionService {
     }
   }
 
+  /**
+   * The first books of a collection in its own order, limited to what this viewer may see. Throws
+   * when the viewer cannot read the collection.
+   */
+  async findBookIdsInOrder(id: number, user: RequestUser, limit: number, libraryIds?: number[]): Promise<number[]> {
+    const collection = await this.getReadableCollectionOrThrow(id, user);
+    if (collection.mediaType !== 'books') throw new BadRequestException('Only book collections hold books');
+    const [accessibleLibraryIds, visibleBooksWhere] = await Promise.all([
+      libraryIds ?? this.libraryService.findAccessibleLibraryIds(user),
+      this.buildViewerBookWhere(user),
+    ]);
+    return this.collectionRepo.findFirstBookIds(id, accessibleLibraryIds, limit, visibleBooksWhere);
+  }
+
+  /**
+   * A collection a dashboard shelf may follow: a public book collection, since every user sees the
+   * shelf. The shelf only reads it, so the collection need not be this user's.
+   */
+  async assertShelfLinkable(id: number): Promise<void> {
+    const collection = await this.getCollectionOrThrow(id);
+    this.assertBookCollection(collection);
+    if (!collection.isPublic) throw new BadRequestException('Make the collection public before linking it to a dashboard shelf');
+  }
+
+  containsBook(id: number, bookId: number): Promise<boolean> {
+    return this.collectionRepo.containsBook(id, bookId);
+  }
+
   async getBooks(id: number, user: RequestUser, page: number, size: number, collapseSeries?: boolean, q?: string): Promise<BooksPage> {
     return this.queryBooks(id, user, {
       sort: [{ field: 'collectionOrder', dir: 'asc' }],

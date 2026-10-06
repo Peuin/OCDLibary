@@ -8389,7 +8389,8 @@
       "added": "Đã thêm",
       "loadMore": "Tải thêm",
       "remove": "Bỏ khỏi kệ",
-      "removeAria": "Bỏ {title} khỏi kệ này"
+      "removeAria": "Bỏ {title} khỏi kệ này",
+      "addSlot": "Thêm sách"
     },
     "shelves": {
       "hint": "Kệ sách dùng chung cho mọi người. Đặt tên tùy ý; kệ chỉ chứa những sách bạn tự thêm vào. Thay đổi được lưu ngay. Số hàng là số hàng sách khi bấm \"Xem tất cả\".",
@@ -8400,7 +8401,12 @@
       "moveDown": "Xuống dưới",
       "delete": "Xóa kệ",
       "confirmDelete": "Xóa kệ \"{title}\" khỏi trang tổng quan của mọi người? Sách vẫn còn trong thư viện.",
-      "readOnlyHint": "Kệ sách do quản trị viên sắp xếp cho mọi người."
+      "readOnlyHint": "Kệ sách do quản trị viên sắp xếp cho mọi người.",
+      "collectionLabel": "Liên kết bộ sưu tập (tùy chọn)",
+      "collectionNone": "Không liên kết: tự thêm sách",
+      "noCollections": "Chưa có bộ sưu tập sách công khai. Bật Công khai cho bộ sưu tập để liên kết.",
+      "collectionUnavailable": "Bộ sưu tập đã liên kết không còn công khai",
+      "collectionHint": "Kệ liên kết hiển thị sách của bộ sưu tập và tự cập nhật khi bộ sưu tập thêm, xóa, sửa. Sách thêm ở kệ chỉ nằm trên kệ, không thêm vào bộ sưu tập; bỏ sách của bộ sưu tập khỏi kệ chỉ ẩn nó trên kệ."
     }
   },
   "email": {

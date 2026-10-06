@@ -1,0 +1,3 @@
+ALTER TABLE "dashboard_featured_shelves" ADD COLUMN "collection_id" integer;--> statement-breakpoint
+ALTER TABLE "dashboard_featured_shelves" ADD CONSTRAINT "dashboard_featured_shelves_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "dashboard_featured_shelves_collection_idx" ON "dashboard_featured_shelves" USING btree ("collection_id");

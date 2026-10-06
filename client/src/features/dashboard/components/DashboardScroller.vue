@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useAttrs } from 'vue'
+import { computed, ref, useAttrs, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import { toast } from 'vue-sonner'
@@ -12,7 +12,6 @@ import {
   Headphones,
   LibraryBig,
   ListOrdered,
-  Plus,
   RefreshCw,
   Shuffle,
   Sparkles,
@@ -27,6 +26,7 @@ import BookQuickView from '@/features/book/components/BookQuickView.vue'
 import AddToCollectionSheet from '@/features/collection/components/AddToCollectionSheet.vue'
 import DeleteBookDialog from '@/features/book/components/DeleteBookDialog.vue'
 import { useDashboardScroller } from '../composables/useDashboardScroller'
+import { useDashboardSharedConfig } from '../composables/useDashboardSharedConfig'
 import { removeDashboardShelfBook } from '../api/dashboard-featured-shelf.api'
 import { useDeleteBook } from '@/features/book/composables/useDeleteBook'
 import { MIN_SHELF_ROWS, chunkIntoBands, effectiveShelfRows, shelfBookLimit } from '../lib/shelf-rows'
@@ -62,6 +62,15 @@ const { books, loading, error, refresh } = useDashboardScroller(
   shelfBookLimit(props.limit ?? DEFAULT_BOOKS_PER_ROW, shelfRows.value),
   props.smartScopeId,
   props.featuredShelfId,
+)
+
+// Books copied onto this shelf from the settings sheet reload it in place.
+const { shelfBookRevision } = useDashboardSharedConfig()
+watch(
+  () => shelfBookRevision(props.featuredShelfId),
+  () => {
+    void refresh()
+  },
 )
 
 const showSaintCard = computed(() => Boolean(props.featured && (props.featured.saintName || props.featured.imageUrl)))
@@ -129,7 +138,7 @@ const typeIcon = computed(() => {
 
 const SKELETON_COUNT = 8
 const skeletons = Array.from({ length: SKELETON_COUNT })
-const skeletonWidthClass = computed(() => (showSaintCard.value ? 'w-[200px]' : 'w-[120px]'))
+const SKELETON_WIDTH_CLASS = 'w-[120px]'
 
 const quickViewBookId = ref<number | null>(null)
 const quickViewOpen = ref(false)
@@ -172,7 +181,7 @@ function handleBookAction(book: BookCard, action: ShelfBookAction) {
     class="group/scroller flex h-full flex-col overflow-hidden rounded-2xl border border-primary/40 bg-card/30 shadow-sm backdrop-blur-[1px]"
   >
     <!-- Header -->
-    <div class="mb-2 flex items-center justify-between px-5 pt-4">
+    <div class="flex items-center justify-between border-b border-border bg-[var(--shelf-header)] px-5 py-3">
       <div class="flex items-center gap-2.5">
         <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50">
           <component :is="typeIcon" :size="14" class="text-foreground" />
@@ -205,17 +214,6 @@ function handleBookAction(book: BookCard, action: ShelfBookAction) {
           </button>
         </div>
         <button
-          v-if="curatableShelfId !== null"
-          type="button"
-          data-testid="shelf-add-books"
-          class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          :aria-label="t('dashboard.shelfBooks.addToShelf')"
-          :title="t('dashboard.shelfBooks.addToShelf')"
-          @click="handleOpenPicker"
-        >
-          <Plus :size="16" />
-        </button>
-        <button
           v-if="!loading && !error && books.length > 0"
           type="button"
           data-testid="shelf-view-all"
@@ -236,14 +234,16 @@ function handleBookAction(book: BookCard, action: ShelfBookAction) {
       :show-saint-card="showSaintCard"
       saint-action
       :removable="curatableShelfId !== null"
+      :addable="curatableShelfId !== null && !loading && !error"
       @action="handleBookAction"
       @view-all="handleViewAll"
       @remove="handleRemoveFromShelf"
+      @add="handleOpenPicker"
     >
       <template #empty>
         <!-- Skeleton -->
         <div v-if="loading" class="flex gap-3 overflow-hidden pb-3">
-          <div v-for="(_, n) in skeletons" :key="n" class="shrink-0" :class="skeletonWidthClass">
+          <div v-for="(_, n) in skeletons" :key="n" class="shrink-0" :class="SKELETON_WIDTH_CLASS">
             <div class="w-full animate-pulse rounded-lg bg-muted" style="aspect-ratio: 2/3" />
           </div>
         </div>
@@ -254,19 +254,6 @@ function handleBookAction(book: BookCard, action: ShelfBookAction) {
           <button class="flex items-center gap-1.5 text-xs text-primary hover:underline" @click="refresh">
             <RefreshCw :size="12" />
             {{ t('dashboard.common.retry') }}
-          </button>
-        </div>
-
-        <!-- Empty: an administrator can fill the shelf from here -->
-        <div v-else-if="curatableShelfId !== null" class="flex w-full animate-fade-up flex-col items-center justify-center gap-3 py-10 text-center">
-          <button
-            type="button"
-            data-testid="shelf-empty-add"
-            class="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/40 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            @click="handleOpenPicker"
-          >
-            <Plus :size="16" aria-hidden="true" />
-            {{ t('dashboard.shelfBooks.addToShelf') }}
           </button>
         </div>
 

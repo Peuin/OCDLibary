@@ -51,11 +51,10 @@ export function useTableCellHelpers(
 
   function getPinnedCellBackground(book: BookCard, colId: string, isSelected: boolean): string {
     const isMandatory = isMandatoryFieldEmpty(book, colId)
-    if (isSelected && isMandatory)
-      return 'color-mix(in oklch, color-mix(in oklch, oklch(0.769 0.188 70.08) 5%, var(--background)) 92%, var(--primary))'
-    if (isSelected) return 'color-mix(in oklch, var(--primary) 8%, var(--background))'
-    if (isMandatory) return 'color-mix(in oklch, oklch(0.769 0.188 70.08) 5%, var(--background))'
-    return 'var(--background)'
+    if (isSelected && isMandatory) return 'color-mix(in oklch, color-mix(in oklch, oklch(0.769 0.188 70.08) 5%, var(--card)) 92%, var(--primary))'
+    if (isSelected) return 'color-mix(in oklch, var(--primary) 8%, var(--card))'
+    if (isMandatory) return 'color-mix(in oklch, oklch(0.769 0.188 70.08) 5%, var(--card))'
+    return 'var(--card)'
   }
 
   return { getCellValue, isCellLocked, isBookAudio, isCellReadOnly, isMandatoryFieldEmpty, isBookFileMissing, getPinnedCellBackground }

@@ -23,6 +23,7 @@ import {
   registerConditionalHsts,
   registerDeclaredBodyLimits,
   registerEmptyBodyContentTypeParser,
+  applyDefaultApiCacheControl,
   shouldInjectEmptyJsonBody,
   shouldServeSpaFallback,
 } from './common/utils/bootstrap.utils';
@@ -59,6 +60,7 @@ async function bootstrap() {
     if (id !== undefined && id !== null) {
       void reply.header('X-Request-Id', String(id));
     }
+    applyDefaultApiCacheControl(reply.request, reply);
     done();
   });
 
