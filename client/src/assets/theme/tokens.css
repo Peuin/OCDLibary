@@ -66,14 +66,6 @@
   --saint-glow: oklch(0.71 0.15 60);
   --saint-caption: oklch(0.89 0.05 75);
   --saint-action: oklch(0.5 0.1 55);
-  /* Dashboard bookshelf: a warm oak chamber under a cream header, books standing on a walnut ledge. */
-  --shelf-header: oklch(0.97 0.012 80);
-  --shelf-chamber-top: oklch(0.76 0.05 70);
-  --shelf-chamber-bottom: oklch(0.63 0.065 65);
-  --shelf-ledge-top: oklch(0.71 0.055 65);
-  --shelf-ledge-mid: oklch(0.59 0.07 62);
-  --shelf-ledge-bottom: oklch(0.49 0.07 60);
-  --shelf-ledge-edge: oklch(0.36 0.06 55);
 
   /* Android brand green, darkened in light mode so the mark still separates from the sidebar. */
   --android-highlight: oklch(0.72 0.16 154);
@@ -347,13 +339,6 @@
   --saint-glow: oklch(0.66 0.14 60);
   --saint-caption: oklch(0.86 0.05 75);
   --saint-action: oklch(0.46 0.09 55);
-  --shelf-header: oklch(0.26 0.02 60);
-  --shelf-chamber-top: oklch(0.36 0.04 60);
-  --shelf-chamber-bottom: oklch(0.28 0.04 55);
-  --shelf-ledge-top: oklch(0.45 0.05 60);
-  --shelf-ledge-mid: oklch(0.38 0.05 58);
-  --shelf-ledge-bottom: oklch(0.31 0.05 55);
-  --shelf-ledge-edge: oklch(0.22 0.04 50);
 
   --android-highlight: oklch(0.82 0.17 154);
 

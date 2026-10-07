@@ -79,11 +79,7 @@ defineExpose({ scrollBy })
 </script>
 
 <template>
-  <div
-    ref="scrollEl"
-    class="shelf-chamber overflow-x-auto px-5 pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-    :class="showSaintCard ? 'pt-6' : 'pt-1'"
-  >
+  <div ref="scrollEl" class="overflow-x-auto px-5 pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" :class="showSaintCard ? 'pt-6' : 'pt-1'">
     <!-- With a saint card the rows sit in a second column, so every row and its ledge starts at the
          same point, right of the card. The card itself has no ledge and stays put while books scroll. -->
     <div class="w-max min-w-full" :class="showSaintCard ? 'grid grid-cols-[auto_1fr] gap-x-4 gap-y-6' : 'flex flex-col gap-6'">
@@ -170,18 +166,17 @@ defineExpose({ scrollBy })
   bottom: 0;
   height: 0.875rem;
   border-radius: 3px;
-  background: linear-gradient(180deg, var(--shelf-ledge-top) 0, var(--shelf-ledge-mid) 45%, var(--shelf-ledge-bottom) 100%);
-  border-top: 1px solid color-mix(in oklch, white 35%, transparent);
-  border-bottom: 2px solid var(--shelf-ledge-edge);
-  box-shadow: 0 8px 18px -6px color-mix(in oklch, var(--shelf-ledge-edge) 45%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--primary) 32%, var(--card)) 0,
+    color-mix(in oklch, var(--primary) 32%, var(--card)) 0.3rem,
+    color-mix(in oklch, var(--primary) 52%, var(--card)) 0.3rem,
+    color-mix(in oklch, var(--primary) 44%, var(--card)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklch, var(--card) 70%, transparent),
+    0 10px 14px -10px color-mix(in oklch, var(--primary) 70%, transparent);
   pointer-events: none;
-}
-
-/* The chamber the books stand in: oak darkening toward the floor, shaded under the header. */
-.shelf-chamber {
-  background:
-    linear-gradient(180deg, color-mix(in oklch, var(--shelf-ledge-edge) 30%, transparent) 0, transparent 1.5rem),
-    linear-gradient(180deg, var(--shelf-chamber-top) 0%, var(--shelf-chamber-bottom) 100%);
 }
 
 .shelf-band > * {

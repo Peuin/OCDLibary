@@ -181,7 +181,7 @@ function handleBookAction(book: BookCard, action: ShelfBookAction) {
     class="group/scroller flex h-full flex-col overflow-hidden rounded-2xl border border-primary/40 bg-card/30 shadow-sm backdrop-blur-[1px]"
   >
     <!-- Header -->
-    <div class="flex items-center justify-between border-b border-border bg-[var(--shelf-header)] px-5 py-3">
+    <div class="mb-2 flex items-center justify-between px-5 pt-4">
       <div class="flex items-center gap-2.5">
         <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50">
           <component :is="typeIcon" :size="14" class="text-foreground" />
