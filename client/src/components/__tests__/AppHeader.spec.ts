@@ -282,11 +282,16 @@ describe('AppHeader global search', () => {
     }
   })
 
-  it('keeps Statistics and Achievements in the header', () => {
+  it('moves Statistics, Achievements, Language and Settings into the avatar menu', () => {
     const wrapper = mountHeader()
+    const text = wrapper.text()
 
-    expect(wrapper.text()).toContain('Statistics')
-    expect(wrapper.text()).toContain('Achievements')
+    expect(wrapper.find('[data-tour="statistics-btn"]').exists()).toBe(false)
+    expect(wrapper.find('[data-tour="settings-nav"]').exists()).toBe(false)
+    for (const label of ['Statistics', 'Achievements', 'Settings']) {
+      expect(text).toContain(label)
+    }
+    expect(wrapper.find('[data-testid="language-control"]').exists()).toBe(true)
   })
 
   it('hides achievement entry points when achievements are disabled', () => {
@@ -297,52 +302,30 @@ describe('AppHeader global search', () => {
     expect(wrapper.text()).not.toContain('Achievements')
   })
 
-  it('navigates to statistics from the mobile overflow menu', async () => {
+  it('navigates to statistics from the avatar menu', async () => {
     const wrapper = mountHeader()
     const statisticsItem = wrapper.findAllComponents({ name: 'DropdownMenuItem' }).find((item) => item.text().trim() === 'Statistics')
 
     expect(statisticsItem).toBeDefined()
-    if (!statisticsItem) throw new Error('Expected statistics overflow menu item')
+    if (!statisticsItem) throw new Error('Expected statistics avatar menu item')
 
     await statisticsItem.trigger('click')
 
     expect(mocks.routerPush).toHaveBeenCalledWith({ name: 'statistics', query: { tab: 'library' } })
   })
 
-  it('places the desktop language control immediately before settings', () => {
-    const wrapper = mountHeader()
-    const buttons = wrapper.findAll('button')
-    const languageIndex = buttons.findIndex((button) => button.attributes('data-testid') === 'language-control')
-    const settingsIndex = buttons.findIndex((button) => button.attributes('data-tour') === 'settings-nav')
-
-    expect(languageIndex).toBeGreaterThanOrEqual(0)
-    expect(settingsIndex).toBeGreaterThanOrEqual(0)
-    if (languageIndex < 0 || settingsIndex < 0) throw new Error('Expected desktop language and settings controls')
-
-    const desktopGroup = buttons[settingsIndex]?.element.closest('[class~="md:flex"]')
-    if (!desktopGroup) throw new Error('Expected desktop control group')
-    const controls = Array.from(desktopGroup.children)
-    const languageControlIndex = controls.findIndex((control) => control.contains(buttons[languageIndex]?.element ?? null))
-    const settingsControlIndex = controls.findIndex((control) => control.contains(buttons[settingsIndex]?.element ?? null))
-
-    expect(settingsControlIndex).toBe(languageControlIndex + 1)
-  })
-
-  it('labels the icon-only desktop destinations and preference controls', () => {
+  it('keeps upload and appearance as header controls', () => {
     const wrapper = mountHeader()
 
-    expect(wrapper.get('[data-tour="statistics-btn"]').attributes('aria-label')).toBe('Statistics')
-    expect(wrapper.get('[data-tour="documentation-link"]').attributes('aria-label')).toBe('Help')
     expect(wrapper.get('[data-tour="appearance-picker"]').attributes('aria-label')).toBe('Appearance')
-    expect(wrapper.get('[data-tour="settings-nav"]').attributes('aria-label')).toBe('Settings')
   })
 
-  it('opens settings from the mobile overflow menu', async () => {
+  it('opens settings from the avatar menu', async () => {
     const wrapper = mountHeader()
     const settingsItem = wrapper.findAllComponents({ name: 'DropdownMenuItem' }).find((item) => item.text().trim() === 'Settings')
 
     expect(settingsItem).toBeDefined()
-    if (!settingsItem) throw new Error('Expected settings overflow menu item')
+    if (!settingsItem) throw new Error('Expected settings avatar menu item')
 
     await settingsItem.trigger('click')
 

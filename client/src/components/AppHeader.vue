@@ -16,7 +16,8 @@ import {
   Headphones,
   Languages,
 } from '@lucide/vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useMediaQuery } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { SidebarTrigger } from '@/components/ui/sidebar'
@@ -58,7 +59,6 @@ import { hasReadAlong, isReadAlongFormat, READ_ALONG_FORMAT_COLOR, READ_ALONG_FO
 
 const { t } = useI18n()
 const router = useRouter()
-const route = useRoute()
 const { user, logout } = useAuth()
 const { open: openChangePassword } = useChangePasswordDialog()
 const { hasPermission, isDemoRestrictedAccount } = usePermissions()
@@ -80,17 +80,6 @@ const controlClass = computed(() => [
   iconRadiusClass.value,
 ])
 
-/** Same ghost geometry, plus the tinted active state the two destinations need. */
-function destinationClass(isActive: boolean) {
-  return [
-    'h-8 w-8 border transition-colors duration-150',
-    isActive ? 'border-primary bg-(--shell-accent-tint) text-primary' : 'border-(--shell-accent-line) text-foreground hover:bg-(--shell-accent-wash)',
-    iconRadiusClass.value,
-  ]
-}
-
-const isStatisticsActive = computed(() => route.name === 'statistics')
-const isAchievementsActive = computed(() => route.name === 'achievements')
 const achievementsEnabled = computed(() => user.value?.settings?.achievementPreferences?.enabled !== false)
 
 function navigateToStatistics() {
@@ -119,11 +108,10 @@ function navigateToSettings() {
 
 const appearanceSheetOpen = ref(false)
 const languageSheetOpen = ref(false)
-const languagePopoverOpen = ref(false)
+const isDesktop = useMediaQuery('(min-width: 768px)')
 
 async function selectLanguage(locale: Locale) {
   languageSheetOpen.value = false
-  languagePopoverOpen.value = false
 
   try {
     await localeStore.setLocale(locale)
@@ -633,76 +621,23 @@ function formatBadgeStyle(fmt: string, result?: GlobalSearchResult) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" class="w-44">
-            <DropdownMenuItem @click="navigateToStatistics">
-              <BarChart3 :size="15" class="mr-2 text-muted-foreground" />
-              {{ t('components.appHeader.statistics') }}
-            </DropdownMenuItem>
-            <DropdownMenuItem v-if="achievementsEnabled" @click="navigateToAchievements">
-              <Trophy :size="15" class="mr-2 text-muted-foreground" />
-              {{ t('components.appHeader.achievements') }}
-            </DropdownMenuItem>
             <DropdownMenuItem v-if="hasPermission('library_upload')" @click="uploadOpen = true">
               <Upload :size="15" class="mr-2 text-muted-foreground" />
               {{ t('components.appHeader.uploadBooks') }}
             </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
+            <DropdownMenuSeparator v-if="hasPermission('library_upload')" />
             <DropdownMenuItem @click="openAppearanceSheet">
               <Palette :size="15" class="mr-2 text-muted-foreground" />
               {{ t('components.appHeader.appearance') }}
             </DropdownMenuItem>
-
-            <DropdownMenuItem @click="openLanguageSheet">
-              <Languages :size="15" class="mr-2 text-muted-foreground" />
-              {{ t('settings.appearance.language.label') }}
-              <span class="ms-auto ps-3 text-xs text-muted-foreground">{{ currentLanguageLabel }}</span>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem @click="navigateToSettings">
-              <Settings :size="15" class="mr-2 text-muted-foreground" />
-              {{ t('components.appHeader.settings') }}
-            </DropdownMenuItem>
-
           </DropdownMenuContent>
         </DropdownMenu>
 
         <Separator orientation="vertical" class="hidden h-4 md:block" />
 
-        <!-- Group 1: Content (Notifications, Statistics, Achievements, Upload) -->
+        <!-- Group 1: Content (Notifications, Upload) -->
         <div class="hidden md:flex items-center gap-1.5">
           <NotificationSheet v-if="canAccessNotifications" :icon-radius-class="iconRadiusClass" />
-
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                data-tour="statistics-btn"
-                variant="ghost"
-                size="icon"
-                :class="destinationClass(isStatisticsActive)"
-                :aria-label="t('components.appHeader.statistics')"
-                @click="navigateToStatistics"
-              >
-                <BarChart3 :size="15" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{{ t('components.appHeader.statistics') }}</TooltipContent>
-          </Tooltip>
-
-          <Tooltip v-if="achievementsEnabled">
-            <TooltipTrigger as-child>
-              <Button
-                variant="ghost"
-                size="icon"
-                :class="destinationClass(isAchievementsActive)"
-                :aria-label="t('components.appHeader.achievements')"
-                @click="navigateToAchievements"
-              >
-                <Trophy :size="15" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{{ t('components.appHeader.achievements') }}</TooltipContent>
-          </Tooltip>
 
           <Tooltip v-if="hasPermission('library_upload')">
             <TooltipTrigger as-child>
@@ -721,7 +656,7 @@ function formatBadgeStyle(fmt: string, result?: GlobalSearchResult) {
           </Tooltip>
         </div>
 
-        <!-- Group 2: Preferences (Appearance, Language, Settings) -->
+        <!-- Group 2: Preferences (Appearance) -->
         <Separator orientation="vertical" class="hidden h-4 md:block" />
         <div class="hidden md:flex items-center gap-1.5">
           <Tooltip>
@@ -771,44 +706,6 @@ function formatBadgeStyle(fmt: string, result?: GlobalSearchResult) {
             </Popover>
             <TooltipContent>{{ t('components.appHeader.appearance') }}</TooltipContent>
           </Tooltip>
-
-          <Tooltip>
-            <Popover v-model:open="languagePopoverOpen">
-              <TooltipTrigger as-child>
-                <PopoverTrigger as-child>
-                  <Button
-                    data-testid="language-control"
-                    variant="ghost"
-                    size="icon"
-                    :class="controlClass"
-                    :aria-label="t('settings.appearance.language.label')"
-                  >
-                    <Languages :size="15" />
-                  </Button>
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <PopoverContent align="end" class="w-80 p-1">
-                <LanguagePicker :autofocus="languagePopoverOpen" class="max-h-[min(26rem,calc(100dvh-8rem))]" @select="selectLanguage" />
-              </PopoverContent>
-            </Popover>
-            <TooltipContent>{{ t('settings.appearance.language.label') }}</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button
-                data-tour="settings-nav"
-                variant="ghost"
-                size="icon"
-                :class="controlClass"
-                :aria-label="t('components.appHeader.settings')"
-                @click="navigateToSettings"
-              >
-                <Settings :size="15" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{{ t('components.appHeader.settings') }}</TooltipContent>
-          </Tooltip>
         </div>
 
         <!-- Group 3: Identity (Avatar) -->
@@ -824,7 +721,7 @@ function formatBadgeStyle(fmt: string, result?: GlobalSearchResult) {
               <UserAvatar :name="user.name" :avatar-url="user.avatarUrl ?? null" size-class="h-full w-full" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" class="w-48">
+          <DropdownMenuContent align="end" class="w-56">
             <DropdownMenuLabel class="font-normal">
               <div class="flex flex-col gap-0.5">
                 <span class="text-[13px] font-medium text-foreground">{{ user.name }}</span>
@@ -835,6 +732,24 @@ function formatBadgeStyle(fmt: string, result?: GlobalSearchResult) {
             <DropdownMenuItem @click="navigateToAccount">
               <User :size="13" class="mr-2 text-muted-foreground" />
               {{ t('components.appHeader.account') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="navigateToStatistics">
+              <BarChart3 :size="13" class="mr-2 text-muted-foreground" />
+              {{ t('components.appHeader.statistics') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem v-if="achievementsEnabled" @click="navigateToAchievements">
+              <Trophy :size="13" class="mr-2 text-muted-foreground" />
+              {{ t('components.appHeader.achievements') }}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem data-testid="language-control" @click="openLanguageSheet">
+              <Languages :size="13" class="mr-2 text-muted-foreground" />
+              {{ t('settings.appearance.language.label') }}
+              <span class="ms-auto ps-3 text-xs text-muted-foreground">{{ currentLanguageLabel }}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="navigateToSettings">
+              <Settings :size="13" class="mr-2 text-muted-foreground" />
+              {{ t('components.appHeader.settings') }}
             </DropdownMenuItem>
             <DropdownMenuSeparator v-if="canChangePassword" />
             <DropdownMenuItem v-if="canChangePassword" @click="openChangePassword()">
@@ -896,12 +811,12 @@ function formatBadgeStyle(fmt: string, result?: GlobalSearchResult) {
   </Sheet>
 
   <Sheet v-model:open="languageSheetOpen">
-    <SheetContent side="bottom" class="h-[85dvh] rounded-t-xl px-2 pb-2">
+    <SheetContent :side="isDesktop ? 'right' : 'bottom'" :class="isDesktop ? 'w-80 px-2 pb-2 sm:max-w-80' : 'h-[85dvh] rounded-t-xl px-2 pb-2'">
       <SheetHeader class="pb-1">
         <SheetTitle>{{ t('settings.appearance.language.label') }}</SheetTitle>
         <SheetDescription class="sr-only">{{ t('settings.appearance.language.description') }}</SheetDescription>
       </SheetHeader>
-      <LanguagePicker :autofocus="false" class="min-h-0 flex-1" @select="selectLanguage" />
+      <LanguagePicker :autofocus="isDesktop && languageSheetOpen" class="min-h-0 flex-1" @select="selectLanguage" />
     </SheetContent>
   </Sheet>
 </template>
