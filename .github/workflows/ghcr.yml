@@ -98,7 +98,9 @@ jobs:
             echo "::warning::CF_API_TOKEN / CF_ZONE_ID not set, skipping Cloudflare cache purge"
             exit 0
           fi
-          curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
+          resp=$(curl -sS -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
             -H "Authorization: Bearer $CF_API_TOKEN" \
             -H "Content-Type: application/json" \
-            --data '{"purge_everything":true}'
+            --data '{"purge_everything":true}')
+          echo "$resp"
+          echo "$resp" | jq -e '.success' >/dev/null
