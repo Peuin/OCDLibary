@@ -115,7 +115,7 @@ function itemCountText(item: EntityIndexItem): string {
 
 <template>
   <div class="flex h-full flex-col">
-    <div class="mb-3 flex flex-wrap items-center gap-2">
+    <div class="page-bar mb-3 flex min-h-12 flex-wrap items-center gap-2 px-4 py-2">
       <div class="flex min-w-0 flex-1 items-center gap-2">
         <AppIcon :icon="titleIcon" :fallback="fallbackIcon" :size="18" class="shrink-0 text-primary" />
         <h1 class="min-w-0 truncate text-lg font-semibold text-foreground">{{ title }}</h1>

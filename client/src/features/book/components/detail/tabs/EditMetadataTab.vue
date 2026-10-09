@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import {
   Check,
   ChevronDown,
+  Ellipsis,
   HardDriveDownload,
   HardDriveUpload,
   Loader2,
@@ -27,6 +28,7 @@ import type {
 } from '@bookorbit/types'
 import { BOOK_FILE_WRITE_FIELD_LABELS, FORMAT_TO_GROUP, isValidSeriesIndex, parseSeriesIndex } from '@bookorbit/types'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { api } from '@/lib/api'
 import { metadataScoreColor } from '@/lib/metadata-score-color'
 import ChipInput from '@/components/ui/ChipInput.vue'
@@ -648,6 +650,27 @@ const coverMutationPending = computed(() => Boolean(coverPanel.value?.busy))
 const formMutationPending = computed(() => autoFilling.value || loadingFromFile.value || coverMutationPending.value)
 const formDisabled = computed(() => saving.value || writingAndRenaming.value || formMutationPending.value)
 const submitDisabled = computed(() => formDisabled.value || !hasPendingChanges.value || hasInvalidSeriesIndex.value)
+
+const writeAndRenameDisabled = computed(() => writingAndRenaming.value || saving.value || fileWriteManualDisabledReasonLabel.value !== null)
+const lockAllDisabled = computed(() => formDisabled.value || updatingLocks.value || areAllLocked.value)
+const unlockAllDisabled = computed(() => formDisabled.value || updatingLocks.value || !hasLockedFields.value)
+
+const loadFromFileTooltip = computed(() => {
+  if (loadingFromFile.value) return t('common.loading')
+  if (!primaryFile.value) return t('book.detail.editMetadata.noPrimaryFile')
+  return t('book.detail.editMetadata.loadFromFileTooltip')
+})
+
+const autoFillTooltip = computed(() => {
+  if (autoFilling.value) return t('book.detail.editMetadata.fetchingMetadata')
+  if (areAllLocked.value) return t('book.detail.editMetadata.allFieldsLocked')
+  return t('book.detail.editMetadata.autoFillTooltip')
+})
+
+const TOOLBAR_BUTTON =
+  'flex h-9 flex-none items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40'
+const TOOLBAR_ICON_BUTTON =
+  'flex size-9 flex-none items-center justify-center rounded-lg border border-input bg-background transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40'
 let dismissTimer: ReturnType<typeof setTimeout> | null = null
 
 function pluralizeField(count: number): string {
@@ -842,17 +865,24 @@ function handleCoverChanged(source: 'extracted' | 'custom' | null) {
        container query on this element. `edit` sizes the page; `catalog` sizes the identifier list. -->
   <div class="@container/edit flex min-h-full min-w-0 flex-col">
     <div class="flex flex-1 flex-col gap-3">
-      <!-- Command strip -->
-      <div class="sticky top-0 z-30 -mx-4 flex flex-none items-center gap-2 bg-card/95 px-4 py-0.5 backdrop-blur-sm sm:mx-0 sm:px-0">
-        <div class="no-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+      <!-- Command strip. Wide: one row. Medium: status + commit on top, actions below. Narrow:
+           secondary actions collapse into the menu so status and Save never scroll away.
+           -top-4 cancels the scroller's top padding, which otherwise leaves a band of fields
+           showing above the stuck strip. -->
+      <div
+        class="sticky -top-4 z-30 flex flex-none flex-wrap items-center gap-x-2 gap-y-2 rounded-xl border border-border/60 bg-card/95 px-3 py-2 shadow-sm backdrop-blur-sm"
+      >
+        <div class="order-1 flex min-w-0 items-center gap-2">
           <div
             v-if="metadataScore !== null"
-            class="flex h-9 flex-none items-center gap-2 rounded-lg border border-border bg-card px-2.5 sm:h-8"
+            class="flex h-11 flex-none items-center gap-2 rounded-lg border border-border/60 bg-muted/60 px-2.5 @2xl/edit:h-9"
             :title="t('book.detail.editMetadata.scoreTooltip', { score: metadataScore })"
           >
-            <span class="text-[10px] font-bold tracking-[0.11em] text-muted-foreground uppercase">{{ t('book.detail.editMetadata.score') }}</span>
+            <span class="sr-only text-[10px] leading-normal font-bold tracking-[0.11em] text-muted-foreground uppercase @md/edit:not-sr-only">{{
+              t('book.detail.editMetadata.score')
+            }}</span>
             <span class="text-sm font-bold tabular-nums" :style="{ color: metadataScoreColour ?? undefined }">{{ metadataScore }}</span>
-            <span class="h-1 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+            <span class="hidden h-1 w-12 overflow-hidden rounded-full bg-muted @md/edit:block" aria-hidden="true">
               <span class="block h-full rounded-full" :style="{ width: `${metadataScore}%`, backgroundColor: metadataScoreColour ?? undefined }" />
             </span>
           </div>
@@ -860,145 +890,205 @@ function handleCoverChanged(source: 'extracted' | 'custom' | null) {
           <button
             v-if="emptyFields.length > 0"
             type="button"
-            class="flex h-9 flex-none items-center gap-1.5 rounded-lg border border-dashed border-amber-500/40 bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-600 transition-colors hover:bg-amber-500/15 sm:h-8 dark:text-amber-400"
+            class="flex h-11 flex-none items-center gap-1.5 rounded-lg border border-dashed border-warning/40 bg-warning/10 px-2.5 text-xs font-semibold text-warning transition-colors hover:bg-warning/15 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none @2xl/edit:h-9"
             :title="emptyFieldsTitle"
+            :aria-label="emptyFieldsTitle"
             @click="handleOpenSearch"
           >
             <TriangleAlert class="size-3.5 shrink-0" aria-hidden="true" />
             <span>{{ emptyFields.length }}</span>
             <span class="hidden @3xl/edit:inline">{{ t('book.detail.editMetadata.emptyFields', { count: emptyFields.length }) }}</span>
           </button>
+        </div>
 
-          <div class="flex-1" />
-
+        <div
+          class="order-3 hidden min-w-0 basis-full flex-wrap items-center gap-2 @2xl/edit:flex @5xl/edit:order-2 @5xl/edit:ml-auto @5xl/edit:basis-auto"
+        >
           <Tooltip>
             <TooltipTrigger as-child>
               <button
-                class="flex h-9 flex-none items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-sm transition-colors hover:bg-muted disabled:opacity-40 sm:h-8 sm:px-3"
+                type="button"
+                :class="TOOLBAR_BUTTON"
                 :disabled="formDisabled || loadingFromFile || !primaryFile"
                 :aria-label="t('book.detail.editMetadata.loadFromFile')"
                 @click="handleLoadFromFile"
               >
                 <Loader2 v-if="loadingFromFile" class="size-3.5 animate-spin" aria-hidden="true" />
                 <HardDriveUpload v-else class="size-3.5" aria-hidden="true" />
-                <span class="hidden @3xl/edit:inline">{{ t('book.detail.editMetadata.loadFromFile') }}</span>
+                <span class="@5xl/edit:hidden @7xl/edit:inline">{{ t('book.detail.editMetadata.loadFromFile') }}</span>
               </button>
             </TooltipTrigger>
-            <TooltipContent>{{
-              loadingFromFile
-                ? t('common.loading')
-                : !primaryFile
-                  ? t('book.detail.editMetadata.noPrimaryFile')
-                  : t('book.detail.editMetadata.loadFromFileTooltip')
-            }}</TooltipContent>
+            <TooltipContent>{{ loadFromFileTooltip }}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger as-child>
               <button
-                class="flex h-9 flex-none items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-sm transition-colors hover:bg-muted disabled:opacity-40 sm:h-8 sm:px-3"
-                :disabled="writingAndRenaming || saving || fileWriteManualDisabledReasonLabel !== null"
-                :aria-label="t('book.detail.editMetadata.writeAndRename')"
-                @click="handleWriteAndRename"
+                type="button"
+                :class="[TOOLBAR_BUTTON, 'border-primary/30 bg-primary/10 font-medium text-primary hover:bg-primary/15']"
+                :disabled="formDisabled"
+                :aria-label="t('common.search')"
+                @click="handleOpenSearch"
               >
-                <Loader2 v-if="writingAndRenaming" class="size-3.5 animate-spin" aria-hidden="true" />
-                <HardDriveDownload v-else class="size-3.5" aria-hidden="true" />
-                <span class="hidden @3xl/edit:inline">{{ t('book.detail.editMetadata.writeAndRename') }}</span>
+                <Sparkles class="size-3.5" aria-hidden="true" />
+                <span>{{ t('common.search') }}</span>
               </button>
             </TooltipTrigger>
-            <TooltipContent>{{ fileWriteManualTooltip }}</TooltipContent>
+            <TooltipContent>{{ t('common.search') }}</TooltipContent>
           </Tooltip>
-
-          <div class="mx-0.5 h-4 w-px flex-none bg-border" aria-hidden="true" />
-
-          <button
-            class="search-online-btn flex h-9 flex-none items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-primary-foreground transition-all sm:h-8"
-            :disabled="formDisabled"
-            :aria-label="t('common.search')"
-            @click="handleOpenSearch"
-          >
-            <Sparkles class="size-3.5" aria-hidden="true" />
-            <span class="hidden @3xl/edit:inline">{{ t('common.search') }}</span>
-          </button>
 
           <Tooltip>
             <TooltipTrigger as-child>
               <button
-                class="auto-fill-btn flex h-9 flex-none items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-all disabled:opacity-40 sm:h-8 sm:px-3"
+                type="button"
+                :class="[TOOLBAR_BUTTON, 'font-medium']"
                 :disabled="formDisabled || autoFilling || areAllLocked"
                 :aria-label="t('book.detail.editMetadata.autoFill')"
                 @click="autoFill"
               >
                 <Loader2 v-if="autoFilling" class="size-3.5 animate-spin" aria-hidden="true" />
-                <RefreshCw v-else class="size-3.5" aria-hidden="true" />
-                <span class="hidden @3xl/edit:inline">{{ t('book.detail.editMetadata.autoFill') }}</span>
+                <RefreshCw v-else class="size-3.5 text-warning" aria-hidden="true" />
+                <span>{{ t('book.detail.editMetadata.autoFill') }}</span>
               </button>
             </TooltipTrigger>
-            <TooltipContent>{{
-              autoFilling
-                ? t('book.detail.editMetadata.fetchingMetadata')
-                : areAllLocked
-                  ? t('book.detail.editMetadata.allFieldsLocked')
-                  : t('book.detail.editMetadata.autoFillTooltip')
-            }}</TooltipContent>
+            <TooltipContent>{{ autoFillTooltip }}</TooltipContent>
           </Tooltip>
 
-          <div class="mx-0.5 h-4 w-px flex-none bg-border" aria-hidden="true" />
+          <div class="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
 
           <Tooltip>
             <TooltipTrigger as-child>
               <button
-                class="flex size-9 flex-none items-center justify-center rounded-lg border border-input bg-background transition-colors hover:bg-muted disabled:opacity-40 sm:size-8"
-                :disabled="formDisabled || updatingLocks || areAllLocked"
-                :aria-label="t('book.detail.editMetadata.lockAll')"
-                @click="handleLockAll"
+                type="button"
+                :class="[TOOLBAR_BUTTON, 'border-transparent bg-transparent text-muted-foreground hover:text-foreground']"
+                :disabled="writeAndRenameDisabled"
+                :aria-label="t('book.detail.editMetadata.writeAndRename')"
+                @click="handleWriteAndRename"
               >
-                <Lock class="size-3.5" aria-hidden="true" />
+                <Loader2 v-if="writingAndRenaming" class="size-3.5 animate-spin" aria-hidden="true" />
+                <HardDriveDownload v-else class="size-3.5" aria-hidden="true" />
+                <span class="@5xl/edit:hidden @7xl/edit:inline">{{ t('book.detail.editMetadata.writeAndRename') }}</span>
               </button>
             </TooltipTrigger>
-            <TooltipContent>{{ t('book.detail.editMetadata.lockAllTooltip') }}</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <button
-                class="flex size-9 flex-none items-center justify-center rounded-lg border border-input bg-background transition-colors hover:bg-muted disabled:opacity-40 sm:size-8"
-                :disabled="formDisabled || updatingLocks || !hasLockedFields"
-                :aria-label="t('book.detail.editMetadata.unlockAll')"
-                @click="handleUnlockAll"
-              >
-                <LockOpen class="size-3.5" aria-hidden="true" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{{ t('book.detail.editMetadata.unlockAllTooltip') }}</TooltipContent>
+            <TooltipContent>{{ fileWriteManualTooltip }}</TooltipContent>
           </Tooltip>
         </div>
 
-        <div class="mx-0.5 h-4 w-px flex-none bg-border" aria-hidden="true" />
+        <div class="order-2 ml-auto flex flex-none items-center gap-1.5 @5xl/edit:order-3 @5xl/edit:ml-0">
+          <div class="hidden items-center gap-1.5 @2xl/edit:flex">
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <button
+                  type="button"
+                  :class="TOOLBAR_ICON_BUTTON"
+                  :disabled="lockAllDisabled"
+                  :aria-label="t('book.detail.editMetadata.lockAll')"
+                  @click="handleLockAll"
+                >
+                  <Lock class="size-3.5" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{{ t('book.detail.editMetadata.lockAllTooltip') }}</TooltipContent>
+            </Tooltip>
 
-        <button
-          class="flex size-11 flex-none items-center justify-center rounded-lg border border-input bg-background transition-colors hover:bg-muted disabled:opacity-40 sm:size-8"
-          :title="t('common.cancel')"
-          :aria-label="t('common.cancel')"
-          :disabled="submitDisabled"
-          @click="handleReset"
-        >
-          <X class="size-3.5" aria-hidden="true" />
-        </button>
-        <button
-          class="inline-grid h-11 flex-none grid-cols-1 grid-rows-1 items-center justify-items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40 sm:h-8"
-          :disabled="submitDisabled"
-          @click="submit"
-        >
-          <span class="col-start-1 row-start-1 flex items-center gap-1.5" :class="{ invisible: saving }">
-            <Check class="size-3.5" aria-hidden="true" />
-            {{ t('common.save') }}
-          </span>
-          <span class="col-start-1 row-start-1 flex items-center gap-1.5" :class="{ invisible: !saving }">
-            <Loader2 class="size-3.5 animate-spin" aria-hidden="true" />
-            {{ t('book.detail.editMetadata.saving') }}
-          </span>
-        </button>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <button
+                  type="button"
+                  :class="TOOLBAR_ICON_BUTTON"
+                  :disabled="unlockAllDisabled"
+                  :aria-label="t('book.detail.editMetadata.unlockAll')"
+                  @click="handleUnlockAll"
+                >
+                  <LockOpen class="size-3.5" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{{ t('book.detail.editMetadata.unlockAllTooltip') }}</TooltipContent>
+            </Tooltip>
+
+            <div class="mx-0.5 h-5 w-px flex-none bg-border" aria-hidden="true" />
+
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <button type="button" :class="TOOLBAR_ICON_BUTTON" :aria-label="t('common.cancel')" :disabled="submitDisabled" @click="handleReset">
+                  <X class="size-3.5" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{{ t('common.cancel') }}</TooltipContent>
+            </Tooltip>
+          </div>
+
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <span class="inline-flex shrink-0 @2xl/edit:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <button
+                      type="button"
+                      class="flex size-11 flex-none items-center justify-center rounded-lg border border-input bg-background transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      :aria-label="t('book.detail.editMetadata.moreActions')"
+                    >
+                      <Ellipsis class="size-4" aria-hidden="true" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" class="w-60">
+                    <DropdownMenuItem class="min-h-11" :disabled="formDisabled || loadingFromFile || !primaryFile" @select="handleLoadFromFile">
+                      <Loader2 v-if="loadingFromFile" class="animate-spin" aria-hidden="true" />
+                      <HardDriveUpload v-else aria-hidden="true" />
+                      {{ t('book.detail.editMetadata.loadFromFile') }}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem class="min-h-11" :disabled="formDisabled" @select="handleOpenSearch">
+                      <Sparkles aria-hidden="true" />
+                      {{ t('common.search') }}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem class="min-h-11" :disabled="formDisabled || autoFilling || areAllLocked" @select="autoFill">
+                      <Loader2 v-if="autoFilling" class="animate-spin" aria-hidden="true" />
+                      <RefreshCw v-else aria-hidden="true" />
+                      {{ t('book.detail.editMetadata.autoFill') }}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem class="min-h-11" :disabled="writeAndRenameDisabled" @select="handleWriteAndRename">
+                      <Loader2 v-if="writingAndRenaming" class="animate-spin" aria-hidden="true" />
+                      <HardDriveDownload v-else aria-hidden="true" />
+                      {{ t('book.detail.editMetadata.writeAndRename') }}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem class="min-h-11" :disabled="lockAllDisabled" @select="handleLockAll">
+                      <Lock aria-hidden="true" />
+                      {{ t('book.detail.editMetadata.lockAll') }}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem class="min-h-11" :disabled="unlockAllDisabled" @select="handleUnlockAll">
+                      <LockOpen aria-hidden="true" />
+                      {{ t('book.detail.editMetadata.unlockAll') }}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem class="min-h-11" :disabled="submitDisabled" @select="handleReset">
+                      <X aria-hidden="true" />
+                      {{ t('common.cancel') }}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{{ t('book.detail.editMetadata.moreActions') }}</TooltipContent>
+          </Tooltip>
+
+          <button
+            type="button"
+            class="inline-grid h-11 flex-none grid-cols-1 grid-rows-1 items-center justify-items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card focus-visible:outline-none disabled:opacity-40 disabled:shadow-none @2xl/edit:h-9"
+            :disabled="submitDisabled"
+            @click="submit"
+          >
+            <span class="col-start-1 row-start-1 flex items-center gap-1.5" :class="{ invisible: saving }">
+              <Check class="size-4" aria-hidden="true" />
+              {{ t('common.save') }}
+            </span>
+            <span class="col-start-1 row-start-1 flex items-center gap-1.5" :class="{ invisible: !saving }">
+              <Loader2 class="size-4 animate-spin" aria-hidden="true" />
+              <span class="sr-only @md/edit:not-sr-only">{{ t('book.detail.editMetadata.saving') }}</span>
+            </span>
+          </button>
+        </div>
       </div>
 
       <p v-if="combinedError" role="alert" class="flex-none text-sm text-destructive">{{ combinedError }}</p>
@@ -1569,26 +1659,3 @@ function handleCoverChanged(source: 'extracted' | 'custom' | null) {
 
   <MetadataSearchDrawer v-if="searchOpen" :book="props.book" :locked-fields="lockedFields" @close="handleCloseSearch" @apply="handleApply" />
 </template>
-
-<style scoped>
-.auto-fill-btn {
-  background: linear-gradient(to right, oklch(0.75 0.16 75), oklch(0.72 0.18 55));
-  color: oklch(0.2 0.04 75);
-  box-shadow: 0 2px 8px oklch(0.72 0.18 55 / 0.35);
-}
-.auto-fill-btn:hover {
-  filter: brightness(1.08);
-  box-shadow: 0 2px 12px oklch(0.72 0.18 55 / 0.5);
-}
-.auto-fill-btn:disabled {
-  filter: none;
-}
-.search-online-btn {
-  background: linear-gradient(to right, var(--primary), color-mix(in oklch, var(--primary) 65%, oklch(0.7 0.25 280)));
-  box-shadow: 0 2px 10px color-mix(in oklch, var(--primary) 45%, transparent);
-}
-.search-online-btn:hover {
-  filter: brightness(1.1);
-  box-shadow: 0 2px 14px color-mix(in oklch, var(--primary) 60%, transparent);
-}
-</style>

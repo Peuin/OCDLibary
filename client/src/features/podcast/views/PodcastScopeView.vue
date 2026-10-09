@@ -136,7 +136,7 @@ function isActive(episode: PodcastEpisodeListItem): boolean {
     <EntityNotFound v-if="notFound" :entity="t('views.podcastScope.entity')" />
 
     <div v-else class="flex h-full flex-col gap-3">
-      <header class="flex min-w-0 items-center gap-2 px-2">
+      <header class="page-bar flex min-h-12 min-w-0 items-center gap-2 px-4 py-2">
         <AppIcon :icon="scope?.icon || 'Aperture'" fallback="Aperture" :size="18" class="shrink-0 text-primary" />
         <h1 class="min-w-0 truncate text-lg font-semibold text-foreground">{{ scope?.name ?? t('views.podcastScope.title') }}</h1>
         <span class="shrink-0 text-sm text-muted-foreground tabular-nums">{{ formatNumber(total) }}</span>

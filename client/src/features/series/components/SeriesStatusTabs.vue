@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { SeriesFacets } from '@bookorbit/types'
 import { formatNumber } from '@/i18n/formatters'
@@ -28,19 +28,45 @@ const tabs = computed(() => [
   { value: 'has_gaps' as const, label: t('series.status.gaps'), count: props.facets.hasGaps },
 ])
 
+const strip = ref<HTMLElement | null>(null)
+const overflowing = ref(false)
+let stripObserver: ResizeObserver | null = null
+
+function measureOverflow() {
+  const el = strip.value
+  overflowing.value = !!el && el.scrollWidth > el.clientWidth + 1
+}
+
 function handleSelect(value: CompletionStatus | null) {
   emit('select', value)
 }
+
+onMounted(() => {
+  if (!strip.value) return
+  stripObserver = new ResizeObserver(measureOverflow)
+  stripObserver.observe(strip.value)
+  for (const child of strip.value.children) stripObserver.observe(child)
+})
+
+onBeforeUnmount(() => {
+  stripObserver?.disconnect()
+})
 </script>
 
 <template>
-  <div class="status-tabs flex max-w-full gap-0.5 rounded-lg bg-muted p-0.5" role="tablist" :aria-label="t('series.status.label')">
+  <div
+    ref="strip"
+    class="status-tabs flex min-w-0 max-w-full gap-1 overflow-x-auto rounded-xl bg-muted p-1"
+    :data-overflowing="overflowing || undefined"
+    role="tablist"
+    :aria-label="t('series.status.label')"
+  >
     <button
       v-for="tab in tabs"
       :key="tab.value ?? 'all'"
       type="button"
       role="tab"
-      class="flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[13px] transition-colors"
+      class="flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[13px] leading-normal transition-colors"
       :class="props.status === tab.value ? 'bg-background font-semibold text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
       :aria-selected="props.status === tab.value"
       @click="handleSelect(tab.value)"
@@ -57,17 +83,18 @@ function handleSelect(value: CompletionStatus | null) {
 </template>
 
 <style scoped>
-/* Below the point where all five fit, the strip scrolls rather than wrapping into the layout. */
-@media (max-width: 639px) {
-  .status-tabs {
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent 100%);
-  }
+/* Scrolls whenever its container is narrower than the five tabs, not only on small viewports:
+   the strip shares a wrapping row with filters, so the space it gets depends on more than the window. */
+.status-tabs {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
 
-  .status-tabs::-webkit-scrollbar {
-    display: none;
-  }
+.status-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.status-tabs[data-overflowing] {
+  mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent 100%);
 }
 </style>

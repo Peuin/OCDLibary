@@ -835,7 +835,7 @@ function beginCreate() {
                 <Tablet :size="16" />
               </div>
               <div class="flex-1 min-w-0">
-                <p class="settings-label truncate leading-none mb-1.5">
+                <p class="settings-label truncate leading-normal mb-1.5">
                   {{ device.name }}
                 </p>
                 <p class="settings-hint leading-none">

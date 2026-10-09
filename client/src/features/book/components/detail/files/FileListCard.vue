@@ -143,7 +143,7 @@ function handleCopyPath(file: TreeFile) {
       <h3 class="text-[10.5px] font-bold uppercase tracking-[0.09em] leading-none text-muted-foreground">
         {{ t('book.detail.files.filesHeading') }}
       </h3>
-      <span class="ml-auto truncate text-[11.5px] leading-none text-muted-foreground">{{ t('book.detail.files.groupedByReader') }}</span>
+      <span class="ml-auto truncate text-[11.5px] leading-normal text-muted-foreground">{{ t('book.detail.files.groupedByReader') }}</span>
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1">
@@ -151,7 +151,7 @@ function handleCopyPath(file: TreeFile) {
         <div class="flex h-[30px] items-center gap-2.5 px-2.5">
           <span class="size-[7px] shrink-0 rounded-full" :style="{ backgroundColor: GROUP_ACCENT[group.key] }" aria-hidden="true" />
           <h4 class="shrink-0 text-[11px] font-bold uppercase tracking-[0.07em] leading-none">{{ group.label }}</h4>
-          <span v-if="group.stem" class="min-w-0 truncate font-mono text-[11px] leading-none text-muted-foreground" :title="group.stem"
+          <span v-if="group.stem" class="min-w-0 truncate font-mono text-[11px] leading-normal text-muted-foreground" :title="group.stem"
             >{{ group.stem }}&hellip;</span
           >
           <span class="ml-auto shrink-0 whitespace-nowrap text-[11.5px] leading-none text-muted-foreground tabular-nums">

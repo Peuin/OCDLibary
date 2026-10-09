@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref, onUnmounted } from 'vue'
+import { computed, inject, ref, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Image, ImagePlus, Link, Lock, LockOpen, Loader2, RotateCcw, Search, Upload, X } from '@lucide/vue'
 import type { BookDetail } from '@bookorbit/types'
@@ -51,6 +51,23 @@ const isPrimaryAudio = computed(() => primaryFile.value?.format != null && FORMA
 const hasCover = computed(() => !!props.book.coverSource || !!previewSrc.value)
 const coverSeed = computed(() => props.book.title ?? props.book.folderPath.split('/').pop() ?? String(props.book.id))
 const coverAspectRatio = inject(COVER_ASPECT_RATIO_KEY, ref(DEFAULT_COVER_ASPECT_RATIO))
+
+// The editor shows one cover, so it frames the art at its own ratio rather than the library grid
+// ratio. Letterboxing a cover you are about to replace hides how it will actually crop elsewhere.
+const MIN_COVER_RATIO = 0.5
+const MAX_COVER_RATIO = 1.5
+const loadedCoverRatio = ref<number | null>(null)
+const frameAspectRatio = computed(() => (hasCover.value && loadedCoverRatio.value ? loadedCoverRatio.value : coverAspectRatio.value))
+
+watch(activeSrc, () => {
+  loadedCoverRatio.value = null
+})
+
+function handleCoverLoad(event: Event) {
+  const img = event.target as HTMLImageElement
+  if (!img.naturalWidth || !img.naturalHeight) return
+  loadedCoverRatio.value = Math.min(MAX_COVER_RATIO, Math.max(MIN_COVER_RATIO, img.naturalWidth / img.naturalHeight))
+}
 
 function cancelPending() {
   clearPending()
@@ -151,12 +168,19 @@ onUnmounted(() => clearTimeout(debounceTimer))
     <div class="flex min-w-0 flex-col gap-3 @min-[21rem]/cover-editor:flex-row @min-[21rem]/cover-editor:gap-5">
       <!-- Cover image -->
       <div
-        class="relative w-full shrink-0 overflow-hidden rounded-lg bg-muted shadow-md @min-[21rem]/cover-editor:w-36"
+        class="group relative w-full shrink-0 overflow-hidden rounded-xl bg-muted shadow-md ring-1 ring-border/60 @min-[21rem]/cover-editor:w-36"
         :class="hasCover ? 'cursor-zoom-in' : ''"
-        :style="{ aspectRatio: coverAspectRatio }"
+        :style="{ aspectRatio: frameAspectRatio }"
         @click="handleCoverClick"
       >
-        <img v-if="hasCover" :src="activeSrc" :alt="book.title ?? ''" class="h-full w-full object-contain" @error="hideOnError" />
+        <img
+          v-if="hasCover"
+          :src="activeSrc"
+          :alt="book.title ?? ''"
+          class="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+          @load="handleCoverLoad"
+          @error="hideOnError"
+        />
         <BookCoverPlaceholder
           v-else
           :title="book.title"
@@ -166,13 +190,14 @@ onUnmounted(() => clearTimeout(debounceTimer))
         />
         <button
           type="button"
-          class="absolute right-2 bottom-2 flex size-7 items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition-colors"
+          class="absolute right-2 bottom-2 flex size-8 items-center justify-center rounded-lg border shadow-sm backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           :class="
             props.locked
               ? 'border-primary/40 bg-primary/25 text-primary hover:bg-primary/35'
               : 'border-input bg-background/90 text-muted-foreground hover:bg-muted hover:text-foreground'
           "
           :title="props.locked ? t('book.detail.coverEditor.unlockCover') : t('book.detail.coverEditor.lockCover')"
+          :aria-label="props.locked ? t('book.detail.coverEditor.unlockCover') : t('book.detail.coverEditor.lockCover')"
           :disabled="props.disabled"
           @click.stop="handleToggleLock"
         >
@@ -201,9 +226,9 @@ onUnmounted(() => clearTimeout(debounceTimer))
       <!-- Controls follow the space assigned by the parent layout, not the viewport width. -->
       <div class="flex min-w-0 flex-1 flex-col gap-3">
         <!-- Mode toggle -->
-        <div class="flex gap-1 p-0.5 rounded-lg bg-muted">
+        <div class="flex gap-1 rounded-xl bg-muted p-1">
           <button
-            class="flex flex-1 items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             :class="mode === 'file' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
             :disabled="controlsDisabled"
             @click="handleSelectFileMode"
@@ -212,7 +237,7 @@ onUnmounted(() => clearTimeout(debounceTimer))
             {{ t('book.detail.coverEditor.fileTab') }}
           </button>
           <button
-            class="flex flex-1 items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             :class="mode === 'url' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
             :disabled="controlsDisabled"
             @click="handleSelectUrlMode"

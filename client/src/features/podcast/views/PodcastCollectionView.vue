@@ -83,7 +83,7 @@ async function removeShow(show: PodcastListItem): Promise<void> {
     <EntityNotFound v-if="notFound" :entity="t('views.podcastCollection.entity')" />
 
     <div v-else class="flex h-full flex-col gap-3">
-      <header class="flex min-w-0 items-center gap-2 px-2">
+      <header class="page-bar flex min-h-12 min-w-0 items-center gap-2 px-4 py-2">
         <AppIcon :icon="collection?.icon || 'FolderOpen'" fallback="FolderOpen" :size="18" class="shrink-0 text-primary" />
         <h1 class="min-w-0 truncate text-lg font-semibold text-foreground">{{ collection?.name ?? t('views.podcastCollection.title') }}</h1>
         <span class="shrink-0 text-sm text-muted-foreground tabular-nums">{{ formatNumber(total) }}</span>

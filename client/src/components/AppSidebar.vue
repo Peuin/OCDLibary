@@ -305,7 +305,7 @@ onUnmounted(() => stopLibraryUploadListener())
         @click="handleNavigate"
       >
         <AppLogo class="h-9 w-9 shrink-0" />
-        <span class="truncate font-serif text-[18px] font-semibold leading-none text-primary group-data-[collapsible=icon]:hidden">
+        <span class="truncate font-serif text-[18px] font-semibold leading-normal text-primary group-data-[collapsible=icon]:hidden">
           {{ t('common.appName') }}
         </span>
       </RouterLink>

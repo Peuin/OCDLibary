@@ -5771,6 +5771,7 @@
         "lockAllTooltip": "Lock all fields",
         "unlockAll": "Unlock all",
         "unlockAllTooltip": "Unlock all fields",
+        "moreActions": "More actions",
         "saving": "Saving...",
         "fileWriteBackDetails": "File write-back details",
         "fileWriteBack": "File write-back",
@@ -10989,6 +10990,7 @@
     "bookDock": {
       "title": "Book Dock",
       "newFilesDetected": "New files detected",
+      "paused": "Paused",
       "reconnecting": "Reconnecting",
       "rescanFailed": "Rescan failed",
       "totalInDock": "{size} in Book Dock",

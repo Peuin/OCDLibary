@@ -474,7 +474,7 @@ defineOptions({ name: 'SeriesView' })
       </template>
     </ViewHeader>
 
-    <div v-if="mobileSearchOpen" class="mb-2 flex h-9 items-center gap-2 rounded-lg border border-input bg-background px-2.5 lg:hidden">
+    <div v-if="mobileSearchOpen" class="mb-3 flex h-9 items-center gap-2 rounded-xl border border-input bg-background px-3 lg:hidden">
       <Search :size="14" class="shrink-0 text-muted-foreground" />
       <input
         ref="mobileSearchInput"
@@ -495,15 +495,15 @@ defineOptions({ name: 'SeriesView' })
       </button>
     </div>
 
-    <main ref="mainRef" class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-2">
-      <div ref="pageHeader" class="sticky top-0 z-40 mb-3.5 border-b border-border bg-background/85 pb-2.5 pt-0.5 backdrop-blur-md">
-        <div class="flex min-w-0 flex-wrap items-center gap-2">
+    <main ref="mainRef" class="-ml-1 min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-1 pl-1 pr-2">
+      <div ref="pageHeader" class="page-bar sticky top-0 z-40 mb-4 px-3 py-2.5">
+        <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
           <SeriesStatusTabs :status="completionStatus" :facets="facets" @select="setCompletionStatus" />
 
-          <div v-if="filtersOpen" class="flex min-w-0 flex-wrap items-center gap-1.5 rounded-lg bg-muted p-0.5">
+          <div v-if="filtersOpen" class="flex min-w-0 flex-wrap items-center gap-1 rounded-xl bg-muted p-1">
             <button
               type="button"
-              class="h-7 shrink-0 rounded-md px-2.5 text-xs transition-colors"
+              class="h-7 shrink-0 rounded-lg px-2.5 text-xs transition-colors"
               :class="libraryId === null ? 'bg-background font-semibold text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
               @click="setLibraryId(null)"
             >
@@ -513,7 +513,7 @@ defineOptions({ name: 'SeriesView' })
               v-for="library in libraries"
               :key="library.id"
               type="button"
-              class="h-7 min-w-0 shrink-0 rounded-md px-2.5 text-xs transition-colors"
+              class="h-7 min-w-0 shrink-0 rounded-lg px-2.5 text-xs transition-colors"
               :class="
                 libraryId === library.id ? 'bg-background font-semibold text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               "
@@ -533,8 +533,7 @@ defineOptions({ name: 'SeriesView' })
             <span class="hidden sm:inline">{{ t('series.list.clear') }}</span>
           </button>
 
-          <div class="flex-1" />
-          <SeriesVolumeLegend class="hidden xl:flex" />
+          <SeriesVolumeLegend class="ml-auto hidden min-w-0 xl:flex" />
         </div>
       </div>
 

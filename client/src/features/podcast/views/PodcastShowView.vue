@@ -542,7 +542,7 @@ function toggleDescription() {
           <h2 class="text-lg font-bold tracking-tight">{{ t('podcast.library.episodes') }}</h2>
           <Badge variant="secondary" class="text-[11px] tabular-nums">{{ formatNumber(totalEpisodes) }}</Badge>
         </div>
-        <form class="sticky top-0 z-10 -mx-2 mb-4 bg-background/70 px-2 py-2 backdrop-blur-md" role="search" @submit.prevent="applyEpisodeFilters">
+        <form class="page-bar sticky top-0 z-10 mb-4 px-3 py-2" role="search" @submit.prevent="applyEpisodeFilters">
           <div class="flex items-center gap-2">
             <div class="relative min-w-0 flex-1 sm:max-w-xl">
               <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

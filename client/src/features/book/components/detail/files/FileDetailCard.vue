@@ -153,7 +153,7 @@ function handleCopyPath() {
           class="flex h-[31px] items-center justify-between gap-3.5 border-b border-border last:border-b-0"
         >
           <dt class="shrink-0 text-[12.5px] leading-none text-muted-foreground">{{ spec.label }}</dt>
-          <dd class="truncate text-[13px] font-medium leading-none tabular-nums">{{ spec.value }}</dd>
+          <dd class="truncate text-[13px] font-medium leading-normal tabular-nums">{{ spec.value }}</dd>
         </div>
       </dl>
 

@@ -54,7 +54,7 @@ function handleEditMetadata() {
       <h3 class="text-[10.5px] font-bold uppercase leading-none tracking-[0.09em] text-muted-foreground">
         {{ t('book.detail.files.writeBackShort') }}
       </h3>
-      <span class="ml-auto truncate text-[11.5px] leading-none text-muted-foreground">{{ runLabel }}</span>
+      <span class="ml-auto truncate text-[11.5px] leading-normal text-muted-foreground">{{ runLabel }}</span>
     </div>
 
     <div class="flex flex-col gap-2.5 px-3.5 py-3.5">

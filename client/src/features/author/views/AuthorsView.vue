@@ -573,7 +573,7 @@ defineOptions({ name: 'AuthorsView' })
            cannot be selected - in the one mode whose whole purpose is selecting. -->
       <main
         ref="mainRef"
-        class="@container/page min-h-0 flex-1 overflow-y-auto transition-[padding] duration-200"
+        class="@container/page -ml-1 min-h-0 flex-1 overflow-y-auto pl-1 transition-[padding] duration-200"
         :class="[rail.gutterReserved.value ? 'pr-10' : 'pr-2', selectionMode ? 'pb-24' : '']"
         @scroll.passive="handleScroll"
       >
@@ -619,11 +619,11 @@ defineOptions({ name: 'AuthorsView' })
             <h2
               v-if="sectioned && section.letter"
               :data-letter="section.letter"
-              class="sticky top-0 z-10 mb-1 flex h-7 items-center gap-2.5 bg-linear-to-b from-background from-65% to-transparent"
+              class="sticky top-0 z-10 mb-1 flex min-h-9 items-center gap-2.5 rounded-xl border border-border/60 bg-card/95 px-3 py-2 shadow-xs backdrop-blur-md"
             >
-              <span class="min-w-[0.9rem] font-serif text-[15px] font-semibold leading-none text-foreground">{{ section.letter }}</span>
-              <span class="h-px flex-1 bg-border" />
-              <span class="text-[10.5px] font-bold tabular-nums text-muted-foreground">{{ formatNumber(section.authors.length) }}</span>
+              <span class="min-w-[0.9rem] shrink-0 font-serif text-[15px] font-semibold leading-normal text-foreground">{{ section.letter }}</span>
+              <span class="h-px min-w-0 flex-1 bg-border" />
+              <span class="shrink-0 text-[10.5px] font-bold tabular-nums text-muted-foreground">{{ formatNumber(section.authors.length) }}</span>
             </h2>
 
             <div v-if="isGallery" class="grid" :style="gridStyle">

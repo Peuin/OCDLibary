@@ -8,7 +8,7 @@ const KEYS = ['read', 'reading', 'unread', 'missing'] as const
 
 <template>
   <ul class="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12px] text-muted-foreground">
-    <li v-for="key in KEYS" :key="key" class="flex items-center gap-1.5">
+    <li v-for="key in KEYS" :key="key" class="flex items-center gap-1.5 whitespace-nowrap leading-normal">
       <span class="legend-swatch h-2 w-3 shrink-0 rounded-[2px]" :data-status="key" aria-hidden="true" />
       {{ t(`series.legend.${key}`) }}
     </li>

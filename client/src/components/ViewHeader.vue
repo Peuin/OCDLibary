@@ -145,10 +145,10 @@ function handleMobileSearchOpenUpdate(value: boolean) {
 </script>
 
 <template>
-  <div class="sticky top-0 z-20 mb-2 mt-2 flex h-10 shrink-0 items-center gap-2 bg-background/80 p-2 backdrop-blur-md transition-all duration-300">
+  <div class="page-bar sticky top-0 z-20 mb-3 mt-2 flex min-h-12 shrink-0 items-center gap-2 px-4 py-2 transition-all duration-300">
     <div class="flex min-w-0 flex-1 items-center gap-2">
       <AppIcon v-if="icon" :icon="icon" :fallback="fallbackIcon" :size="16" class="shrink-0 text-muted-foreground" />
-      <span class="truncate text-[16px] font-bold tracking-tight text-foreground">{{ title }}</span>
+      <span class="truncate text-[16px] font-bold leading-normal tracking-tight text-foreground">{{ title }}</span>
       <span class="shrink-0 tabular-nums text-[12px] font-semibold text-primary">({{ formatNumber(total) }})</span>
     </div>
 

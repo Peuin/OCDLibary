@@ -428,6 +428,11 @@
   .settings-control[aria-invalid='true'] {
     @apply border-destructive focus-visible:border-destructive focus-visible:ring-destructive/40;
   }
+  /* Page-level strips (title bars, filter rows) float over the shell's background image. One
+     surface definition keeps every list page's bars at the same radius, edge and depth. */
+  .page-bar {
+    @apply rounded-2xl border border-border/60 bg-card/95 shadow-sm backdrop-blur-md;
+  }
   .settings-card {
     @apply overflow-hidden rounded-lg border border-border bg-card divide-y divide-border shadow-xs;
   }

@@ -5771,6 +5771,7 @@
         "lockAllTooltip": "Khóa mọi trường",
         "unlockAll": "Mở khóa tất cả",
         "unlockAllTooltip": "Mở khóa mọi trường",
+        "moreActions": "Thao tác",
         "saving": "Đang lưu...",
         "fileWriteBackDetails": "Chi tiết ghi ngược vào tệp",
         "fileWriteBack": "Ghi ngược vào tệp",
@@ -10989,6 +10990,7 @@
     "bookDock": {
       "title": "Book Dock",
       "newFilesDetected": "Phát hiện tệp mới",
+      "paused": "Đã tạm dừng",
       "reconnecting": "Đang kết nối lại",
       "rescanFailed": "Quét lại thất bại",
       "totalInDock": "{size} trong Book Dock",

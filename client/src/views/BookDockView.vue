@@ -483,8 +483,8 @@ onUnmounted(() => {
   <div>
     <main class="flex-1" @dragover="onDragOver" @dragenter="onDragEnter" @dragleave="onDragLeave" @drop="onDrop">
       <input ref="emptyUploadInput" type="file" :accept="SUPPORTED_FORMATS_ACCEPT" multiple class="hidden" @change="onEmptyUploadSelected" />
-      <div class="flex w-full max-w-420 flex-col gap-4 py-4">
-        <div class="flex items-center gap-2.5">
+      <div class="flex w-full max-w-420 flex-col gap-3 py-4">
+        <div class="page-bar flex min-h-12 flex-wrap items-center gap-2.5 px-4 py-2">
           <div class="flex items-center justify-center size-9 rounded-lg bg-primary/10">
             <PackageOpen class="size-4.5 text-primary" />
           </div>
@@ -497,15 +497,15 @@ onUnmounted(() => {
           </span>
           <span
             v-if="summary.paused"
-            class="ml-2 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-medium"
+            class="ml-2 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-warning/15 text-warning text-xs font-medium"
           >
             <span class="size-1.5 rounded-full bg-current" />
-            Paused
+            {{ t('views.bookDock.paused') }}
           </span>
           <Transition name="fade">
             <span
               v-if="newFilesDetected"
-              class="ml-2 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-xs font-medium"
+              class="ml-2 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-success/15 text-success text-xs font-medium"
             >
               <span class="size-1.5 rounded-full bg-current animate-pulse" />
               {{ t('views.bookDock.newFilesDetected') }}
@@ -514,7 +514,7 @@ onUnmounted(() => {
           <Transition name="fade">
             <span
               v-if="applyFetchedResult"
-              class="ml-2 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-medium"
+              class="ml-2 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-warning/15 text-warning text-xs font-medium"
             >
               <CheckCircle2 class="size-3.5" />
               {{ applyFetchedResultMessage(applyFetchedResult) }}
@@ -541,7 +541,7 @@ onUnmounted(() => {
           <Transition name="fade">
             <span
               v-if="rescanFailed"
-              class="ml-2 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 text-xs font-medium"
+              class="ml-2 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-destructive/15 text-destructive text-xs font-medium"
             >
               <AlertCircle class="size-3.5" />
               {{ t('views.bookDock.rescanFailed') }}
@@ -550,7 +550,7 @@ onUnmounted(() => {
           <Transition name="fade">
             <span
               v-if="processingStateFailed"
-              class="ml-2 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 text-xs font-medium"
+              class="ml-2 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-destructive/15 text-destructive text-xs font-medium"
             >
               <AlertCircle class="size-3.5" />
               {{ t('bookDock.layout.pauseUpdateFailed') }}

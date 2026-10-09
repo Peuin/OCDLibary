@@ -488,7 +488,7 @@ function goToNextPage() {
 
 <template>
   <div class="mx-auto flex w-full max-w-420 flex-col py-4">
-    <header class="mb-4">
+    <header class="page-bar mb-3 px-4 py-3">
       <div class="flex items-center gap-2.5">
         <div class="flex size-9 items-center justify-center rounded-lg bg-primary/10">
           <BookPlus class="size-4.5 text-primary" aria-hidden="true" />
@@ -506,7 +506,7 @@ function goToNextPage() {
     <NoRequestSourcesNotice v-if="noSourcesEnabled" :nothing-configured="noSourcesConfigured" class="mb-4" />
 
     <!-- Underline tabs with a roving tabindex, matching the only other tablist in the app. -->
-    <div role="tablist" :aria-label="t('bookRequests.title')" class="mb-4 flex gap-1 border-b border-border">
+    <div role="tablist" :aria-label="t('bookRequests.title')" class="page-bar no-scrollbar mb-4 flex gap-1 overflow-x-auto px-2">
       <button
         v-for="tab in availableTabs"
         :id="`requests-tab-${tab}`"
@@ -516,7 +516,7 @@ function goToNextPage() {
         :aria-selected="activeTab === tab"
         :aria-controls="`requests-panel-${tab}`"
         :tabindex="activeTab === tab ? 0 : -1"
-        class="-mb-px shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none"
+        class="shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset motion-reduce:transition-none"
         :class="activeTab === tab ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
         @click="selectTab(tab)"
       >

@@ -47,8 +47,8 @@ function clearSearch() {
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center gap-2">
-    <div class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-0.5">
+  <div class="page-bar flex flex-wrap items-center gap-2 px-3 py-2">
+    <div class="no-scrollbar flex min-w-0 flex-1 gap-1.5 overflow-x-auto p-0.5">
       <button
         v-for="chip in chips"
         :key="chip.view"

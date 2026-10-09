@@ -127,7 +127,7 @@ onUnmounted(() => {
 
 <template>
   <div class="w-full max-w-6xl px-4 py-6">
-    <header class="mb-5 flex items-center gap-3">
+    <header class="page-bar mb-5 flex items-center gap-3 px-4 py-3">
       <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
         <Sparkles :size="20" />
       </span>
@@ -139,7 +139,7 @@ onUnmounted(() => {
 
     <div class="lg:flex lg:gap-6">
       <nav v-if="!loading && !error && filtered.length" class="hidden w-48 shrink-0 lg:order-last lg:block">
-        <div class="sticky top-2 space-y-1">
+        <div class="page-bar sticky top-2 space-y-1 p-2">
           <p class="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{{ t('whatsNew.versions') }}</p>
           <a
             v-for="release in filtered"

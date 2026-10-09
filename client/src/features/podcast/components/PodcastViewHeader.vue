@@ -105,11 +105,11 @@ function selectView(view: string) {
 </script>
 
 <template>
-  <div class="sticky top-0 z-20 mb-2 mt-2 shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md">
-    <div class="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-2 px-2 py-2">
+  <div class="page-bar sticky top-0 z-20 mb-3 mt-2 shrink-0">
+    <div class="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2">
       <div class="flex min-w-0 flex-1 items-center gap-2.5">
         <AppIcon v-if="icon" :icon="icon" fallback="Radio" :size="26" class="shrink-0 text-primary" />
-        <h1 class="min-w-0 truncate font-serif text-2xl font-semibold leading-tight tracking-tight text-foreground">{{ title }}</h1>
+        <h1 class="min-w-0 truncate font-serif text-2xl font-semibold leading-normal tracking-tight text-foreground">{{ title }}</h1>
         <RefreshCw v-if="refreshing" class="size-3.5 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none" aria-hidden="true" />
         <span v-if="refreshing" class="sr-only" role="status">{{ t('podcast.library.loading') }}</span>
       </div>
