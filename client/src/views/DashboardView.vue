@@ -169,9 +169,3 @@ onUnmounted(() => {
     <DashboardSettingsSheet v-model:open="settingsOpen" @saved="handleDashboardSettingsSaved" @shared-changed="refreshSharedConfig" />
   </div>
 </template>
-
-<style scoped>
-:global(.pattern-carmel:has(#dashboard-main)::before) {
-  background-position: center min(0px, calc((100vh - max(100vh, 56.25vw)) / 2 + clamp(3rem, 10vh, 7rem))) !important;
-}
-</style>
