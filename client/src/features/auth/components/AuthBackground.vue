@@ -12,7 +12,7 @@ const srcset = `${authBackgroundSmallUrl} 960w, ${authBackgroundUrl} 1792w`
       :srcset="srcset"
       sizes="100vw"
       alt=""
-      class="h-full w-full object-cover object-[28%_center]"
+      class="auth-artwork h-full w-full object-cover"
       fetchpriority="high"
       decoding="async"
     />
@@ -22,6 +22,11 @@ const srcset = `${authBackgroundSmallUrl} 960w, ${authBackgroundUrl} 1792w`
 </template>
 
 <style scoped>
+/* Same vertical offset as the app-wide Carmel backdrop (main.css), so the cross is never cropped. */
+.auth-artwork {
+  object-position: 28% var(--carmel-artwork-y);
+}
+
 .auth-scrim {
   background: linear-gradient(
     90deg,

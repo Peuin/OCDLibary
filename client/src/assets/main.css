@@ -187,13 +187,26 @@
   background-size: 100% 4px;
 }
 
+/*
+ * The Carmel artwork is 16:9 and keeps its cross near the top edge. When the viewport is
+ * wider than 16:9 (laptops once browser chrome eats some height), cover-scaling overflows
+ * vertically and a centred image crops the cross. Shift the image down by a bounded amount,
+ * but never past its top edge, so no blank band appears. Taller viewports (16:9, tablets,
+ * phones) resolve to 0, i.e. the image is pinned to the top and fills the height.
+ */
+:root {
+  --carmel-artwork-y: min(0px, calc((100vh - max(100vh, 56.25vw)) / 2 + clamp(3rem, 10vh, 7rem)));
+}
+
 .pattern-carmel::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: url('./backgrounds/carmel-light.jpg') center / cover no-repeat;
+  background: url('./backgrounds/carmel-light.jpg') no-repeat;
+  background-size: cover;
+  background-position: center var(--carmel-artwork-y);
 }
 
 .dark .pattern-carmel::before {
