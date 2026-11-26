@@ -2,22 +2,46 @@ import { ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUserForm } from '../composables/useUserForm'
 
-const { apiMock } = vi.hoisted(() => ({ apiMock: vi.fn() }))
+const { apiMock } = vi.hoisted(() => ({
+  apiMock: vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(),
+}))
 vi.mock('@/lib/api', () => ({ api: apiMock }))
 
 beforeEach(() => apiMock.mockReset())
 
 describe('admin-created password accounts', () => {
-  it.each(['', 'Short1', 'lowercase123', 'UPPERCASE123', 'NoDigitsHere', 'Aa1' + 'x'.repeat(1022)])(
-    'rejects invalid password %s',
-    async (password) => {
-      const form = useUserForm(ref(null), ref([]))
-      form.username.value = 'reader'
-      form.password.value = password
-      expect(await form.save()).toEqual({ ok: false, section: 'profile' })
-      expect(apiMock).not.toHaveBeenCalled()
-    },
-  )
+  it.each([
+    '',
+    'Short1',
+    'lowercase123',
+    'UPPERCASE123',
+    'NoDigitsHere',
+    'Aa1' + 'x'.repeat(1022),
+    'ValidPass1\n',
+    'ValidPass1\r',
+    'Valid\nPass1',
+    'Valid\r\nPass1',
+  ])('rejects invalid password %j', async (password) => {
+    const form = useUserForm(ref(null), ref([]))
+    form.username.value = 'reader'
+    form.password.value = password
+    expect(await form.save()).toEqual({ ok: false, section: 'profile' })
+    expect(apiMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    'ValidPass1',
+    'Aa1!' + 'x'.repeat(4),
+    'Aa1' + 'x'.repeat(1021),
+    'P@ssw0rd!#$%',
+  ])('accepts valid password %j matching backend policy', async (password) => {
+    apiMock.mockResolvedValueOnce({ ok: true, json: async () => ({ id: 42 }) } as Response)
+    const form = useUserForm(ref(null), ref([]))
+    form.username.value = 'reader'
+    form.password.value = password
+    expect(await form.save()).toEqual({ ok: true })
+    expect(apiMock).toHaveBeenCalledTimes(1)
+  })
 
   it.each([true, false, 'network'])('clears password after submission outcome %s', async (outcome) => {
     if (outcome === 'network') apiMock.mockRejectedValueOnce(new Error('Offline'))
