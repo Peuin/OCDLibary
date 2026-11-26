@@ -42,7 +42,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  saved: [resetUrl?: string]
+  saved: []
   requestSuperuserChange: [isSuperuser: boolean]
   delete: []
 }>()
@@ -52,6 +52,7 @@ const { t } = useI18n()
 const {
   name,
   username,
+  password,
   email,
   active,
   isSharedAccount,
@@ -185,6 +186,7 @@ const libraryReach = computed(() => {
 
 const errorMessage = computed(() => {
   if (error.value) return error.value
+  if (errorKey.value === 'passwordInvalid') return t('auth.fields.passwordHint')
   if (!errorKey.value) return null
   return t(`adminFeature.userForm.errors.${errorKey.value}`)
 })
@@ -248,7 +250,7 @@ async function handleSubmit() {
     if (result.section) activeSection.value = result.section
     return
   }
-  emit('saved', result.resetUrl)
+  emit('saved')
 }
 </script>
 
@@ -366,7 +368,8 @@ async function handleSubmit() {
                   id="user-form-name"
                   v-model="name"
                   type="text"
-                  required
+                  :required="isEdit || isSharedAccount"
+                  :placeholder="!isEdit && !isSharedAccount ? username : undefined"
                   class="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
@@ -385,19 +388,34 @@ async function handleSubmit() {
               </div>
             </div>
 
+            <div v-if="!isEdit && !isSharedAccount" class="space-y-1.5">
+              <label for="user-form-password" class="settings-label block">{{ t('auth.fields.password') }}</label>
+              <input
+                id="user-form-password"
+                v-model="password"
+                type="password"
+                autocomplete="new-password"
+                required
+                minlength="8"
+                maxlength="1024"
+                aria-describedby="user-form-password-hint"
+                class="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+              <p id="user-form-password-hint" class="settings-hint">{{ t('auth.fields.passwordHint') }}</p>
+            </div>
+
             <div class="space-y-1.5">
               <label for="user-form-email" class="settings-label block">
                 {{ t('adminFeature.userForm.email') }}
-                <span v-if="isSharedAccount && !isEdit" class="font-normal text-muted-foreground">{{ t('adminFeature.userForm.optional') }}</span>
+                <span v-if="!isEdit" class="font-normal text-muted-foreground">{{ t('adminFeature.userForm.optional') }}</span>
               </label>
               <input
                 id="user-form-email"
                 v-model="email"
                 type="email"
-                :required="!isEdit && !isSharedAccount"
                 class="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
-              <p class="settings-hint">{{ t('adminFeature.userForm.emailHint') }}</p>
+              <p v-if="isEdit || isSharedAccount" class="settings-hint">{{ t('adminFeature.userForm.emailHint') }}</p>
             </div>
 
             <div v-if="isEdit">

@@ -316,9 +316,8 @@ async function confirmDeleteUser() {
   }
 }
 
-async function onSaved(newResetUrl?: string) {
+async function onSaved() {
   drawerOpen.value = false
-  if (newResetUrl) resetUrl.value = newResetUrl
   await reload()
 }
 

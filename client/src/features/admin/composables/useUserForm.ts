@@ -1,5 +1,5 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import { PERMISSION_REQUIRES, type AuthUser, type Permission } from '@bookorbit/types'
+import { PERMISSION_REQUIRES, type AuthUser, type CreateUserRequest, type Permission } from '@bookorbit/types'
 import { api } from '@/lib/api'
 import { grantingPermissions, isRestrictionPermission, presetPermissions, type PermissionPreset } from '../lib/permission-presets'
 
@@ -21,8 +21,6 @@ export interface NamedItem {
 
 export interface UserFormSaveResult {
   ok: boolean
-  /** Present when creating a password account, so the caller can offer the one-time link. */
-  resetUrl?: string
   /** The section holding the field a failed save complained about. */
   section?: UserFormSection
 }
@@ -42,6 +40,7 @@ export type RestrictionState = 'none' | 'content' | 'demo' | 'both'
 export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds: Ref<number[] | undefined>) {
   const name = ref('')
   const username = ref('')
+  const password = ref('')
   const email = ref('')
   const active = ref(true)
   const isSharedAccount = ref(false)
@@ -170,6 +169,7 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
     const target = user.value
     name.value = target?.name ?? ''
     username.value = target?.username ?? ''
+    password.value = ''
     email.value = target?.email ?? ''
     active.value = target?.active ?? true
     isSharedAccount.value = target?.provisioningMethod === 'shared'
@@ -231,9 +231,11 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
   }
 
   function validate(): UserFormSaveResult | null {
-    if (!name.value.trim()) return fail('nameRequired', 'profile')
+    if ((isEdit.value || isSharedAccount.value) && !name.value.trim()) return fail('nameRequired', 'profile')
     if (!isEdit.value && !username.value.trim()) return fail('usernameRequired', 'profile')
-    if (!isEdit.value && !isSharedAccount.value && !email.value.trim()) return fail('emailRequired', 'profile')
+    if (!isEdit.value && !isSharedAccount.value && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[\s\S]{8,1024}$/.test(password.value)) {
+      return fail('passwordInvalid', 'profile')
+    }
     return null
   }
 
@@ -282,8 +284,8 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
   async function createNew(): Promise<UserFormSaveResult> {
     const trimmedEmail = email.value.trim()
     const payload = {
-      name: name.value,
-      username: username.value,
+      name: name.value.trim() || username.value.trim(),
+      username: username.value.trim(),
       email: trimmedEmail || undefined,
       permissionNames: [...selectedPermissionNames.value],
       libraryIds: [...selectedLibraryIds.value],
@@ -299,14 +301,19 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
       return { ok: true }
     }
 
+    const request: CreateUserRequest = {
+      ...payload,
+      password: password.value,
+      email: trimmedEmail || null,
+      permissionNames: [...selectedPermissionNames.value] as Permission[],
+    }
     const res = await api('/api/v1/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload, email: trimmedEmail }),
+      body: JSON.stringify(request),
     })
     if (!res.ok) return fail('createUser', 'profile', await readMessage(res))
-    const data = await res.json()
-    return { ok: true, resetUrl: data.resetUrl }
+    return { ok: true }
   }
 
   async function save(): Promise<UserFormSaveResult> {
@@ -323,6 +330,7 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
       if (result.ok) snapshot.value = currentSnapshot()
       return result
     } finally {
+      password.value = ''
       loading.value = false
     }
   }
@@ -339,6 +347,7 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
   return {
     name,
     username,
+    password,
     email,
     active,
     isSharedAccount,

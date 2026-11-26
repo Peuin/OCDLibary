@@ -260,7 +260,7 @@ describe('UserFormDrawer saving', () => {
     expect(wrapper.emitted('saved')).toBeUndefined()
   })
 
-  it('blocks a create with no name and lands back on the field', async () => {
+  it('blocks a create with no username and lands back on the field', async () => {
     const wrapper = await mountDrawer({ user: null })
     await openSection(wrapper, 'Permissions')
 
@@ -268,27 +268,36 @@ describe('UserFormDrawer saving', () => {
     await save?.trigger('click')
     await flushPromises()
 
-    expect(wrapper.find('[role="alert"]').text()).toBe('Full name is required')
+    expect(wrapper.find('[role="alert"]').text()).toBe('Username is required')
     expect(wrapper.text()).toContain('Full name')
     expect(apiMock).not.toHaveBeenCalled()
   })
 
-  it('creates a password account and hands back its reset link', async () => {
+  it('creates a password account without email or name and clears the password', async () => {
     apiMock.mockImplementation(async (input: string) => {
-      if (input === '/api/v1/users') return jsonResponse({ resetUrl: 'https://example.test/reset/abc' })
+      if (input === '/api/v1/users') return jsonResponse({ id: 8, username: 'grace', name: 'grace' })
       return jsonResponse({})
     })
 
     const wrapper = await mountDrawer({ user: null })
-    await wrapper.find('#user-form-name').setValue('Grace Hopper')
     await wrapper.find('#user-form-username').setValue('grace')
-    await wrapper.find('#user-form-email').setValue('grace@example.com')
+    await wrapper.find('#user-form-password').setValue('SecureTest123')
 
     const save = wrapper.findAll('button').find((button) => button.text() === 'Save')
     await save?.trigger('click')
     await flushPromises()
 
-    expect(wrapper.emitted('saved')?.[0]).toEqual(['https://example.test/reset/abc'])
+    expect(wrapper.emitted('saved')?.[0]).toEqual([])
+    const call = apiMock.mock.calls.find(([url]) => url === '/api/v1/users')
+    expect(JSON.parse(call?.[1]?.body as string)).toEqual({
+      username: 'grace',
+      name: 'grace',
+      email: null,
+      password: 'SecureTest123',
+      permissionNames: [],
+      libraryIds: [],
+    })
+    expect((wrapper.find('#user-form-password').element as HTMLInputElement).value).toBe('')
   })
 
   it('asks the page to delete rather than confirming inside the editor', async () => {
