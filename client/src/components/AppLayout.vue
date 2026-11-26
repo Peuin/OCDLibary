@@ -5,12 +5,7 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import AppSidebar from '@/components/AppSidebar.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import BookMetadataFetchWidget from '@/features/book-metadata-fetch/components/BookMetadataFetchWidget.vue'
-import { useThemeStore, BACKGROUND_OPTIONS } from '@/stores/theme'
-
 const route = useRoute()
-const themeStore = useThemeStore()
-
-const backgroundClass = computed(() => BACKGROUND_OPTIONS.find((b) => b.id === themeStore.background)?.cssClass ?? '')
 
 const BOOK_ROUTE_NAMES = new Set(['book-detail'])
 
@@ -50,7 +45,7 @@ const viewKey = computed(() => {
 </script>
 
 <template>
-  <SidebarProvider class="app-shell glow-wrapper min-h-svh" :class="backgroundClass">
+  <SidebarProvider class="app-shell glow-wrapper min-h-svh">
     <AppSidebar />
     <SidebarInset class="app-shell-inset flex flex-col h-svh overflow-hidden relative bg-transparent pb-(--shell-gap)">
       <!-- 1. Global App Header: Fixed at the top, independent of views -->

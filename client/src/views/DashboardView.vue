@@ -93,7 +93,7 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <main class="relative flex-none [body.pattern-carmel:has(&)::before]:bg-position-[center_calc(50%+clamp(3rem,10vh,7rem))]!">
+    <main id="dashboard-main" class="relative flex-none">
       <!-- Scrollers / Welcome -->
       <div class="space-y-5 pb-8 pt-4 sm:pr-2">
         <div v-if="libraryState === 'loading'" role="status" class="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
@@ -169,3 +169,9 @@ onUnmounted(() => {
     <DashboardSettingsSheet v-model:open="settingsOpen" @saved="handleDashboardSettingsSaved" @shared-changed="refreshSharedConfig" />
   </div>
 </template>
+
+<style scoped>
+:global(.pattern-carmel:has(#dashboard-main)::before) {
+  background-position: center min(0px, calc((100vh - max(100vh, 56.25vw)) / 2 + clamp(3rem, 10vh, 7rem))) !important;
+}
+</style>
