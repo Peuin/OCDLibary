@@ -93,7 +93,7 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <main class="relative flex-none">
+    <main class="relative flex-none [body.pattern-carmel:has(&)::before]:bg-position-[center_calc(50%+clamp(3rem,10vh,7rem))]!">
       <!-- Scrollers / Welcome -->
       <div class="space-y-5 pb-8 pt-4 sm:pr-2">
         <div v-if="libraryState === 'loading'" role="status" class="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">

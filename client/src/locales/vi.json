@@ -6984,7 +6984,7 @@
         "proposedChanges": "Thay đổi đề xuất",
         "noChanges": "Chưa lấy siêu dữ liệu",
         "editDetails": "Sửa chi tiết",
-        "noMatch": "Không khớp",
+        "noMatch": "Chưa khớp thông tin sách",
         "applied": "Đã áp dụng",
         "refetch": "Lấy lại siêu dữ liệu",
         "clickToZoom": "Nhấn ảnh bìa để phóng to",
@@ -8235,7 +8235,7 @@
       "libraryScope": {
         "title": "Thư viện trên trang tổng quan",
         "description": "Chọn thư viện cung cấp sách và dữ liệu đọc cho trang tổng quan này.",
-        "allLibraries": "Mọi thư viện có quyền truy cập",
+        "allLibraries": "Tất cả thư viện bạn được cấp quyền",
         "summaryNone": "Chưa chọn thư viện",
         "summaryCount": "{count, plural, other {# thư viện}}",
         "required": "Chọn ít nhất một thư viện."
@@ -10554,7 +10554,7 @@
     "bookDuplicates": {
       "title": "Sách trùng lặp",
       "scope": "Phạm vi thư viện",
-      "allLibraries": "Mọi thư viện có quyền truy cập",
+      "allLibraries": "Tất cả thư viện bạn được cấp quyền",
       "similarity": "Tiêu đề tương tự",
       "explainSimilarity": "Giải thích ngưỡng tiêu đề tương tự",
       "similarityHelp": "Chỉ áp dụng cho kiểu khớp tiêu đề và tác giả tương tự. Ít nhất một tác giả và loại sách cũng phải khớp. Ngưỡng thấp tìm được nhiều bản có thể trùng hơn; ngưỡng cao đòi hỏi tiêu đề gần giống hơn. Tệp giống hệt, ISBN và siêu dữ liệu trùng khớp được kiểm tra riêng.",
