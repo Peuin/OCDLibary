@@ -194,6 +194,7 @@ describe('Users admin lifecycle (e2e)', { timeout: 180_000 }, () => {
         headers: authHeader(manageUsersAdmin.accessToken),
         payload: {
           username: `invalid-perm-${randomUUID().slice(0, 8)}`,
+          password: 'InvalidPermPass123',
           name: 'Invalid Permission User',
           email: `invalid-perm-${randomUUID().slice(0, 8)}@example.com`,
           permissionNames: ['not_a_real_permission'],
@@ -207,6 +208,7 @@ describe('Users admin lifecycle (e2e)', { timeout: 180_000 }, () => {
         headers: authHeader(manageUsersAdmin.accessToken),
         payload: {
           username: `unknown-lib-${randomUUID().slice(0, 8)}`,
+          password: 'UnknownLibraryPass123',
           name: 'Unknown Library User',
           email: `unknown-lib-${randomUUID().slice(0, 8)}@example.com`,
           libraryIds: [libraryA.libraryId, 9_999_123],
@@ -217,12 +219,14 @@ describe('Users admin lifecycle (e2e)', { timeout: 180_000 }, () => {
 
     it('covers user create/update/delete, permission assignment, and library assignment lifecycle', async () => {
       const username = `lifecycle-${randomUUID().slice(0, 8)}`;
+      const password = 'LifecyclePass123';
       const createResponse = await ctx.app.inject({
         method: 'POST',
         url: '/api/v1/users',
         headers: authHeader(manageUsersAdmin.accessToken),
         payload: {
           username,
+          password,
           name: 'Lifecycle User',
           email: `${username}@example.com`,
           permissionNames: [PermissionEnum.ManageLibraries, PermissionEnum.ManageLibraries],
@@ -230,8 +234,13 @@ describe('Users admin lifecycle (e2e)', { timeout: 180_000 }, () => {
         },
       });
       expect(createResponse.statusCode).toBe(201);
-      const created = createResponse.json() as { id: number; resetUrl: string };
-      expect(created.resetUrl).toContain('/reset-password?token=');
+      const created = createResponse.json() as { id: number; username: string; name: string };
+      expect(created).toEqual({ id: expect.any(Number), username, name: 'Lifecycle User' });
+      expect(createResponse.body).not.toContain(password);
+      expect(createResponse.body).not.toContain('passwordHash');
+
+      const createdLoginToken = await loginForToken(ctx.app, username, password);
+      expect(createdLoginToken).not.toBeNull();
 
       const readCreated = await ctx.app.inject({
         method: 'GET',
@@ -330,18 +339,72 @@ describe('Users admin lifecycle (e2e)', { timeout: 180_000 }, () => {
       expectError(readAfterDelete, 404, 'User not found');
     });
 
-    it('rejects duplicate username on create', async () => {
+    it('creates an account without email or default access and keeps existing username login compatible', async () => {
+      const username = `no-email-${randomUUID().slice(0, 8)}`;
+      const password = 'NoEmailPass123';
+      const response = await ctx.app.inject({
+        method: 'POST',
+        url: '/api/v1/users',
+        headers: authHeader(manageUsersAdmin.accessToken),
+        payload: { username, password },
+      });
+
+      expect(response.statusCode).toBe(201);
+      const created = response.json() as { id: number; username: string; name: string };
+      expect(created).toEqual({ id: expect.any(Number), username, name: username });
+      expect(response.body).not.toContain(password);
+      expect(response.body).not.toContain('passwordHash');
+
+      const stored = await ctx.db.query.users.findFirst({ where: eq(schema.users.id, created.id) });
+      expect(stored).toMatchObject({
+        username,
+        name: username,
+        email: null,
+        isSuperuser: false,
+        isDefaultPassword: true,
+        provisioningMethod: 'local',
+      });
+      expect(stored?.passwordHash).not.toBe(password);
+
+      const [permissionCount, libraryCount] = await Promise.all([
+        ctx.db.$count(schema.userPermissions, eq(schema.userPermissions.userId, created.id)),
+        ctx.db.$count(schema.userLibraryAccess, eq(schema.userLibraryAccess.userId, created.id)),
+      ]);
+      expect(Number(permissionCount)).toBe(0);
+      expect(Number(libraryCount)).toBe(0);
+
+      await expect(loginForToken(ctx.app, username, password)).resolves.not.toBeNull();
+      await expect(loginForToken(ctx.app, regularA.username, regularA.password)).resolves.not.toBeNull();
+    });
+
+    it('rejects duplicate usernames with different casing on create', async () => {
       const response = await ctx.app.inject({
         method: 'POST',
         url: '/api/v1/users',
         headers: authHeader(manageUsersAdmin.accessToken),
         payload: {
-          username: regularA.username,
+          username: regularA.username.toUpperCase(),
+          password: 'DuplicateUsernamePass123',
           name: 'Duplicate Username User',
           email: `dup-username-${randomUUID().slice(0, 8)}@example.com`,
         },
       });
-      expectError(response, 409, 'Username already taken');
+      expectError(response, 409, 'Username or email already in use');
+    });
+
+    it('rejects duplicate optional emails with different casing on create', async () => {
+      const response = await ctx.app.inject({
+        method: 'POST',
+        url: '/api/v1/users',
+        headers: authHeader(manageUsersAdmin.accessToken),
+        payload: {
+          username: `duplicate-email-${randomUUID().slice(0, 8)}`,
+          password: 'DuplicateEmailPass123',
+          email: `${regularA.username.toUpperCase()}@EXAMPLE.COM`,
+        },
+      });
+
+      expectError(response, 409, 'Username or email already in use');
     });
 
     it('returns 401 for unauthenticated requests to admin routes', async () => {
@@ -351,7 +414,7 @@ describe('Users admin lifecycle (e2e)', { timeout: 180_000 }, () => {
         payload?: Record<string, unknown>;
       }> = [
         { method: 'GET', url: '/api/v1/users' },
-        { method: 'POST', url: '/api/v1/users', payload: { username: 'noauth', name: 'No Auth', email: 'noauth@test.com' } },
+        { method: 'POST', url: '/api/v1/users', payload: { username: 'noauth', password: 'NoAuthPass123', name: 'No Auth' } },
         { method: 'GET', url: `/api/v1/users/${regularA.userId}` },
         { method: 'PATCH', url: `/api/v1/users/${regularA.userId}`, payload: { name: 'hacked' } },
         { method: 'DELETE', url: `/api/v1/users/${regularA.userId}` },
@@ -373,7 +436,7 @@ describe('Users admin lifecycle (e2e)', { timeout: 180_000 }, () => {
         payload?: Record<string, unknown>;
       }> = [
         { method: 'GET', url: '/api/v1/users' },
-        { method: 'POST', url: '/api/v1/users', payload: { username: 'noperm', name: 'No Perm', email: 'noperm@test.com' } },
+        { method: 'POST', url: '/api/v1/users', payload: { username: 'noperm', password: 'NoPermPass123', name: 'No Perm' } },
         { method: 'GET', url: `/api/v1/users/${regularA.userId}` },
         { method: 'PATCH', url: `/api/v1/users/${regularA.userId}`, payload: { name: 'hacked' } },
         { method: 'DELETE', url: `/api/v1/users/${regularA.userId}` },
@@ -742,20 +805,28 @@ describe('Users admin lifecycle (e2e)', { timeout: 180_000 }, () => {
   describe('password reset and default-password behavior', () => {
     it('enforces admin reset lifecycle with consumable tokens and OIDC rejection', async () => {
       const username = `reset-local-${randomUUID().slice(0, 8)}`;
+      const initialPassword = 'InitialResetPass123';
       const createUserResponse = await ctx.app.inject({
         method: 'POST',
         url: '/api/v1/users',
         headers: authHeader(manageUsersAdmin.accessToken),
         payload: {
           username,
+          password: initialPassword,
           name: 'Reset Flow User',
           email: `${username}@example.com`,
         },
       });
       expect(createUserResponse.statusCode).toBe(201);
-      const created = createUserResponse.json() as { id: number; resetUrl: string };
+      const created = createUserResponse.json() as { id: number };
 
-      const firstToken = parseTokenFromResetUrl(created.resetUrl);
+      const firstResetResponse = await ctx.app.inject({
+        method: 'POST',
+        url: `/api/v1/users/${created.id}/reset-password`,
+        headers: authHeader(manageUsersAdmin.accessToken),
+      });
+      expect(firstResetResponse.statusCode).toBe(201);
+      const firstToken = parseTokenFromResetUrl((firstResetResponse.json() as { resetUrl: string }).resetUrl);
 
       const firstReset = await ctx.app.inject({
         method: 'POST',

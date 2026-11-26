@@ -3,9 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { hash } from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { Permission } from '@bookorbit/types';
-import type { ProvisioningMethod, UserAttentionResponse, UserListSummary, UserSettings } from '@bookorbit/types';
+import type { CreateUserResponse, ProvisioningMethod, UserAttentionResponse, UserListSummary, UserSettings } from '@bookorbit/types';
 
 import type { RequestUser } from '../../common/types/request-user';
+import { isUniqueViolation } from '../../common/utils/db-error.utils';
 import { sanitizeLogValue } from '../../common/utils/log-sanitize.utils';
 import { resolveTimeZone } from '../../common/utils/timezone.utils';
 import { ContentFilterRepository } from './content-filter.repository';
@@ -131,38 +132,43 @@ export class UserService {
     return user;
   }
 
-  async createUser(dto: CreateUserDto) {
+  async createUser(dto: CreateUserDto): Promise<CreateUserResponse> {
     this.authenticationPolicy.assertPasswordLoginEnabled();
     const existing = await this.userRepo.findByUsername(dto.username);
     if (existing) throw new ConflictException('Username already taken');
-    const existingEmail = await this.userRepo.findByEmail(dto.email);
-    if (existingEmail) throw new ConflictException('Email already in use');
-
-    const passwordHash = await hash(randomBytes(16).toString('hex'), 12);
-    const user = await this.userRepo.create({
-      username: dto.username,
-      name: dto.name,
-      email: dto.email,
-      passwordHash,
-      isDefaultPassword: true,
-    });
+    if (dto.email) {
+      const existingEmail = await this.userRepo.findByEmail(dto.email);
+      if (existingEmail) throw new ConflictException('Email already in use');
+    }
 
     const permissionNames = this.uniquePermissions(dto.permissionNames ?? []);
-    if (permissionNames.length > 0) {
-      await this.userRepo.setPermissions(user.id, permissionNames);
-    }
-
-    const libraryIds = await this.resolveNewUserLibraryIds(dto.libraryIds);
+    const libraryIds = this.uniqueIds(dto.libraryIds ?? []);
     if (libraryIds.length > 0) {
       await this.assertKnownLibraryIds(libraryIds);
-      await this.userRepo.assignViewerLibraries(user.id, libraryIds);
     }
 
-    const appUrl = this.config.get<string>('app.appUrl') ?? 'http://localhost:5173';
-    const rawToken = await this.userRepo.generateResetToken(user.id);
-    const resetUrl = `${appUrl}/reset-password?token=${rawToken}`;
+    const passwordHash = await hash(dto.password, 12);
+    let user: Awaited<ReturnType<UserRepository['createManagedUser']>>;
+    try {
+      user = await this.userRepo.createManagedUser(
+        {
+          username: dto.username,
+          name: dto.name ?? dto.username,
+          email: dto.email ?? null,
+          passwordHash,
+          isDefaultPassword: true,
+          isSuperuser: false,
+          provisioningMethod: 'local',
+        },
+        permissionNames,
+        libraryIds,
+      );
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new ConflictException('Username or email already in use');
+      throw error;
+    }
 
-    return { id: user.id, username: user.username, name: user.name, resetUrl };
+    return { id: user.id, username: user.username, name: user.name };
   }
 
   async createSharedUser(dto: CreateSharedUserDto) {

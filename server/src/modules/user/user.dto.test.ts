@@ -17,17 +17,35 @@ async function hasErrors(dto: object): Promise<boolean> {
 }
 
 describe('User DTO validation', () => {
-  it('CreateUserDto requires email, enforces username minimum length, and validates permission enums', async () => {
-    const bad = plainToInstance(CreateUserDto, { username: 'ab', name: 'n', permissionNames: [1, 2] });
+  it('CreateUserDto requires username and password while allowing name and email to be omitted', async () => {
+    const bad = plainToInstance(CreateUserDto, { username: 'ab', permissionNames: [1, 2] });
     expect(await hasErrors(bad)).toBe(true);
 
     const good = plainToInstance(CreateUserDto, {
       username: 'alice',
-      name: 'Alice',
-      email: 'alice@example.com',
+      password: 'StrongPass123',
+      email: null,
       permissionNames: [Permission.LibraryDownload],
     });
     expect(await hasErrors(good)).toBe(false);
+  });
+
+  it('CreateUserDto applies the existing password policy and validates optional email values', async () => {
+    for (const password of ['short', 'lowercase123', 'UPPERCASE123', 'NoDigitsHere', `Aa1${'x'.repeat(1022)}`]) {
+      expect(await hasErrors(plainToInstance(CreateUserDto, { username: 'alice', password }))).toBe(true);
+    }
+
+    expect(await hasErrors(plainToInstance(CreateUserDto, { username: 'alice', password: 'StrongPass123', email: 'not-an-email' }))).toBe(true);
+    expect(
+      await hasErrors(
+        plainToInstance(CreateUserDto, {
+          username: 'alice',
+          password: 'StrongPass123',
+          name: 'Alice',
+          email: 'alice@example.com',
+        }),
+      ),
+    ).toBe(false);
   });
 
   it('SetPermissionsDto requires an array of permission enums', async () => {

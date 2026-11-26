@@ -33,6 +33,7 @@ describe('UserService', () => {
     incrementTokenVersion: vi.fn(),
     findByIdWithPermissions: vi.fn(),
     create: vi.fn(),
+    createManagedUser: vi.fn(),
     findAll: vi.fn(),
     findAssignable: vi.fn(),
     update: vi.fn(),
@@ -78,6 +79,7 @@ describe('UserService', () => {
     appSettingsService.getDefaultLibraryAccessLibraryIds.mockResolvedValue([]);
 
     userRepo.create.mockResolvedValue({ id: 10, username: 'newuser', name: 'New User' });
+    userRepo.createManagedUser.mockResolvedValue({ id: 10, username: 'newuser', name: 'New User' });
     userRepo.createOidcUser.mockResolvedValue({ id: 11, username: 'oidcuser', name: 'OIDC User' });
     userRepo.findByEmail.mockResolvedValue(null);
     userRepo.generateResetToken.mockResolvedValue('reset-token');
@@ -90,9 +92,9 @@ describe('UserService', () => {
   it('createUser rejects duplicate usernames', async () => {
     userRepo.findByUsername.mockResolvedValue({ id: 2 });
 
-    await expect(service.createUser({ username: 'taken', name: 'Name', email: 'taken@example.com' } as any)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.createUser({ username: 'taken', password: 'StrongPass123', name: 'Name', email: 'taken@example.com' } as any),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('delegates basic repository passthrough methods', async () => {
@@ -127,48 +129,56 @@ describe('UserService', () => {
     userRepo.findByUsername.mockResolvedValue(null);
     userRepo.findByEmail.mockResolvedValue({ id: 3 });
 
-    await expect(service.createUser({ username: 'newuser', name: 'Name', email: 'taken@example.com' } as any)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.createUser({ username: 'newuser', password: 'StrongPass123', name: 'Name', email: 'taken@example.com' } as any),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('createUser creates user, deduplicates permission/library lists, and returns reset URL', async () => {
+  it('createUser hashes the supplied password, persists atomically, and returns no secret', async () => {
     userRepo.findByUsername.mockResolvedValue(null);
 
     const result = await service.createUser({
       username: 'newuser',
+      password: 'StrongPass123',
       name: 'New User',
       email: 'x@y.com',
       permissionNames: [Permission.LibraryDownload, Permission.KoboSync, Permission.LibraryDownload],
       libraryIds: [3, 5, 3],
     } as any);
 
-    expect(userRepo.create).toHaveBeenCalledWith(
+    expect(mockHash).toHaveBeenCalledWith('StrongPass123', 12);
+    expect(userRepo.createManagedUser).toHaveBeenCalledWith(
       expect.objectContaining({
         username: 'newuser',
         name: 'New User',
         email: 'x@y.com',
         passwordHash: 'hashed-secret',
         isDefaultPassword: true,
+        isSuperuser: false,
+        provisioningMethod: 'local',
       }),
+      [Permission.LibraryDownload, Permission.KoboSync],
+      [3, 5],
     );
-    expect(userRepo.setPermissions).toHaveBeenCalledWith(10, [Permission.LibraryDownload, Permission.KoboSync]);
-    expect(userRepo.assignViewerLibraries).toHaveBeenCalledWith(10, [3, 5]);
-    expect(result).toEqual({ id: 10, username: 'newuser', name: 'New User', resetUrl: 'https://app.example.com/reset-password?token=reset-token' });
+    expect(result).toEqual({ id: 10, username: 'newuser', name: 'New User' });
+    expect(result).not.toHaveProperty('password');
+    expect(result).not.toHaveProperty('passwordHash');
+    expect(userRepo.generateResetToken).not.toHaveBeenCalled();
   });
 
-  it('createUser applies default library access when libraries are omitted', async () => {
+  it('createUser falls back to username for name and grants no default access when optional fields are omitted', async () => {
     userRepo.findByUsername.mockResolvedValue(null);
     appSettingsService.getDefaultLibraryAccessLibraryIds.mockResolvedValue([2, 4]);
+    userRepo.createManagedUser.mockResolvedValue({ id: 10, username: 'newuser', name: 'newuser' });
 
     await service.createUser({
       username: 'newuser',
-      name: 'New User',
-      email: 'x@y.com',
-      permissionNames: [],
+      password: 'StrongPass123',
     } as any);
 
-    expect(userRepo.assignViewerLibraries).toHaveBeenCalledWith(10, [2, 4]);
+    expect(userRepo.findByEmail).not.toHaveBeenCalled();
+    expect(userRepo.createManagedUser).toHaveBeenCalledWith(expect.objectContaining({ name: 'newuser', email: null, isSuperuser: false }), [], []);
+    expect(appSettingsService.getDefaultLibraryAccessLibraryIds).not.toHaveBeenCalled();
   });
 
   it('createOidcUser applies default library access', async () => {
@@ -187,6 +197,7 @@ describe('UserService', () => {
     await expect(
       service.createUser({
         username: 'newuser',
+        password: 'StrongPass123',
         name: 'New User',
         email: 'x@y.com',
         libraryIds: [7, 9],
@@ -194,21 +205,11 @@ describe('UserService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('createUser skips permission/library writes when lists are empty', async () => {
+  it('createUser maps concurrent identifier conflicts without exposing database errors', async () => {
     userRepo.findByUsername.mockResolvedValue(null);
-    config.get.mockReturnValue(undefined);
+    userRepo.createManagedUser.mockRejectedValue(Object.assign(new Error('duplicate key'), { code: '23505' }));
 
-    const result = await service.createUser({
-      username: 'newuser',
-      name: 'New User',
-      email: 'new@example.com',
-      permissionNames: [],
-      libraryIds: [],
-    } as any);
-
-    expect(userRepo.setPermissions).not.toHaveBeenCalled();
-    expect(userRepo.assignViewerLibraries).not.toHaveBeenCalled();
-    expect(result.resetUrl).toBe('http://localhost:5173/reset-password?token=reset-token');
+    await expect(service.createUser({ username: 'newuser', password: 'StrongPass123' } as any)).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('findById returns user and throws when missing', async () => {

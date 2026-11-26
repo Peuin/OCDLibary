@@ -383,6 +383,26 @@ export class UserRepository {
     return user;
   }
 
+  async createManagedUser(data: typeof schema.users.$inferInsert, permissionNames: Permission[], libraryIds: number[]) {
+    const resolvedPermissions = withRequiredPermissions(permissionNames);
+
+    return this.db.transaction(async (tx) => {
+      const [user] = await tx.insert(schema.users).values(data).returning();
+
+      if (resolvedPermissions.length > 0) {
+        await tx.insert(schema.userPermissions).values(resolvedPermissions.map((permissionName) => ({ userId: user.id, permissionName })));
+      }
+
+      if (libraryIds.length > 0) {
+        await tx
+          .insert(schema.userLibraryAccess)
+          .values(libraryIds.map((libraryId) => ({ userId: user.id, libraryId, accessLevel: 'viewer' as const })));
+      }
+
+      return user;
+    });
+  }
+
   async update(id: number, data: Partial<Pick<typeof schema.users.$inferInsert, 'name' | 'email' | 'active' | 'settings' | 'seeOwnRequestedBooks'>>) {
     const { settings, ...rest } = data;
     const setData: Record<string, unknown> = { ...rest, updatedAt: new Date() };

@@ -56,6 +56,19 @@ export interface AuthUser {
     authenticationMethod?: AuthenticationMethod;
     permissions: string[];
 }
+export interface CreateUserRequest {
+    username: string;
+    password: string;
+    name?: string;
+    email?: string | null;
+    permissionNames?: import("./permissions").Permission[];
+    libraryIds?: number[];
+}
+export interface CreateUserResponse {
+    id: number;
+    username: string;
+    name: string;
+}
 export interface OidcPublicConfig {
     enabled: boolean;
     providerName: string;

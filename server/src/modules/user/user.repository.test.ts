@@ -463,6 +463,42 @@ describe('UserRepository', () => {
     expect(updateSet).toHaveBeenCalledWith({ oidcSubject: 'sub-1', oidcIssuer: 'issuer-1' });
   });
 
+  it('createManagedUser writes the account, permissions, and library access in one transaction', async () => {
+    const created = { id: 7, username: 'alice', name: 'Alice' };
+    const userReturning = vi.fn().mockResolvedValue([created]);
+    const userValues = vi.fn().mockReturnValue({ returning: userReturning });
+    const permissionValues = vi.fn().mockResolvedValue(undefined);
+    const libraryValues = vi.fn().mockResolvedValue(undefined);
+    const txInsert = vi.fn((table: unknown) => {
+      if (table === schema.users) return { values: userValues };
+      if (table === schema.userPermissions) return { values: permissionValues };
+      if (table === schema.userLibraryAccess) return { values: libraryValues };
+      throw new Error('Unexpected table');
+    });
+    db.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => callback({ insert: txInsert }));
+
+    const result = await repo.createManagedUser(
+      {
+        username: 'alice',
+        name: 'Alice',
+        email: null,
+        passwordHash: 'hashed-secret',
+        isDefaultPassword: true,
+        isSuperuser: false,
+        provisioningMethod: 'local',
+      },
+      [Permission.LibraryDownload],
+      [3],
+    );
+
+    expect(userValues).toHaveBeenCalledWith(
+      expect.objectContaining({ username: 'alice', email: null, passwordHash: 'hashed-secret', isSuperuser: false }),
+    );
+    expect(permissionValues).toHaveBeenCalledWith([{ userId: 7, permissionName: Permission.LibraryDownload }]);
+    expect(libraryValues).toHaveBeenCalledWith([{ userId: 7, libraryId: 3, accessLevel: 'viewer' }]);
+    expect(result).toEqual(created);
+  });
+
   it('createOidcUser stores OIDC identity and generated password hash', async () => {
     await repo.createOidcUser({
       username: 'oidc-user',

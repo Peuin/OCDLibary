@@ -11,7 +11,8 @@ export const AuthenticationMethod = {
   Legacy: "legacy",
 } as const;
 
-export type AuthenticationMethod = (typeof AuthenticationMethod)[keyof typeof AuthenticationMethod];
+export type AuthenticationMethod =
+  (typeof AuthenticationMethod)[keyof typeof AuthenticationMethod];
 
 export enum OidcErrorCode {
   STATE_EXPIRED = "oidc_state_expired",
@@ -30,7 +31,8 @@ export const ProvisioningMethod = {
   Shared: "shared",
 } as const;
 
-export type ProvisioningMethod = (typeof ProvisioningMethod)[keyof typeof ProvisioningMethod];
+export type ProvisioningMethod =
+  (typeof ProvisioningMethod)[keyof typeof ProvisioningMethod];
 
 export interface UserSettings {
   syncReaderPreferences?: boolean;
@@ -62,6 +64,21 @@ export interface AuthUser {
   provisioningMethod: ProvisioningMethod;
   authenticationMethod?: AuthenticationMethod;
   permissions: string[];
+}
+
+export interface CreateUserRequest {
+  username: string;
+  password: string;
+  name?: string;
+  email?: string | null;
+  permissionNames?: import("./permissions").Permission[];
+  libraryIds?: number[];
+}
+
+export interface CreateUserResponse {
+  id: number;
+  username: string;
+  name: string;
 }
 
 export interface OidcPublicConfig {
@@ -151,11 +168,17 @@ export interface OidcPreviewResult {
   mode: "preview";
   claims: {
     raw: Record<string, unknown>;
-    mapped: { username: string; name: string; email?: string; groups: string[] };
+    mapped: {
+      username: string;
+      name: string;
+      email?: string;
+      groups: string[];
+    };
   };
 }
 
-export type OidcCallbackResponse = OidcCallbackResult | OidcLinkResult | OidcPreviewResult;
+export type OidcCallbackResponse =
+  OidcCallbackResult | OidcLinkResult | OidcPreviewResult;
 
 export type AuthClientKind = "web" | "native";
 
