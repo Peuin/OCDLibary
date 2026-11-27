@@ -315,6 +315,26 @@ describe('Paginator windowed scrolled mode', () => {
     for (const i of [3, 4, 5]) expect(sections[i]!.unload).toHaveBeenCalledTimes(1)
   })
 
+  it('does not mount a section whose load resolves after destroy() during a long jump', async () => {
+    const sections = makeSections(20)
+    const el = await openPaginator(sections, 'scrolled')
+    await el.goTo({ index: 4 })
+    await flush()
+
+    let resolveLoad!: (src: string) => void
+    sections[9]!.load.mockImplementationOnce(() => new Promise((resolve) => (resolveLoad = resolve)))
+    void el.goTo({ index: 9 })
+    await flush()
+    el.destroy()
+    resolveLoad('section-9.xhtml')
+    await flush()
+
+    expect(el.getContents()).toEqual([])
+    expect(container.querySelectorAll('iframe')).toHaveLength(0)
+    expect(sections[9]!.unload).toHaveBeenCalledTimes(1)
+    for (const i of [8, 10]) expect(sections[i]!.load).not.toHaveBeenCalled()
+  })
+
   it('emits load and create-overlayer for every mounted section', async () => {
     const sections = makeSections(10)
     const el = await openPaginator(sections, 'scrolled')
@@ -398,6 +418,93 @@ describe('Paginator windowed scrolled mode', () => {
     expect(relocated.at(-1)).toBeLessThan(0.95)
     await flush()
     expect(relocated.at(-1)).toBeCloseTo(0.95)
+  })
+
+  it('uses caret hit testing for synchronous scroll anchoring instead of walking the whole chapter', async () => {
+    const el = await openPaginator(makeSections(10), 'scrolled', { states: new Map() })
+    await el.goTo({ index: 4 })
+    await flush()
+    const doc = el.getContents()[0]!.doc!
+    const text = doc.querySelector('p')!.firstChild!
+    const caret = vi.fn<(x: number, y: number) => Range>(() => {
+      const range = doc.createRange()
+      range.setStart(text, 100)
+      range.collapse(true)
+      return range
+    })
+    Object.assign(doc, { caretRangeFromPoint: caret })
+    const walk = vi.spyOn(doc, 'createTreeWalker')
+    for (let i = 0; i < 50; i++) {
+      container.scrollTop += 1
+      container.dispatchEvent(new Event('scroll'))
+    }
+    expect(caret).toHaveBeenCalledTimes(50)
+    expect(walk).not.toHaveBeenCalled()
+    el.flushRelocate()
+    expect(walk).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not rewrite unchanged styles or schedule redundant section reflows', async () => {
+    const el = await openPaginator(makeSections(10), 'scrolled', { states: new Map() })
+    await el.goTo({ index: 4 })
+    await flush()
+    el.setStyles('p { font-size: 21px }')
+    await flush()
+    const doc = el.getContents()[0]!.doc!
+    const observer = new MutationObserver(() => {})
+    observer.observe(doc.head, { subtree: true, childList: true, characterData: true })
+    for (let i = 0; i < 20; i++) el.setStyles('p { font-size: 21px }')
+    expect(observer.takeRecords()).toHaveLength(0)
+    observer.disconnect()
+  })
+
+  it('keeps iframe and observer counts bounded across one hundred section windows', async () => {
+    const sections = makeSections(300)
+    const el = await openPaginator(sections, 'scrolled', { states: new Map() })
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      for (let index = 1; index <= 100; index++) {
+        await el.goTo({ index })
+        await vi.advanceTimersByTimeAsync(81)
+        expect(el.getContents()).toHaveLength(3)
+        expect(container.querySelectorAll('iframe')).toHaveLength(3)
+        expect(resizeCallbacks.size).toBe(4)
+      }
+      el.destroy()
+      el.destroy()
+      expect(container.querySelectorAll('iframe')).toHaveLength(0)
+      expect(resizeCallbacks.size).toBe(0)
+      for (const section of sections) expect(section.unload.mock.calls.length).toBeLessThanOrEqual(1)
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('removes renderer document listeners when a slot leaves the window', async () => {
+    const el = await openPaginator(makeSections(10), 'scrolled', { states: new Map() })
+    await el.goTo({ index: 4 })
+    await flush()
+    const oldDoc = el.getContents().find((item) => item.index === 3)!.doc!
+    const remove = vi.spyOn(oldDoc, 'removeEventListener')
+    await el.goTo({ index: 5 })
+    await flush()
+    const events = remove.mock.calls.map(([type]) => type)
+    for (const event of [
+      'touchstart',
+      'touchmove',
+      'touchend',
+      'pointerdown',
+      'pointerup',
+      'keydown',
+      'keyup',
+      'selectionchange',
+      'focusin',
+      'load',
+      'error',
+    ])
+      expect(events).toContain(event)
+    expect(el.getContents().some((item) => item.doc === oldDoc)).toBe(false)
   })
 
   it('emits one document unload per slot and releases old document input before removal', async () => {

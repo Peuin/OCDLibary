@@ -11,7 +11,7 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const debounce = (f, wait, immediate) => {
   let timeout
-  return (...args) => {
+  const debounced = (...args) => {
     const later = () => {
       timeout = null
       if (!immediate) f(...args)
@@ -21,6 +21,11 @@ const debounce = (f, wait, immediate) => {
     timeout = setTimeout(later, wait)
     if (callNow) f(...args)
   }
+  debounced.cancel = () => {
+    clearTimeout(timeout)
+    timeout = null
+  }
+  return debounced
 }
 
 const lerp = (min, max, x) => x * (max - min) + min
@@ -297,7 +302,7 @@ class View {
     return this.#element
   }
   get document() {
-    return this.#iframe.contentDocument
+    return this.#iframe?.contentDocument
   }
   async load(src, afterLoad, beforeRender) {
     if (typeof src !== 'string') throw new Error(`${src} is not string`)
@@ -484,8 +489,8 @@ class View {
   }
   destroy() {
     if (this.#destroyed) return
-    this.onDestroy?.(this.document)
     this.#destroyed = true
+    this.onDestroy?.(this.document)
     this.#observer.disconnect()
     if (this.#expandFrame != null) cancelAnimationFrame(this.#expandFrame)
     this.#resourceDocument?.removeEventListener('load', this.#onResourceLoad, true)
@@ -493,6 +498,13 @@ class View {
     this.#resourceDocument = null
     this.#cancelLoad?.()
     this.#cancelLoad = null
+    this.#contentRange = null
+    this.#overlayer = null
+    this.#element.replaceChildren()
+    this.#iframe = null
+    this.onExpand = null
+    this.onDestroy = null
+    this.container = null
   }
 }
 
@@ -522,6 +534,11 @@ export class Paginator extends HTMLElement {
   #touchState
   #touchScrolled
   #lastVisibleRange
+  #destroyed = false
+  #docCleanups = new WeakMap()
+  #legacyAfterScroll
+  #checkPointerSelection
+  #styleFrame
   // Windowed scrolled mode (GD1-15): spine index -> { index, view } for every mounted section.
   // `#view` / `#index` stay the active section, so single-view code paths keep working.
   #slots = new Map()
@@ -664,24 +681,24 @@ export class Paginator extends HTMLElement {
       else this.#relocateTimer = setTimeout(() => this.flushRelocate(), 200)
       this.#scheduleWindowSync()
     })
-    this.#container.addEventListener(
-      'scroll',
-      debounce(() => {
-        if (this.scrolled && !this.#isVirtual()) {
-          if (this.#justAnchored) this.#justAnchored = false
-          else this.#afterScroll('scroll')
-        }
-      }, 250),
-    )
+    this.#legacyAfterScroll = debounce(() => {
+      if (this.scrolled && !this.#isVirtual()) {
+        if (this.#justAnchored) this.#justAnchored = false
+        else this.#afterScroll('scroll')
+      }
+    }, 250)
+    this.#container.addEventListener('scroll', () => {
+      if (!this.#isVirtual()) this.#legacyAfterScroll()
+    })
 
     const opts = { passive: false }
     this.addEventListener('touchstart', this.#onTouchStart.bind(this), opts)
     this.addEventListener('touchmove', this.#onTouchMove.bind(this), opts)
     this.addEventListener('touchend', this.#onTouchEnd.bind(this))
     this.addEventListener('load', ({ detail: { doc } }) => {
-      doc.addEventListener('touchstart', this.#onTouchStart.bind(this), opts)
-      doc.addEventListener('touchmove', this.#onTouchMove.bind(this), opts)
-      doc.addEventListener('touchend', this.#onTouchEnd.bind(this))
+      this.#listenDoc(doc, 'touchstart', this.#onTouchStart.bind(this), opts)
+      this.#listenDoc(doc, 'touchmove', this.#onTouchMove.bind(this), opts)
+      this.#listenDoc(doc, 'touchend', this.#onTouchEnd.bind(this))
     })
 
     this.addEventListener('relocate', ({ detail }) => {
@@ -692,7 +709,7 @@ export class Paginator extends HTMLElement {
         else setSelectionTo(this.#anchor, -1)
       }
     })
-    const checkPointerSelection = debounce((range, sel) => {
+    this.#checkPointerSelection = debounce((range, sel) => {
       if (!sel.rangeCount) return
       const selRange = sel.getRangeAt(0)
       const backward = selectionIsBackward(sel)
@@ -701,18 +718,18 @@ export class Paginator extends HTMLElement {
     }, 700)
     this.addEventListener('load', ({ detail: { doc } }) => {
       let isPointerSelecting = false
-      doc.addEventListener('pointerdown', () => (isPointerSelecting = true))
-      doc.addEventListener('pointerup', () => (isPointerSelecting = false))
+      this.#listenDoc(doc, 'pointerdown', () => (isPointerSelecting = true))
+      this.#listenDoc(doc, 'pointerup', () => (isPointerSelecting = false))
       let isKeyboardSelecting = false
-      doc.addEventListener('keydown', () => (isKeyboardSelecting = true))
-      doc.addEventListener('keyup', () => (isKeyboardSelecting = false))
-      doc.addEventListener('selectionchange', () => {
+      this.#listenDoc(doc, 'keydown', () => (isKeyboardSelecting = true))
+      this.#listenDoc(doc, 'keyup', () => (isKeyboardSelecting = false))
+      this.#listenDoc(doc, 'selectionchange', () => {
         if (this.scrolled) return
         const range = this.#lastVisibleRange
         if (!range) return
         const sel = doc.getSelection()
         if (!sel.rangeCount) return
-        if (isPointerSelecting && sel.type === 'Range') checkPointerSelection(range, sel)
+        if (isPointerSelecting && sel.type === 'Range') this.#checkPointerSelection(range, sel)
         else if (isKeyboardSelecting) {
           const selRange = sel.getRangeAt(0).cloneRange()
           const backward = selectionIsBackward(sel)
@@ -720,12 +737,15 @@ export class Paginator extends HTMLElement {
           this.#scrollToAnchor(selRange)
         }
       })
-      doc.addEventListener('focusin', (e) =>
-        this.scrolled
-          ? null
-          : // NOTE: `requestAnimationFrame` is needed in WebKit
-            requestAnimationFrame(() => this.#scrollToAnchor(e.target)),
-      )
+      let focusFrame
+      this.#docCleanups.get(doc).push(() => cancelAnimationFrame(focusFrame))
+      this.#listenDoc(doc, 'focusin', (e) => {
+        if (this.scrolled) return
+        cancelAnimationFrame(focusFrame)
+        focusFrame = requestAnimationFrame(() => {
+          if (this.#view?.document === doc) this.#scrollToAnchor(e.target)
+        })
+      })
     })
 
     this.#mediaQueryListener = () => {
@@ -733,6 +753,22 @@ export class Paginator extends HTMLElement {
       this.#background.style.background = getBackground(this.#view.document)
     }
     this.#mediaQuery.addEventListener('change', this.#mediaQueryListener)
+  }
+  #listenDoc(doc, type, listener, options) {
+    let cleanups = this.#docCleanups.get(doc)
+    if (!cleanups) {
+      cleanups = []
+      this.#docCleanups.set(doc, cleanups)
+    }
+    doc.addEventListener(type, listener, options)
+    cleanups.push(() => doc.removeEventListener(type, listener, options))
+  }
+  #releaseDocument(doc, index) {
+    for (const cleanup of this.#docCleanups.get(doc) ?? []) cleanup()
+    this.#docCleanups.delete(doc)
+    this.#styleMap.delete(doc)
+    this.#checkPointerSelection?.cancel()
+    this.dispatchEvent(new CustomEvent('unload', { detail: { doc, index } }))
   }
   attributeChangedCallback(name, _, value) {
     switch (name) {
@@ -772,7 +808,7 @@ export class Paginator extends HTMLElement {
     }
     const index = this.#index
     this.#view = new View({
-      onDestroy: (doc) => this.dispatchEvent(new CustomEvent('unload', { detail: { doc, index } })),
+      onDestroy: (doc) => this.#releaseDocument(doc, index),
       container: this,
       onExpand: () => this.#scrollToAnchor(this.#anchor),
     })
@@ -857,7 +893,7 @@ export class Paginator extends HTMLElement {
     return { height, width, margin, gap, columnWidth }
   }
   render() {
-    if (!this.#view) return
+    if (this.#destroyed || !this.#view) return
     const layout = this.#beforeRender({
       vertical: this.#vertical,
       rtl: this.#rtl,
@@ -904,7 +940,28 @@ export class Paginator extends HTMLElement {
     return rect ? this.#offsetOf(anchor.view) + this.#margin + rect.top - this.start : null
   }
   #rememberReadingAnchor() {
-    const range = this.#getVisibleRange().cloneRange()
+    const doc = this.#view.document
+    let range
+    if (doc.caretRangeFromPoint || doc.caretPositionFromPoint) {
+      const bounds = doc.body.getBoundingClientRect()
+      const x = bounds.left + Math.min(32, bounds.width / 2)
+      const y = Math.max(0, this.start - this.#offsetOf(this.#view))
+      try {
+        range = doc.caretRangeFromPoint?.(x, y)
+        if (!range) {
+          const position = doc.caretPositionFromPoint?.(x, y)
+          if (position) {
+            range = doc.createRange()
+            range.setStart(position.offsetNode, position.offset)
+            range.collapse(true)
+          }
+        }
+      } catch {
+        /* Unsupported hit testing falls back to the visible-range walker. */
+      }
+      if (range?.startContainer?.nodeType !== 3 || range.startContainer.ownerDocument !== doc) range = null
+    }
+    range ??= this.#getVisibleRange().cloneRange()
     range.collapse(true)
     const anchor = { view: this.#view, range }
     const top = this.#anchorTop(anchor)
@@ -933,18 +990,21 @@ export class Paginator extends HTMLElement {
     if (doc?.body) this.#background.style.background = getBackground(doc)
   }
   #applyStylesTo(view) {
-    const $$styles = this.#styleMap.get(view?.document)
-    if (!$$styles) return false
-    const styles = this.#styles
-    const [$beforeStyle, $style] = $$styles
-    if (Array.isArray(styles)) {
-      const [beforeStyle, style] = styles
-      $beforeStyle.textContent = beforeStyle
-      $style.textContent = style
-    } else $style.textContent = styles ?? ''
-    // needed because the resize observer doesn't work in Firefox
-    view.document?.fonts?.ready?.then(() => view.expand())
-    return true
+    const nodes = this.#styleMap.get(view?.document)
+    if (!nodes) return false
+    const [before, after] = nodes
+    const values = Array.isArray(this.#styles) ? this.#styles : ['', this.#styles ?? '']
+    let changed = false
+    for (const [node, value] of [
+      [before, values[0]],
+      [after, values[1]],
+    ]) {
+      if (node.textContent === (value ?? '')) continue
+      node.textContent = value ?? ''
+      changed = true
+    }
+    if (changed) view.document?.fonts?.ready?.then(() => view.expand())
+    return changed
   }
   async #mountSlot(index, wanted = () => true) {
     const mounted = this.#slots.get(index)
@@ -966,7 +1026,13 @@ export class Paginator extends HTMLElement {
       const src = await this.sections[index].load()
       if (!src) throw new Error(`Failed to load section ${index}`)
       // the window was reset (long jump, mode change) while this section was loading
-      if (cancelled || generation !== this.#slotGeneration || !this.#isVirtual() || !wanted()) {
+      if (
+        this.#destroyed ||
+        cancelled ||
+        generation !== this.#slotGeneration ||
+        !this.#isVirtual() ||
+        !wanted()
+      ) {
         this.sections[index]?.unload?.()
         return null
       }
@@ -974,7 +1040,7 @@ export class Paginator extends HTMLElement {
       const view = new View({
         container: this,
         onExpand: () => this.#onSlotExpand(slot),
-        onDestroy: (doc) => this.dispatchEvent(new CustomEvent('unload', { detail: { doc, index } })),
+        onDestroy: (doc) => this.#releaseDocument(doc, index),
       })
       slot.view = view
       const nextIndex = [...this.#slots.keys()].filter((i) => i > index).sort((a, b) => a - b)[0]
@@ -997,7 +1063,7 @@ export class Paginator extends HTMLElement {
       const beforeRender = (args) => this.#beforeRender(args, { applyBackground: isActive() })
       const loaded = await view.load(src, afterLoad, beforeRender)
       if (this.#slots.get(index) !== slot) return null
-      if (!loaded || cancelled || generation !== this.#slotGeneration || !wanted()) {
+      if (!loaded || this.#destroyed || cancelled || generation !== this.#slotGeneration || !wanted()) {
         this.#unmountSlot(index)
         return null
       }
@@ -1039,6 +1105,8 @@ export class Paginator extends HTMLElement {
     this.#cancelWindowSync()
     this.#slotGeneration++
     this.#readingAnchor = null
+    this.#anchor = 0
+    this.#lastVisibleRange = null
     for (const cancel of this.#cancelSlotLoads.values()) cancel()
     for (const index of [...this.#slots.keys()]) {
       const slot = this.#slots.get(index)
@@ -1422,6 +1490,7 @@ export class Paginator extends HTMLElement {
   }
   async #display(promise) {
     const { index, src, anchor, onLoad, select } = await promise
+    if (this.#destroyed) return
     this.#index = index
     const hasFocus = this.#view?.document?.hasFocus()
     if (src) {
@@ -1437,7 +1506,8 @@ export class Paginator extends HTMLElement {
         onLoad?.({ doc, index })
       }
       const beforeRender = this.#beforeRender.bind(this)
-      await view.load(src, afterLoad, beforeRender)
+      const loaded = await view.load(src, afterLoad, beforeRender)
+      if (!loaded || this.#destroyed || this.#view !== view) return
       this.dispatchEvent(
         new CustomEvent('create-overlayer', {
           detail: {
@@ -1483,7 +1553,7 @@ export class Paginator extends HTMLElement {
     }
   }
   async goTo(target) {
-    if (this.#locked) return
+    if (this.#destroyed || this.#locked) return
     const resolved = await target
     if (this.#canGoToIndex(resolved.index)) return this.#goTo(resolved)
   }
@@ -1577,11 +1647,12 @@ export class Paginator extends HTMLElement {
   }
   setStyles(styles) {
     this.#styles = styles
-    if (!this.#styleMap.get(this.#view?.document)) return
-    for (const view of this.#mountedViews()) this.#applyStylesTo(view)
-
-    // NOTE: needs `requestAnimationFrame` in Chromium
-    requestAnimationFrame(() => {
+    if (this.#destroyed || !this.#styleMap.get(this.#view?.document)) return
+    let changed = false
+    for (const view of this.#mountedViews()) changed = this.#applyStylesTo(view) || changed
+    if (!changed || this.#styleFrame != null) return
+    this.#styleFrame = requestAnimationFrame(() => {
+      this.#styleFrame = undefined
       if (this.#view?.document) this.#background.style.background = getBackground(this.#view.document)
     })
   }
@@ -1589,16 +1660,29 @@ export class Paginator extends HTMLElement {
     this.#view.document.defaultView.focus()
   }
   destroy() {
+    if (this.#destroyed) return
+    this.#destroyed = true
+    this.#legacyAfterScroll?.cancel()
+    this.#checkPointerSelection?.cancel()
+    cancelAnimationFrame(this.#styleFrame)
     this.#cancelRelocate()
     this.#virtualNavigation++
     this.#cancelWindowSync()
     this.#observer.disconnect()
+    // Invalidate section loads still in flight even when no slot is mounted yet (e.g. right after a long jump).
+    this.#slotGeneration++
+    for (const cancel of this.#cancelSlotLoads.values()) cancel()
     if (this.#slots.size) this.#destroyAllSlots()
     else {
       this.#view?.destroy()
       this.sections[this.#index]?.unload?.()
     }
     this.#view = null
+    this.#anchor = 0
+    this.#lastVisibleRange = null
+    this.#readingAnchor = null
+    this.#touchState = null
+    this.#styleMap = new WeakMap()
     this.#mediaQuery.removeEventListener('change', this.#mediaQueryListener)
   }
 }

@@ -357,6 +357,7 @@ export const makeStreamingBook = async (bookId, baseUrl, bookInfo, fetchFile = f
 
 class CursorAutohider {
   #timeout
+  #onMove
   #el
   #check
   #state
@@ -366,18 +367,21 @@ class CursorAutohider {
     this.#check = check
     this.#state = state
     if (this.#state.hidden) this.hide()
-    this.#el.addEventListener(
-      'mousemove',
-      ({ screenX, screenY }) => {
-        // check if it actually moved
-        if (screenX === this.#state.x && screenY === this.#state.y) return
-        ;((this.#state.x = screenX), (this.#state.y = screenY))
-        this.show()
-        if (this.#timeout) clearTimeout(this.#timeout)
-        if (check()) this.#timeout = setTimeout(this.hide.bind(this), 1000)
-      },
-      false,
-    )
+    this.#onMove = ({ screenX, screenY }) => {
+      // check if it actually moved
+      if (screenX === this.#state.x && screenY === this.#state.y) return
+      ;((this.#state.x = screenX), (this.#state.y = screenY))
+      this.show()
+      if (this.#timeout) clearTimeout(this.#timeout)
+      if (check()) this.#timeout = setTimeout(this.hide.bind(this), 1000)
+    }
+    this.#el.addEventListener('mousemove', this.#onMove, false)
+  }
+
+  destroy() {
+    clearTimeout(this.#timeout)
+    this.#el?.removeEventListener('mousemove', this.#onMove, false)
+    this.#el = null
   }
 
   cloneFor(el) {
@@ -385,12 +389,12 @@ class CursorAutohider {
   }
 
   hide() {
-    this.#el.style.cursor = 'none'
+    if (this.#el) this.#el.style.cursor = 'none'
     this.#state.hidden = true
   }
 
   show() {
-    this.#el.style.removeProperty('cursor')
+    this.#el?.style.removeProperty('cursor')
     this.#state.hidden = false
   }
 }
@@ -467,6 +471,7 @@ export class View extends HTMLElement {
   #cursorAutohider = new CursorAutohider(this, () => this.hasAttribute('autohide-cursor'))
   isFixedLayout = false
   lastLocation
+  #docCleanups = new WeakMap()
   #searchGeneration = 0
   #mediaOverlayGeneration = 0
   #clearMediaHighlight = () => {}
@@ -517,7 +522,11 @@ export class View extends HTMLElement {
     }
     this.renderer.setAttribute('exportparts', 'head,foot,filter')
     this.renderer.addEventListener('load', (e) => this.#onLoad(e.detail))
-    this.renderer.addEventListener('unload', (e) => this.#emit('unload', e.detail))
+    this.renderer.addEventListener('unload', (e) => {
+      for (const cleanup of this.#docCleanups.get(e.detail.doc) ?? []) cleanup()
+      this.#docCleanups.delete(e.detail.doc)
+      this.#emit('unload', e.detail)
+    })
     this.renderer.addEventListener('relocate', (e) => this.#onRelocate(e.detail))
     this.renderer.addEventListener('create-overlayer', (e) => {
       e.detail.attach(this.#createOverlayer(e.detail))
@@ -588,6 +597,7 @@ export class View extends HTMLElement {
     this.#searchGeneration++
     this.renderer?.destroy()
     this.renderer?.remove()
+    this.renderer = null
     this.#sectionProgress = null
     this.#tocProgress = null
     this.#pageProgress = null
@@ -596,6 +606,23 @@ export class View extends HTMLElement {
     this.history.clear()
     this.tts = null
     this.mediaOverlay = null
+  }
+
+  destroy() {
+    this.close()
+    this.#cursorAutohider.destroy()
+    this.book?.destroy?.()
+    this.book = null
+  }
+
+  #listenDoc(doc, type, listener, options) {
+    let cleanups = this.#docCleanups.get(doc)
+    if (!cleanups) {
+      cleanups = []
+      this.#docCleanups.set(doc, cleanups)
+    }
+    doc.addEventListener(type, listener, options)
+    cleanups.push(() => doc.removeEventListener(type, listener, options))
   }
 
   goToTextStart() {
@@ -656,7 +683,8 @@ export class View extends HTMLElement {
     if (!this.language.isCJK) doc.documentElement.dir ||= this.language.direction ?? ''
 
     this.#handleLinks(doc, index)
-    this.#cursorAutohider.cloneFor(doc.documentElement)
+    const cursor = this.#cursorAutohider.cloneFor(doc.documentElement)
+    this.#docCleanups.get(doc).push(() => cursor.destroy())
 
     this.#emit('load', { doc, index })
   }
@@ -664,7 +692,7 @@ export class View extends HTMLElement {
   #handleLinks(doc, index) {
     const { book } = this
     const section = book.sections[index]
-    doc.addEventListener('click', (e) => {
+    this.#listenDoc(doc, 'click', (e) => {
       const a = e.target.closest('a[href]')
       if (!a) return
       e.preventDefault()
@@ -724,7 +752,8 @@ export class View extends HTMLElement {
 
   #createOverlayer({ doc, index }) {
     const overlayer = new Overlayer()
-    doc.addEventListener(
+    this.#listenDoc(
+      doc,
       'click',
       (e) => {
         const [value, range] = overlayer.hitTest(e)

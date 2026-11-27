@@ -1,3 +1,5 @@
+import { mount } from '@vue/test-utils'
+import { defineComponent } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/api', () => ({
@@ -19,6 +21,8 @@ vi.mock('../useFoliateAnnotations', () => ({
 
 vi.mock('../useFoliateSelection', () => ({
   useFoliateSelection: () => ({
+    cleanup: vi.fn<() => void>(),
+    detachDocument: vi.fn<(doc: Document) => void>(),
     setHandler: vi.fn<() => void>(),
     setInteractionStartHandler: vi.fn<() => void>(),
     handleSelectionEnd: vi.fn<() => void>(),
@@ -30,6 +34,7 @@ vi.mock('../useFoliateSelection', () => ({
 
 const inputMock = vi.hoisted(() => ({
   cleanup: vi.fn<() => void>(),
+  detachDocument: vi.fn<(doc: Document) => void>(),
   attachIframeClicks: vi.fn<() => void>(),
   suppressNextTapNavigation: vi.fn<() => void>(),
 }))
@@ -126,6 +131,24 @@ describe('useFoliate.open', () => {
     await foliate.open(1, 1, 'epub')
     Object.assign(viewEl!, { resolveNavigation: (target: string) => ({ index: target.includes('chapter-2') ? 1 : 0 }) })
     expect(await foliate.getSectionIndexForTarget('chapter-2.xhtml#sentence')).toBe(1)
+  })
+
+  it('runs the view teardown contract when its Vue owner unmounts', async () => {
+    let reader!: ReturnType<typeof useFoliate>
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          reader = useFoliate(() => container)
+          return () => null
+        },
+      }),
+    )
+    await reader.open(1, 1, 'epub')
+    const destroy = (viewEl as unknown as { destroy: () => void }).destroy
+    wrapper.unmount()
+    expect(destroy).toHaveBeenCalledOnce()
+    expect(inputMock.cleanup).toHaveBeenCalledOnce()
+    expect(reader.view.value).toBeNull()
   })
 
   it('navigates to CFI when cfi is provided', async () => {

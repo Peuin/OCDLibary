@@ -47,12 +47,14 @@ class Renderer extends HTMLElement {
     this.active = target.index
   }
   destroy() {
+    for (const { doc, index } of this.contents) this.dispatchEvent(new CustomEvent('unload', { detail: { doc, index } }))
     this.contents = []
   }
 }
 interface View extends HTMLElement {
   renderer: Renderer
   open: (book: Book) => Promise<void>
+  destroy: () => void
   close: () => void
   search: (opts: { query: string }) => AsyncGenerator<unknown>
   clearSearch: () => void
@@ -114,6 +116,23 @@ afterEach(() => {
 })
 
 describe('Foliate multi-section overlay integration', () => {
+  it('exposes final teardown for useFoliate and releases document handlers, renderer and book exactly once', async () => {
+    const { view, renderer, book } = await setup()
+    const content = await renderer.mount(0)
+    const removeDoc = vi.spyOn(content.doc, 'removeEventListener')
+    const removeRoot = vi.spyOn(content.doc.documentElement, 'removeEventListener')
+    const destroyBook = vi.fn<() => void>()
+    Object.assign(book, { destroy: destroyBook })
+    expect(typeof view.destroy).toBe('function')
+    view.destroy()
+    view.destroy()
+    expect(view.renderer).toBeNull()
+    expect(destroyBook).toHaveBeenCalledOnce()
+    expect(removeDoc.mock.calls.filter(([type]) => type === 'click')).toHaveLength(2)
+    expect(removeRoot.mock.calls.some(([type]) => type === 'mousemove')).toBe(true)
+    expect(renderer.getContents()).toHaveLength(0)
+  })
+
   it('restores search outlines after remount and clears every mounted section without resurrection', async () => {
     const { view, renderer } = await setup()
     const first = await renderer.mount(0),
