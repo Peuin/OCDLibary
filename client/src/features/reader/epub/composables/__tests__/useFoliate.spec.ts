@@ -102,6 +102,25 @@ describe('useFoliate.open', () => {
     delete (window as { makeStreamingBook?: unknown }).makeStreamingBook
   })
 
+  it('publishes only the final location after restoring CFI', async () => {
+    const relocated = vi.fn<(detail: unknown) => void>()
+    mockOpen.mockImplementation(async () => {
+      viewEl!.dispatchEvent(new CustomEvent('relocate', { detail: { cfi: 'initial', fraction: 0 } }))
+    })
+    mockGoTo.mockImplementation(async () => {
+      expect(relocated).not.toHaveBeenCalled()
+      viewEl!.dispatchEvent(new CustomEvent('relocate', { detail: { cfi: 'restored', fraction: 0.6 } }))
+      return { index: 4 }
+    })
+    const foliate = useFoliate(() => container, relocated)
+    await foliate.open(1, 1, 'epub', 'epubcfi(/6/10!)')
+    expect(relocated).toHaveBeenCalledTimes(1)
+    expect(relocated).toHaveBeenLastCalledWith({ cfi: 'restored', fraction: 0.6 })
+    expect(foliate.fraction.value).toBe(0.6)
+    viewEl!.dispatchEvent(new CustomEvent('relocate', { detail: { cfi: 'next', fraction: 0.7 } }))
+    expect(relocated).toHaveBeenCalledTimes(2)
+  })
+
   it('navigates to CFI when cfi is provided', async () => {
     const foliate = useFoliate(() => container)
 

@@ -51,7 +51,7 @@ describe('ReaderSidebar', () => {
             subitems: [{ label: 'Section 1.1', href: 'ch1.xhtml#sec-1' }],
           },
         ],
-        activeHref: 'ch1.xhtml#middle',
+        activeHref: 'ch1.xhtml#start',
       },
       global,
     })
@@ -75,7 +75,7 @@ describe('ReaderSidebar', () => {
           label: `Chapter ${index + 1}`,
           href: `ch${index + 1}.xhtml#start`,
         })),
-        activeHref: 'ch1.xhtml#middle',
+        activeHref: 'ch1.xhtml#start',
       },
       global,
     })
@@ -83,11 +83,37 @@ describe('ReaderSidebar', () => {
     await flushScrollWatcher()
     scrollIntoView.mockClear()
 
-    await wrapper.setProps({ activeHref: 'ch18.xhtml#middle' })
+    await wrapper.setProps({ activeHref: 'ch18.xhtml#start' })
     await flushScrollWatcher()
 
     expect(wrapper.find('[data-reader-active-row="chapter"]').text()).toContain('Chapter 18')
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', inline: 'nearest' })
+  })
+
+  it('marks only the active subitem and navigates with its fragment intact', async () => {
+    const wrapper = mount(ReaderSidebar, {
+      props: {
+        ...makeBaseProps(),
+        chapters: [
+          {
+            label: 'Chapter',
+            href: 'ch.xhtml',
+            subitems: [
+              { label: 'One', href: 'ch.xhtml#one' },
+              { label: 'Two', href: 'ch.xhtml#two' },
+            ],
+          },
+        ],
+        expandedHrefs: new Set(['ch.xhtml']),
+        activeHref: 'ch.xhtml#two',
+      },
+      global,
+    })
+    expect(wrapper.findAll('[data-reader-active-row="chapter"]')).toHaveLength(1)
+    expect(wrapper.get('[data-reader-active-row="chapter"]').text()).toBe('Two')
+    const button = wrapper.findAll('button').find((item) => item.text() === 'One')!
+    await button.trigger('click')
+    expect(wrapper.emitted('navigateChapter')?.[0]).toEqual(['ch.xhtml#one'])
   })
 
   it('shows pin state and emits togglePinned from the sidebar header', async () => {

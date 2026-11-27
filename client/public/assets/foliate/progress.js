@@ -20,7 +20,7 @@ export class TOCProgress {
       const [id, fragment] = (await splitHref(item?.href)) ?? []
       const value = { fragment, item }
       if (grouped.has(id)) grouped.get(id).items.push(value)
-      else grouped.set(id, { prev: items[i - 1], items: [value] })
+      else grouped.set(id, { id, prev: items[i - 1], items: [value] })
     }
     const map = new Map()
     for (const [i, id] of ids.entries()) {
@@ -38,13 +38,16 @@ export class TOCProgress {
     if (!obj) return null
     const { prev, items } = obj
     if (!items) return prev
+    if (obj.id !== id) return items[items.length - 1].item
     if (!range || (items.length === 1 && !items[0].fragment)) return items[0].item
 
     const doc = range.startContainer.getRootNode()
+    const point = range.cloneRange()
+    point.collapse(true)
     for (const [i, { fragment }] of items.entries()) {
       const el = this.getFragment(doc, fragment)
       if (!el) continue
-      if (range.comparePoint(el, 0) > 0) return items[i - 1]?.item ?? prev
+      if (point.comparePoint(el, 0) > 0) return items[i - 1]?.item ?? prev
     }
     return items[items.length - 1].item
   }

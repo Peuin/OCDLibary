@@ -132,6 +132,9 @@ const { onActivity, elapsedMinutes } = useReadingSession(
 
 const progress = useReaderProgress(bookId, fileId, elapsedMinutes, 0, {
   trackingEnabled,
+  beforeExitFlush: () => {
+    if (!loading.value) getRenderer()?.flushRelocate?.()
+  },
 })
 const { cfi, chapterTitle, sectionIndex, totalSections, fraction, locationTotal, footerMode, cycleFooterMode, updateHeadsFeet } = progress
 

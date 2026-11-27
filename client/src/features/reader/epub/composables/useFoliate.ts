@@ -23,6 +23,7 @@ export interface RelocateDetail {
 }
 
 export interface FoliateRenderer {
+  flushRelocate?: () => void
   heads?: HTMLElement[]
   feet?: HTMLElement[]
   setStyles?: (css: string) => void
@@ -160,6 +161,7 @@ export function useFoliate(
 
     let loadTimeoutId: ReturnType<typeof setTimeout> | undefined
     let initialNavigationPending = true
+    let pendingInitialLocation: RelocateDetail | undefined
 
     try {
       await loadScript()
@@ -252,6 +254,10 @@ export function useFoliate(
 
       view.addEventListener('relocate', (e: Event) => {
         const detail = (e as CustomEvent).detail
+        if (initialNavigationPending) {
+          pendingInitialLocation = detail
+          return
+        }
         fraction.value = detail?.fraction ?? 0
         if (import.meta.env.DEV) {
           console.info('[foliate.relocate]', {
@@ -356,6 +362,10 @@ export function useFoliate(
         await view.goTo(0).catch(() => {})
       }
       initialNavigationPending = false
+      if (pendingInitialLocation) {
+        fraction.value = pendingInitialLocation.fraction ?? 0
+        onRelocate?.(pendingInitialLocation)
+      }
       loading.value = false
     } catch (e) {
       console.error('[useFoliate]', e)

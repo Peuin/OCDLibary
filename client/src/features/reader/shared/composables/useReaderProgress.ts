@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref, unref, type MaybeRef, type Ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUnmounted, ref, unref, type MaybeRef, type Ref } from 'vue'
 import { api } from '@/lib/api'
 import type { FoliateRenderer, RelocateDetail } from '../../epub/composables/useFoliate'
 
@@ -6,6 +6,7 @@ export type FooterDisplayMode = 0 | 1 | 2
 
 export interface ReaderProgressOptions {
   trackingEnabled?: MaybeRef<boolean>
+  beforeExitFlush?: () => void
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -88,7 +89,20 @@ export function useReaderProgress(
   let saveTimer: ReturnType<typeof setTimeout> | null = null
   let lastValidPercentage = 0
 
+  function flushOnExit() {
+    if (!options.beforeExitFlush || !unref(trackingEnabled)) return
+    options.beforeExitFlush()
+    if (!saveTimer) return
+    void save(true).catch(() => {})
+  }
+
+  if (options.beforeExitFlush) {
+    onMounted(() => window.addEventListener('pagehide', flushOnExit))
+    onBeforeUnmount(flushOnExit)
+  }
+
   onUnmounted(() => {
+    window.removeEventListener('pagehide', flushOnExit)
     if (saveTimer) clearTimeout(saveTimer)
   })
 
@@ -123,8 +137,12 @@ export function useReaderProgress(
 
   function scheduleSave() {
     if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = null
     if (!unref(trackingEnabled)) return
-    saveTimer = setTimeout(() => save(), 2000)
+    saveTimer = setTimeout(() => {
+      saveTimer = null
+      void save().catch(() => {})
+    }, 2000)
   }
 
   function onRelocate(detail: RelocateDetail) {
@@ -154,6 +172,7 @@ export function useReaderProgress(
 
     if (!hasSaveableLocation) {
       if (saveTimer) clearTimeout(saveTimer)
+      saveTimer = null
       return
     }
     pendingSource.value = 'text'
@@ -174,11 +193,14 @@ export function useReaderProgress(
     mediaOverlaySectionIndex.value = null
   }
 
-  async function save() {
+  async function save(keepalive = false) {
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = null
     if (!unref(trackingEnabled)) return
     const safePercentage = updatePercentage(percentage.value)
     await api(`/api/v1/books/files/${fileId}/progress`, {
       method: 'POST',
+      ...(keepalive ? { keepalive: true } : {}),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         cfi: cfi.value,

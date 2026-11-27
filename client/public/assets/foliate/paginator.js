@@ -531,6 +531,8 @@ export class Paginator extends HTMLElement {
   #windowRequested = false
   #readingAnchor
   #compensatedScrollTop
+  #relocateTimer
+  #relocateFrame
   #virtualNavigation = 0
   windowRadius = DEFAULT_WINDOW_RADIUS
   maxMountedSections = MAX_MOUNTED_SECTIONS
@@ -649,14 +651,18 @@ export class Paginator extends HTMLElement {
         return
       }
       this.#compensatedScrollTop = undefined
+      const previousIndex = this.#index
       this.#updateActiveFromScroll()
       this.#rememberReadingAnchor()
+      this.#cancelRelocate()
+      if (previousIndex !== this.#index) this.#emitRelocate('scroll')
+      else this.#relocateTimer = setTimeout(() => this.flushRelocate(), 200)
       this.#scheduleWindowSync()
     })
     this.#container.addEventListener(
       'scroll',
       debounce(() => {
-        if (this.scrolled) {
+        if (this.scrolled && !this.#isVirtual()) {
           if (this.#justAnchored) this.#justAnchored = false
           else this.#afterScroll('scroll')
         }
@@ -1017,6 +1023,7 @@ export class Paginator extends HTMLElement {
     if (this.#view && index < this.#index) this.#compensate()
   }
   #destroyAllSlots() {
+    this.#cancelRelocate()
     this.#cancelWindowSync()
     this.#slotGeneration++
     this.#readingAnchor = null
@@ -1032,6 +1039,7 @@ export class Paginator extends HTMLElement {
   }
   // Leaving the windowed mode keeps only the active section as the single view.
   #releaseInactiveSlots() {
+    this.#cancelRelocate()
     this.#virtualNavigation++
     this.#cancelWindowSync()
     this.#readingAnchor = null
@@ -1121,6 +1129,7 @@ export class Paginator extends HTMLElement {
     this.#scheduleWindowSync()
   }
   async #goToVirtual({ index, anchor, select }) {
+    this.#cancelRelocate()
     const navigation = ++this.#virtualNavigation
     const hasFocus = this.#view?.document?.hasFocus()
     let slot = this.#slots.get(index)
@@ -1288,6 +1297,7 @@ export class Paginator extends HTMLElement {
       })
     else {
       element[scrollProp] = offset
+      if (this.#isVirtual()) this.#compensatedScrollTop = element[scrollProp]
       this.#scrollBounds = [offset, this.atStart ? 0 : size, this.atEnd ? 0 : size]
       this.#afterScroll(reason)
     }
@@ -1301,7 +1311,9 @@ export class Paginator extends HTMLElement {
   }
   async #scrollToAnchor(anchor, reason = 'anchor') {
     this.#anchor = anchor
-    const rects = uncollapse(anchor)?.getClientRects?.()
+    const target = this.#isVirtual() && anchor?.cloneRange ? anchor.cloneRange() : anchor
+    if (target !== anchor) target.collapse(true)
+    const rects = uncollapse(target)?.getClientRects?.()
     // if anchor is an element or a range
     if (rects) {
       // when the start of the range is immediately after a hyphen in the
@@ -1329,7 +1341,34 @@ export class Paginator extends HTMLElement {
     const size = usesNegativePageScroll(this.#vertical, this.#rtl) ? -this.size : this.size
     return getVisibleRange(this.#view.document, this.start - size, this.end - size, this.#getRectMapper())
   }
+  #cancelRelocate() {
+    clearTimeout(this.#relocateTimer)
+    cancelAnimationFrame(this.#relocateFrame)
+    this.#relocateTimer = undefined
+    this.#relocateFrame = undefined
+  }
+  flushRelocate() {
+    if (!this.#isVirtual() || (this.#relocateTimer == null && this.#relocateFrame == null)) return
+    const reason = this.#relocateTimer != null ? 'scroll' : 'anchor'
+    this.#cancelRelocate()
+    this.#emitRelocate(reason)
+  }
   #afterScroll(reason) {
+    if (this.#isVirtual()) {
+      if (reason === 'anchor') {
+        if (this.#relocateFrame == null)
+          this.#relocateFrame = requestAnimationFrame(() => {
+            this.#relocateFrame = undefined
+            // A user's pending scroll owns the next location, not a layout callback.
+            if (this.#relocateTimer == null) this.#emitRelocate(reason)
+          })
+        return
+      }
+      this.#cancelRelocate()
+    }
+    this.#emitRelocate(reason)
+  }
+  #emitRelocate(reason) {
     if (!this.#view?.document) return
     const userMoved = reason !== 'selection' && reason !== 'navigation' && reason !== 'anchor'
     if (userMoved) this.#updateActiveFromScroll()
@@ -1341,7 +1380,10 @@ export class Paginator extends HTMLElement {
     else this.#justAnchored = true
 
     const index = this.#index
-    const detail = { reason, range, index }
+    // Preserve the requested CFI until the user moves. Measuring the whole viewport
+    // again can advance its start to the next line at a text-node boundary.
+    const locationRange = this.#isVirtual() && !userMoved && this.#anchor?.startContainer ? this.#anchor : range
+    const detail = { reason, range: locationRange, index }
     if (this.scrolled) {
       const local = (this.start - this.#offsetOf(this.#view)) / Math.max(1, this.viewSize)
       detail.fraction = Math.min(1, Math.max(0, local))
@@ -1523,6 +1565,7 @@ export class Paginator extends HTMLElement {
     this.#view.document.defaultView.focus()
   }
   destroy() {
+    this.#cancelRelocate()
     this.#virtualNavigation++
     this.#cancelWindowSync()
     this.#observer.disconnect()

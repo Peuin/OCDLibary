@@ -1,5 +1,4 @@
 import { ref } from 'vue'
-import { stripFragment } from '../utils'
 
 export interface TocItem {
   label: string
@@ -29,10 +28,22 @@ export function useToc() {
 
   function setChapters(toc: unknown[]) {
     chapters.value = mapTocItems((toc ?? []) as RawTocItem[])
+    if (activeHref.value) setActiveHref(activeHref.value)
   }
 
   function setActiveHref(href: string) {
     activeHref.value = href
+    const expandAncestors = (items: TocItem[], ancestors: string[]): boolean => {
+      for (const item of items) {
+        if (item.href === href) {
+          expandedHrefs.value = new Set([...expandedHrefs.value, ...ancestors])
+          return true
+        }
+        if (item.subitems && expandAncestors(item.subitems, [...ancestors, item.href])) return true
+      }
+      return false
+    }
+    expandAncestors(chapters.value, [])
   }
 
   function toggleExpand(href: string) {
@@ -50,7 +61,7 @@ export function useToc() {
   }
 
   function isActive(href: string): boolean {
-    return stripFragment(activeHref.value) === stripFragment(href)
+    return !!href && activeHref.value === href
   }
 
   return {

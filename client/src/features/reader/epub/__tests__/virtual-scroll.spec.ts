@@ -12,6 +12,8 @@ type PaginatorEl = HTMLElement & {
   goTo: (target: { index: number; anchor?: unknown }) => Promise<void>
   getContents: () => Content[]
   setStyles: (styles: string | [string, string]) => void
+  flushRelocate: () => void
+  render: () => void
   destroy: () => void
 }
 
@@ -389,6 +391,98 @@ describe('Paginator windowed scrolled mode', () => {
 
     for (const i of [3, 4, 5]) expect(sections[i]!.unload).toHaveBeenCalledTimes(1)
     expect(el.getContents()).toEqual([])
+  })
+
+  it('preserves a restored CFI range through layout and ignores its own navigation scroll', async () => {
+    const el = await openPaginator(makeSections(10), 'scrolled', { states: new Map() })
+    await el.goTo({ index: 3 })
+    await flush()
+    const doc = el.getContents()[0]!.doc!
+    const anchor = doc.createRange()
+    anchor.setStart(doc.querySelector('p')!.firstChild!, 1000)
+    anchor.setEnd(doc.querySelector('p')!.firstChild!, 2000)
+    const relocated = vi.fn<(event: Event) => void>()
+    el.addEventListener('relocate', relocated)
+    await el.goTo({ index: 3, anchor })
+    container.dispatchEvent(new Event('scroll'))
+    el.render()
+    el.render()
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(anchor.startOffset).toBe(1000)
+    expect(anchor.endOffset).toBe(2000)
+    for (const [event] of relocated.mock.calls) expect((event as CustomEvent).detail.range).toBe(anchor)
+    const count = relocated.mock.calls.length
+    el.flushRelocate()
+    expect(relocated).toHaveBeenCalledTimes(count)
+  })
+
+  it('debounces same-section scroll locations for 200ms and flushes the latest range', async () => {
+    const el = await openPaginator(makeSections(10), 'scrolled', { states: new Map() })
+    await el.goTo({ index: 3 })
+    await flush()
+    const relocated = vi.fn<(event: Event) => void>()
+    el.addEventListener('relocate', relocated)
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      container.scrollTop += 100
+      container.dispatchEvent(new Event('scroll'))
+      await vi.advanceTimersByTimeAsync(150)
+      container.scrollTop += 100
+      container.dispatchEvent(new Event('scroll'))
+      await vi.advanceTimersByTimeAsync(199)
+      expect(relocated).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1)
+      expect(relocated).toHaveBeenCalledTimes(1)
+      const first = (relocated.mock.calls[0]![0] as CustomEvent).detail
+      expect(first.index).toBe(3)
+      container.scrollTop += 150
+      container.dispatchEvent(new Event('scroll'))
+      el.flushRelocate()
+      expect(relocated).toHaveBeenCalledTimes(2)
+      expect((relocated.mock.calls[1]![0] as CustomEvent).detail.fraction).toBeGreaterThan(first.fraction)
+      await vi.advanceTimersByTimeAsync(300)
+      expect(relocated).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('emits a section change immediately and cancels the previous section timer', async () => {
+    const el = await openPaginator(makeSections(10), 'scrolled', { states: new Map() })
+    await el.goTo({ index: 3 })
+    await flush()
+    const relocated = vi.fn<(event: Event) => void>()
+    el.addEventListener('relocate', relocated)
+    container.scrollTop += 100
+    container.dispatchEvent(new Event('scroll'))
+    const frames = [...container.children]
+    const next = frames[2]!.getBoundingClientRect()
+    container.scrollTop += next.top + 100
+    container.dispatchEvent(new Event('scroll'))
+    expect(relocated).toHaveBeenCalledTimes(1)
+    expect((relocated.mock.calls[0]![0] as CustomEvent).detail.index).toBe(4)
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(relocated).toHaveBeenCalledTimes(1)
+  })
+
+  it('coalesces layout relocations within a frame and cancels them on destroy', async () => {
+    const el = await openPaginator(makeSections(10), 'scrolled', { states: new Map() })
+    await el.goTo({ index: 3 })
+    await flush()
+    const relocated = vi.fn<(event: Event) => void>()
+    el.addEventListener('relocate', relocated)
+    el.render()
+    el.render()
+    el.render()
+    expect(relocated).not.toHaveBeenCalled()
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    expect(relocated).toHaveBeenCalledTimes(1)
+    container.scrollTop += 100
+    container.dispatchEvent(new Event('scroll'))
+    el.render()
+    el.destroy()
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(relocated).toHaveBeenCalledTimes(1)
   })
 
   it('waits for an 80ms quiet period and skips intermediate navigation windows', async () => {
