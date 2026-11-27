@@ -7,6 +7,7 @@ import { ensureMediaOverlayActiveClass } from '../../media-overlay/lib/media-ove
 import type { EpubBookInfo, EpubReaderSettings } from '@bookorbit/types'
 
 export interface RelocateDetail {
+  reason?: string
   cfi?: string | null
   fraction?: number
   index?: number
@@ -23,6 +24,7 @@ export interface RelocateDetail {
 }
 
 export interface FoliateRenderer {
+  flushRelocate?: () => void
   heads?: HTMLElement[]
   feet?: HTMLElement[]
   setStyles?: (css: string) => void
@@ -160,6 +162,7 @@ export function useFoliate(
 
     let loadTimeoutId: ReturnType<typeof setTimeout> | undefined
     let initialNavigationPending = true
+    let pendingInitialLocation: RelocateDetail | undefined
 
     try {
       await loadScript()
@@ -204,11 +207,20 @@ export function useFoliate(
         setTimeout(() => {
           if (onApplyStyles) onApplyStyles(view.renderer)
         }, 0)
-        annotations.reAddAll(view)
         if (detail?.doc) {
           input.attachIframeClicks(detail.doc)
           onChapterLoad?.(detail.doc as Document, view as HTMLElement)
         }
+      })
+
+      view.addEventListener('create-overlay', (e: Event) => {
+        annotations.reAddAll(view, (e as CustomEvent).detail?.index)
+      })
+      view.addEventListener('unload', (e: Event) => {
+        const doc = (e as CustomEvent).detail?.doc as Document | undefined
+        if (!doc) return
+        input.detachDocument(doc)
+        selection.detachDocument(doc)
       })
 
       view.addEventListener('draw-annotation', (e: Event) => {
@@ -252,6 +264,10 @@ export function useFoliate(
 
       view.addEventListener('relocate', (e: Event) => {
         const detail = (e as CustomEvent).detail
+        if (initialNavigationPending) {
+          pendingInitialLocation = detail
+          return
+        }
         fraction.value = detail?.fraction ?? 0
         if (import.meta.env.DEV) {
           console.info('[foliate.relocate]', {
@@ -356,6 +372,10 @@ export function useFoliate(
         await view.goTo(0).catch(() => {})
       }
       initialNavigationPending = false
+      if (pendingInitialLocation) {
+        fraction.value = pendingInitialLocation.fraction ?? 0
+        onRelocate?.(pendingInitialLocation)
+      }
       loading.value = false
     } catch (e) {
       console.error('[useFoliate]', e)
@@ -382,6 +402,15 @@ export function useFoliate(
           startMediaOverlay?: () => unknown
         })
       | null
+  }
+
+  async function getSectionIndexForTarget(target: string): Promise<number | null> {
+    try {
+      const resolved = await getViewEl()?.resolveNavigation?.(target)
+      return typeof resolved?.index === 'number' ? resolved.index : null
+    } catch {
+      return null
+    }
   }
 
   async function getLocationContext(target: string): Promise<FoliateLocationContext> {
@@ -418,6 +447,7 @@ export function useFoliate(
 
   onUnmounted(() => {
     input.cleanup()
+    selection.cleanup()
     getViewEl()?.destroy?.()
     viewRef.value = null
   })
@@ -442,6 +472,7 @@ export function useFoliate(
     getSectionFractions: (): number[] => getViewEl()?.getSectionFractions?.() ?? [],
     getChapters: (): unknown[] => getViewEl()?.book?.toc ?? [],
     getRenderer: (): FoliateRenderer | null => getViewEl()?.renderer ?? null,
+    getSectionIndexForTarget,
     getLocationContext: (target: string): Promise<FoliateLocationContext> => getLocationContext(target),
     addAnnotation: (cfi: string, color = '#FACC15', style = 'highlight') => annotations.addAnnotation(viewRef.value, cfi, color, style),
     addAnnotations: (anns: { cfi: string; color: string; style: string }[]) => annotations.addAnnotations(viewRef.value, anns),

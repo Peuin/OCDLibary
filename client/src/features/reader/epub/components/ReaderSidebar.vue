@@ -6,7 +6,7 @@ import { ANNOTATION_COLOR_FILTER_OPTIONS } from '@bookorbit/types'
 import type { TocItem } from '../composables/useToc'
 import type { Bookmark as BookmarkType } from '../composables/useBookmarks'
 import type { Annotation } from '../composables/useAnnotations'
-import { stripFragment, findNearestCfi, formatCfiLocation, formatDate, getCfiSortKey } from '../utils'
+import { findNearestCfi, formatCfiLocation, formatDate, getCfiSortKey } from '../utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const { t } = useI18n()
@@ -473,7 +473,7 @@ const TocList = defineComponent({
   emits: ['navigate', 'toggleExpand'],
   setup(props, { emit }) {
     function isActive(href: string): boolean {
-      return stripFragment(props.activeHref) === stripFragment(href)
+      return !!href && props.activeHref === href
     }
 
     return (): VNode =>

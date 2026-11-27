@@ -29,12 +29,12 @@ export function useSearch() {
   const results = ref<SearchResult[]>([])
   const isSearching = ref(false)
 
-  let cancelled = false
+  let generation = 0
 
   async function search(view: FoliateView, q: string) {
+    const searchId = ++generation
     const normalized = q.trim()
     if (normalized.length < MIN_SEARCH_QUERY_LENGTH) {
-      cancelled = true
       isSearching.value = false
       results.value = []
       query.value = normalized
@@ -42,9 +42,8 @@ export function useSearch() {
       return
     }
 
-    cancelled = true
     await Promise.resolve()
-    cancelled = false
+    if (searchId !== generation) return
 
     query.value = normalized
     results.value = []
@@ -53,7 +52,7 @@ export function useSearch() {
     try {
       const generator = view.search({ query: normalized })
       for await (const section of generator) {
-        if (cancelled) break
+        if (searchId !== generation) break
         if (!section || typeof section !== 'object' || !('subitems' in section)) continue
         const sectionTitle: string = section.label ?? ''
         const newItems: SearchResult[] = (section.subitems ?? []).map((item) => ({
@@ -68,14 +67,14 @@ export function useSearch() {
     } catch {
       // search cancelled or view destroyed
     } finally {
-      if (!cancelled) {
+      if (searchId === generation) {
         isSearching.value = false
       }
     }
   }
 
   function clear(view: FoliateView | null) {
-    cancelled = true
+    generation++
     isSearching.value = false
     results.value = []
     query.value = ''

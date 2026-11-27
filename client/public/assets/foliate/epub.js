@@ -509,6 +509,7 @@ class MediaOverlay extends EventTarget {
           // for some reason need to seek in `canplaythrough`
           // or it won't play when skipping in WebKit
           audio.currentTime = this.#activeItem.begin ?? 0
+          if (this.#state === 'paused') return
           this.#state = 'playing'
           audio.play().catch((e) => this.#error(e))
         },

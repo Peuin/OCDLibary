@@ -119,13 +119,12 @@ export function useFoliateAnnotations() {
     ;(view as any)?.addAnnotation?.({ value: cfi })
   }
 
-  function reAddAll(view: unknown) {
-    setTimeout(() => {
-      for (const [cfi] of annotationStyleMap) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(view as any)?.addAnnotation?.({ value: cfi })
-      }
-    }, 100)
+  function reAddAll(view: unknown, index?: number) {
+    const target = view as { resolveCFI?: (cfi: string) => { index: number }; addAnnotation?: (annotation: { value: string }) => unknown } | null
+    for (const [cfi] of annotationStyleMap) {
+      if (index !== undefined && target?.resolveCFI?.(cfi)?.index !== index) continue
+      void target?.addAnnotation?.({ value: cfi })
+    }
   }
 
   function handleDrawAnnotationEvent(e: CustomEvent) {

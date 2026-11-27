@@ -357,6 +357,7 @@ export const makeStreamingBook = async (bookId, baseUrl, bookInfo, fetchFile = f
 
 class CursorAutohider {
   #timeout
+  #onMove
   #el
   #check
   #state
@@ -366,18 +367,21 @@ class CursorAutohider {
     this.#check = check
     this.#state = state
     if (this.#state.hidden) this.hide()
-    this.#el.addEventListener(
-      'mousemove',
-      ({ screenX, screenY }) => {
-        // check if it actually moved
-        if (screenX === this.#state.x && screenY === this.#state.y) return
-        ;((this.#state.x = screenX), (this.#state.y = screenY))
-        this.show()
-        if (this.#timeout) clearTimeout(this.#timeout)
-        if (check()) this.#timeout = setTimeout(this.hide.bind(this), 1000)
-      },
-      false,
-    )
+    this.#onMove = ({ screenX, screenY }) => {
+      // check if it actually moved
+      if (screenX === this.#state.x && screenY === this.#state.y) return
+      ;((this.#state.x = screenX), (this.#state.y = screenY))
+      this.show()
+      if (this.#timeout) clearTimeout(this.#timeout)
+      if (check()) this.#timeout = setTimeout(this.hide.bind(this), 1000)
+    }
+    this.#el.addEventListener('mousemove', this.#onMove, false)
+  }
+
+  destroy() {
+    clearTimeout(this.#timeout)
+    this.#el?.removeEventListener('mousemove', this.#onMove, false)
+    this.#el = null
   }
 
   cloneFor(el) {
@@ -385,12 +389,12 @@ class CursorAutohider {
   }
 
   hide() {
-    this.#el.style.cursor = 'none'
+    if (this.#el) this.#el.style.cursor = 'none'
     this.#state.hidden = true
   }
 
   show() {
-    this.#el.style.removeProperty('cursor')
+    this.#el?.style.removeProperty('cursor')
     this.#state.hidden = false
   }
 }
@@ -467,6 +471,11 @@ export class View extends HTMLElement {
   #cursorAutohider = new CursorAutohider(this, () => this.hasAttribute('autohide-cursor'))
   isFixedLayout = false
   lastLocation
+  #docCleanups = new WeakMap()
+  #searchGeneration = 0
+  #mediaOverlayGeneration = 0
+  #clearMediaHighlight = () => {}
+  #detachMediaOverlay = () => {}
   history = new History()
 
   constructor() {
@@ -513,8 +522,25 @@ export class View extends HTMLElement {
     }
     this.renderer.setAttribute('exportparts', 'head,foot,filter')
     this.renderer.addEventListener('load', (e) => this.#onLoad(e.detail))
+    this.renderer.addEventListener('unload', (e) => {
+      for (const cleanup of this.#docCleanups.get(e.detail.doc) ?? []) cleanup()
+      this.#docCleanups.delete(e.detail.doc)
+      this.#emit('unload', e.detail)
+    })
     this.renderer.addEventListener('relocate', (e) => this.#onRelocate(e.detail))
-    this.renderer.addEventListener('create-overlayer', (e) => e.detail.attach(this.#createOverlayer(e.detail)))
+    this.renderer.addEventListener('create-overlayer', (e) => {
+      e.detail.attach(this.#createOverlayer(e.detail))
+      const renderer = this.renderer
+      const publish = () => {
+        if (this.renderer !== renderer || !renderer.getContents().some((content) => content.doc === e.detail.doc)) return
+        const list = this.#searchResults.get(e.detail.index)
+        if (list) for (const item of list) void this.addAnnotation(item)
+        this.#emit('create-overlay', { index: e.detail.index, doc: e.detail.doc })
+      }
+      // Fixed-layout frames enter getContents() after the frame's load promise settles.
+      if (this.isFixedLayout) setTimeout(publish, 0)
+      else publish()
+    })
     this.renderer.open(book)
     this.#root.append(this.renderer)
 
@@ -523,29 +549,55 @@ export class View extends HTMLElement {
       const playbackActiveClass = book.media.playbackActiveClass
       this.mediaOverlay = book.getMediaOverlay()
       let lastActive
-      this.mediaOverlay.addEventListener('highlight', (e) => {
-        const resolved = this.resolveNavigation(e.detail.text)
-        this.renderer.goTo(resolved).then(() => {
-          const { doc } = this.renderer.getContents().find((x) => (x.index = resolved.index))
-          const el = resolved.anchor(doc)
-          el.classList.add(activeClass)
-          if (playbackActiveClass) el.ownerDocument.documentElement.classList.add(playbackActiveClass)
-          lastActive = new WeakRef(el)
-        })
-      })
-      this.mediaOverlay.addEventListener('unhighlight', () => {
+      this.#clearMediaHighlight = () => {
         const el = lastActive?.deref()
-        if (el) {
-          el.classList.remove(activeClass)
-          if (playbackActiveClass) el.ownerDocument.documentElement.classList.remove(playbackActiveClass)
-        }
-      })
+        if (!el) return
+        el.classList.remove(activeClass)
+        if (playbackActiveClass) el.ownerDocument.documentElement.classList.remove(playbackActiveClass)
+        lastActive = null
+      }
+      const overlay = this.mediaOverlay
+      const onHighlight = (e) => {
+        const generation = ++this.#mediaOverlayGeneration
+        this.#clearMediaHighlight()
+        const resolved = this.resolveNavigation(e.detail.text)
+        if (!resolved) return
+        this.renderer
+          .goTo(resolved)
+          .then(() => {
+            if (generation !== this.#mediaOverlayGeneration) return
+            const content = this.renderer.getContents().find((x) => x.index === resolved.index)
+            if (!content?.doc) return
+            const el = resolved.anchor(content.doc)
+            if (!el?.classList) return
+            el.classList.add(activeClass)
+            if (playbackActiveClass) el.ownerDocument.documentElement.classList.add(playbackActiveClass)
+            lastActive = new WeakRef(el)
+          })
+          .catch((error) => console.warn(error))
+      }
+      const onUnhighlight = () => {
+        this.#mediaOverlayGeneration++
+        this.#clearMediaHighlight()
+      }
+      overlay.addEventListener('highlight', onHighlight)
+      overlay.addEventListener('unhighlight', onUnhighlight)
+      this.#detachMediaOverlay = () => {
+        overlay.removeEventListener('highlight', onHighlight)
+        overlay.removeEventListener('unhighlight', onUnhighlight)
+      }
     }
   }
 
   close() {
+    this.#mediaOverlayGeneration++
+    this.#detachMediaOverlay()
+    this.mediaOverlay?.stop()
+    this.#clearMediaHighlight()
+    this.#searchGeneration++
     this.renderer?.destroy()
     this.renderer?.remove()
+    this.renderer = null
     this.#sectionProgress = null
     this.#tocProgress = null
     this.#pageProgress = null
@@ -554,6 +606,23 @@ export class View extends HTMLElement {
     this.history.clear()
     this.tts = null
     this.mediaOverlay = null
+  }
+
+  destroy() {
+    this.close()
+    this.#cursorAutohider.destroy()
+    this.book?.destroy?.()
+    this.book = null
+  }
+
+  #listenDoc(doc, type, listener, options) {
+    let cleanups = this.#docCleanups.get(doc)
+    if (!cleanups) {
+      cleanups = []
+      this.#docCleanups.set(doc, cleanups)
+    }
+    doc.addEventListener(type, listener, options)
+    cleanups.push(() => doc.removeEventListener(type, listener, options))
   }
 
   goToTextStart() {
@@ -592,6 +661,8 @@ export class View extends HTMLElement {
     const koreaderProgress = getKoreaderProgress(koreaderDocFragmentIndex, range)
     this.lastLocation = {
       ...progress,
+      reason,
+      index,
       tocItem,
       pageItem,
       cfi,
@@ -612,7 +683,8 @@ export class View extends HTMLElement {
     if (!this.language.isCJK) doc.documentElement.dir ||= this.language.direction ?? ''
 
     this.#handleLinks(doc, index)
-    this.#cursorAutohider.cloneFor(doc.documentElement)
+    const cursor = this.#cursorAutohider.cloneFor(doc.documentElement)
+    this.#docCleanups.get(doc).push(() => cursor.destroy())
 
     this.#emit('load', { doc, index })
   }
@@ -620,7 +692,7 @@ export class View extends HTMLElement {
   #handleLinks(doc, index) {
     const { book } = this
     const section = book.sections[index]
-    doc.addEventListener('click', (e) => {
+    this.#listenDoc(doc, 'click', (e) => {
       const a = e.target.closest('a[href]')
       if (!a) return
       e.preventDefault()
@@ -642,6 +714,7 @@ export class View extends HTMLElement {
     if (value.startsWith(SEARCH_PREFIX)) {
       const cfi = value.replace(SEARCH_PREFIX, '')
       const { index, anchor } = await this.resolveNavigation(cfi)
+      if (!remove && !this.#searchResults.get(index)?.some((item) => item.value === value)) return
       const obj = this.#getOverlayer(index)
       if (obj) {
         const { overlayer, doc } = obj
@@ -665,7 +738,7 @@ export class View extends HTMLElement {
         this.#emit('draw-annotation', { draw, annotation, doc, range })
       }
     }
-    const label = this.#tocProgress.getProgress(index)?.label ?? ''
+    const label = this.#tocProgress?.getProgress(index)?.label ?? ''
     return { index, label }
   }
 
@@ -679,7 +752,8 @@ export class View extends HTMLElement {
 
   #createOverlayer({ doc, index }) {
     const overlayer = new Overlayer()
-    doc.addEventListener(
+    this.#listenDoc(
+      doc,
       'click',
       (e) => {
         const [value, range] = overlayer.hitTest(e)
@@ -690,10 +764,6 @@ export class View extends HTMLElement {
       false,
     )
 
-    const list = this.#searchResults.get(index)
-    if (list) for (const item of list) this.addAnnotation(item)
-
-    this.#emit('create-overlay', { index })
     return overlayer
   }
 
@@ -830,7 +900,7 @@ export class View extends HTMLElement {
       const isRange = frag instanceof Range
       const range = isRange ? frag : doc.createRange()
       if (!isRange) range.selectNodeContents(frag)
-      return this.#tocProgress.getProgress(index, range)
+      return this.#tocProgress?.getProgress(index, range)
     } catch (e) {
       console.error(e)
       console.error(`Could not get ${target}`)
@@ -876,7 +946,9 @@ export class View extends HTMLElement {
 
   async *search(opts) {
     this.clearSearch()
+    const generation = this.#searchGeneration
     const { searchMatcher } = await import('./search.js')
+    if (generation !== this.#searchGeneration) return
     const { query, index } = opts
     const matcher = searchMatcher(textWalker, { defaultLocale: this.language, ...opts })
     const iter = index != null ? this.#searchSection(matcher, query, index) : this.#searchBook(matcher, query)
@@ -885,12 +957,13 @@ export class View extends HTMLElement {
     this.#searchResults.set(index, list)
 
     for await (const result of iter) {
+      if (generation !== this.#searchGeneration) return
       if (result.subitems) {
         const list = result.subitems.map(({ cfi }) => ({ value: SEARCH_PREFIX + cfi }))
         this.#searchResults.set(result.index, list)
         for (const item of list) this.addAnnotation(item)
         yield {
-          label: this.#tocProgress.getProgress(result.index)?.label ?? '',
+          label: this.#tocProgress?.getProgress(result.index)?.label ?? '',
           subitems: result.subitems,
         }
       } else {
@@ -906,7 +979,9 @@ export class View extends HTMLElement {
   }
 
   clearSearch() {
-    for (const list of this.#searchResults.values()) for (const item of list) this.deleteAnnotation(item)
+    this.#searchGeneration++
+    for (const { overlayer } of this.renderer?.getContents?.() ?? [])
+      for (const list of this.#searchResults.values()) for (const item of list) overlayer?.remove(item.value)
     this.#searchResults.clear()
   }
 

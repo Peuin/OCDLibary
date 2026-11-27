@@ -132,6 +132,9 @@ const { onActivity, elapsedMinutes } = useReadingSession(
 
 const progress = useReaderProgress(bookId, fileId, elapsedMinutes, 0, {
   trackingEnabled,
+  beforeExitFlush: () => {
+    if (!loading.value) getRenderer()?.flushRelocate?.()
+  },
 })
 const { cfi, chapterTitle, sectionIndex, totalSections, fraction, locationTotal, footerMode, cycleFooterMode, updateHeadsFeet } = progress
 
@@ -254,7 +257,17 @@ const {
   showResumeHighlightFromBlock,
   clearHighlight,
 } = useFoliateTts()
-const { startPlayback, isActive, currentBook, currentBlockIndex, currentChapterIndex, playbackState, primeAudioContext } = useTtsPlayer()
+const {
+  startPlayback,
+  isActive,
+  currentBook,
+  currentBlockIndex,
+  currentChapterIndex,
+  playbackState,
+  primeAudioContext,
+  pausePlayback,
+  stopPlayback,
+} = useTtsPlayer()
 const { setExpanded: setMiniPlayerExpanded, setReaderFooterVisible } = useTtsMiniPlayerUi()
 const { loadBookPreferences, loadUserPreferences, defaultProviderId, defaultVoiceId, defaultSpeed } = useTtsPreferences()
 const ttsPosition = useTtsPosition()
@@ -367,8 +380,9 @@ function onChapterLoadHandler(doc: Document, viewEl: HTMLElement) {
   currentChapterViewEl = viewEl
   // The windowed scrolled mode also loads the neighbouring chapters. The renderer lists
   // the chapter being read first, so a mounted doc that is not first is only a neighbour.
+  if (getMediaOverlay()) injectMediaOverlayHighlightCss(doc, getMediaActiveClass())
   const docs = renderedChapterDocs()
-  if (docs.includes(doc) && docs[0] !== doc) return
+  if (docs[0] !== doc) return
   setCurrentChapterDoc(doc, viewEl)
 }
 
@@ -608,10 +622,12 @@ function nearestSentenceId(node: Node | null): string | null {
 // Persist the exact narrated sentence so playback can resume there after reload.
 watch(
   () => mediaOverlay.currentFragment.value,
-  (fragment) => {
+  async (fragment) => {
     if (!mediaOverlay.isActive.value || !fragment) return
-    saveNarrationPos(sectionIndex.value, fragment)
-    progress.setMediaOverlayProgress(fragment, sectionIndex.value)
+    const section = await getSectionIndexForTarget(fragment)
+    if (section === null || !mediaOverlay.isActive.value || mediaOverlay.currentFragment.value !== fragment) return
+    saveNarrationPos(section, fragment)
+    progress.setMediaOverlayProgress(fragment, section)
   },
 )
 
@@ -781,6 +797,14 @@ async function handlePlayFromCurrentPage() {
 }
 
 function onRelocateHandler(detail: RelocateDetail) {
+  const relocatedSection = detail.section?.current ?? detail.index
+  if (detail.reason === 'scroll' && relocatedSection !== undefined && relocatedSection !== sectionIndex.value) {
+    if (isTtsActive.value && relocatedSection !== currentChapterIndex.value) {
+      if (playbackState.value === 'loading') stopPlayback()
+      else if (playbackState.value === 'playing') pausePlayback()
+    }
+    if (mediaOverlay.isPlaying.value) mediaOverlay.pause()
+  }
   progress.onRelocate(detail)
   if (initialOpenCompleted && !mediaOverlay.isActive.value && !isTtsRelocating.value && pendingManualNavigationClearsMediaOverlay) {
     progress.clearMediaOverlayProgress()
@@ -848,6 +872,7 @@ const {
   getSectionFractions,
   getChapters,
   getLocationContext,
+  getSectionIndexForTarget,
   getRenderer,
   addAnnotation,
   addAnnotations,

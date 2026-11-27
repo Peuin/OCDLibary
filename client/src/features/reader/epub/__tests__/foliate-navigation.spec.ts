@@ -49,6 +49,7 @@ describe('Foliate navigation', () => {
   let getPageScrollOffset: (page: number, size: number, vertical: boolean, pageProgressionRtl: boolean) => number
   let normalizeStylesheetForReader: (data: string, width?: number, height?: number) => string
   let FixedLayout: new () => HTMLElement & {
+    destroy: () => void
     open: (book: { rendition: { layout: string; spread: string }; sections: { load: () => Promise<string> }[] }) => void
     goTo: (target: { index: number }) => Promise<void>
     getContents: () => { index?: number; doc?: Document }[]
@@ -173,6 +174,13 @@ describe('Foliate navigation', () => {
       expect(contents).toHaveLength(1)
       expect(contents[0]).toMatchObject({ index: 0 })
       expect(contents[0]?.doc?.documentElement).toBeTruthy()
+      const unloaded: number[] = []
+      fixedLayout.addEventListener('unload', (event) => unloaded.push((event as CustomEvent).detail.index))
+      await fixedLayout.goTo({ index: 1 })
+      expect(unloaded).toEqual([0])
+      fixedLayout.destroy()
+      fixedLayout.destroy()
+      expect(unloaded).toEqual([0, 1])
     } finally {
       fixedLayout.remove()
       createElementSpy.mockRestore()

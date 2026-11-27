@@ -36,6 +36,27 @@ describe('useToc', () => {
     ])
   })
 
+  it('expands all ancestors of the active subitem without closing other branches', () => {
+    const toc = useToc()
+    toc.setChapters([{ href: 'part.xhtml', subitems: [{ href: 'ch.xhtml', subitems: [{ href: 'ch.xhtml#two' }] }] }])
+    toc.toggleExpand('other.xhtml')
+    toc.setActiveHref('ch.xhtml#two')
+    expect([...toc.expandedHrefs.value]).toEqual(['other.xhtml', 'part.xhtml', 'ch.xhtml'])
+    expect(toc.isActive('ch.xhtml#two')).toBe(true)
+    expect(toc.isActive('ch.xhtml')).toBe(false)
+  })
+
+  it('expands a restored subitem when chapters arrive after the initial location', () => {
+    const toc = useToc()
+    toc.setActiveHref('chapter.xhtml#two')
+    toc.setChapters([{ href: 'chapter.xhtml', subitems: [{ href: 'chapter.xhtml#two' }] }])
+    expect(toc.isExpanded('chapter.xhtml')).toBe(true)
+  })
+
+  it('does not mark empty hrefs active', () => {
+    expect(useToc().isActive('')).toBe(false)
+  })
+
   it('toggles expanded hrefs immutably', () => {
     const toc = useToc()
 
@@ -52,12 +73,14 @@ describe('useToc', () => {
     expect(toc.expandedHrefs.value).not.toBe(expanded)
   })
 
-  it('matches active href ignoring URL fragments', () => {
+  it('matches only the active fragment within the chapter', () => {
     const toc = useToc()
 
     toc.setActiveHref('chapter-1.xhtml#frag-a')
 
-    expect(toc.isActive('chapter-1.xhtml#frag-b')).toBe(true)
+    expect(toc.isActive('chapter-1.xhtml#frag-a')).toBe(true)
+    expect(toc.isActive('chapter-1.xhtml#frag-b')).toBe(false)
+    expect(toc.isActive('chapter-1.xhtml')).toBe(false)
     expect(toc.isActive('chapter-2.xhtml#frag-b')).toBe(false)
   })
 })

@@ -80,6 +80,28 @@ describe('useSearch', () => {
     ])
   })
 
+  it('does not append stale results or clear the loading state of a newer search', async () => {
+    let release!: () => void
+    const delayed = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const view: FoliateView = {
+      search: async function* ({ query }) {
+        if (query === 'old') await delayed
+        yield { label: query, subitems: [{ cfi: query }] }
+      },
+    }
+    const store = useSearch()
+    const old = store.search(view, 'old')
+    await Promise.resolve()
+    await store.search(view, 'new')
+    release()
+    await old
+    expect(store.results.value.map((item) => item.cfi)).toEqual(['new'])
+    expect(store.query.value).toBe('new')
+    expect(store.isSearching.value).toBe(false)
+  })
+
   it('clear resets local search state and clears foliate highlights', () => {
     const clearSearch = vi.fn<() => void>()
     const view: FoliateView = {

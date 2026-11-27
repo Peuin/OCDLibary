@@ -90,6 +90,38 @@ describe('Foliate MediaOverlay concurrency', () => {
     vi.restoreAllMocks()
   })
 
+  it('does not resume paused narration when a delayed audio canplaythrough arrives', async () => {
+    const overlay = makeOverlay(async () => new Blob(['audio']))
+    await overlay.start(0)
+    overlay.pause()
+    FakeAudio.instances[0]!.emitCanPlayThrough()
+    expect(FakeAudio.instances[0]!.playCalls).toBe(0)
+    expect(FakeAudio.instances[0]!.paused).toBe(true)
+    overlay.stop()
+  })
+
+  it('automatically advances from one section audio to the next section SMIL', async () => {
+    const book = new EPUB({
+      loadText: async (src: string) => (src.endsWith('chapter.smil') ? smil : smil.replaceAll('chapter.xhtml', 'second.xhtml')),
+      loadBlob: async () => new Blob(['audio']),
+      getSize: () => 0,
+    })
+    book.sections = [
+      { id: 'OPS/chapter.xhtml', mediaOverlay: { href: 'OPS/chapter.smil' } },
+      { id: 'OPS/second.xhtml', mediaOverlay: { href: 'OPS/second.smil' } },
+    ]
+    const overlay = book.getMediaOverlay()
+    const fragments: string[] = []
+    overlay.addEventListener('highlight', (event: Event) => fragments.push((event as CustomEvent).detail.text))
+    await overlay.start(0)
+    FakeAudio.instances[0]!.emitCanPlayThrough()
+    FakeAudio.instances[0]!.dispatchEvent(new Event('ended'))
+    await vi.waitFor(() => expect(FakeAudio.instances).toHaveLength(2))
+    FakeAudio.instances[1]!.emitCanPlayThrough()
+    expect(fragments).toEqual(['OPS/chapter.xhtml#top', 'OPS/second.xhtml#top'])
+    overlay.stop()
+  })
+
   it('reports whether the requested SMIL entry exists', async () => {
     const loadBlob = vi.fn<(src: string) => Promise<Blob>>().mockResolvedValue(new Blob(['audio']))
     const overlay = makeOverlay(loadBlob)

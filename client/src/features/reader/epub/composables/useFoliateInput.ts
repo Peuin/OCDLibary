@@ -25,7 +25,27 @@ export function useFoliateInput(
   handleSelectionInteractionStart: ((doc: Document) => void) | undefined = undefined,
   handleSelectionInteractionEnd: ((doc: Document) => void) | undefined = undefined,
 ) {
-  const clickedDocs = new WeakSet<Document>()
+  const documentCleanups = new Map<Document, () => void>()
+  const timers = new Set<ReturnType<typeof setTimeout>>()
+  function schedule(callback: () => void, delay: number) {
+    const timer = setTimeout(() => {
+      timers.delete(timer)
+      callback()
+    }, delay)
+    timers.add(timer)
+    return timer
+  }
+  function cancelTimer(timer: ReturnType<typeof setTimeout>) {
+    clearTimeout(timer)
+    timers.delete(timer)
+  }
+  function clearTimers() {
+    for (const timer of timers) clearTimeout(timer)
+    timers.clear()
+    longHoldTimeout = null
+    isNavigating = false
+    isTextSelectionInProgress = false
+  }
 
   let lastClickTime = 0
   let lastClickZone: 'left' | 'middle' | 'right' | null = null
@@ -92,8 +112,8 @@ export function useFoliateInput(
     touchStartScreenY = touch.screenY
     touchStartTime = Date.now()
     isTextSelectionInProgress = false
-    if (longHoldTimeout) clearTimeout(longHoldTimeout)
-    longHoldTimeout = setTimeout(() => {
+    if (longHoldTimeout) cancelTimer(longHoldTimeout)
+    longHoldTimeout = schedule(() => {
       longHoldTimeout = null
     }, 500)
   }
@@ -122,7 +142,7 @@ export function useFoliateInput(
 
     if (hasSelection) {
       isTextSelectionInProgress = false
-      if (!handleSelectionInteractionEnd) setTimeout(() => handleSelectionEnd(doc), 50)
+      if (!handleSelectionInteractionEnd) schedule(() => handleSelectionEnd(doc), 50)
       return
     }
 
@@ -141,7 +161,7 @@ export function useFoliateInput(
         isNavigating = true
         if (deltaX < 0) navigateRight()
         else navigateLeft()
-        setTimeout(() => (isNavigating = false), 300)
+        schedule(() => (isNavigating = false), 300)
         return
       }
 
@@ -173,30 +193,39 @@ export function useFoliateInput(
   }
 
   function attachIframeClicks(doc: Document) {
-    if (clickedDocs.has(doc)) return
-    clickedDocs.add(doc)
+    if (documentCleanups.has(doc)) return
+    const cleanups: (() => void)[] = []
+    function listen<K extends keyof DocumentEventMap>(
+      type: K,
+      handler: (event: DocumentEventMap[K]) => void,
+      options?: boolean | AddEventListenerOptions,
+    ) {
+      doc.addEventListener(type, handler, options)
+      cleanups.push(() => doc.removeEventListener(type, handler, options))
+    }
+    documentCleanups.set(doc, () => cleanups.forEach((cleanup) => cleanup()))
 
     // Keep keyboard navigation active when focus moves into the EPUB iframe.
-    doc.addEventListener('keydown', handleKeydown)
+    listen('keydown', handleKeydown)
 
-    doc.addEventListener(
+    listen(
       'mousedown',
       () => {
         handleSelectionInteractionStart?.(doc)
-        if (longHoldTimeout) clearTimeout(longHoldTimeout)
-        longHoldTimeout = setTimeout(() => {
+        if (longHoldTimeout) cancelTimer(longHoldTimeout)
+        longHoldTimeout = schedule(() => {
           longHoldTimeout = null
         }, 500)
       },
       true,
     )
 
-    doc.addEventListener('mouseup', () => {
+    listen('mouseup', () => {
       if (handleSelectionInteractionEnd) handleSelectionInteractionEnd(doc)
       else handleSelectionEnd(doc)
     })
 
-    doc.addEventListener(
+    listen(
       'click',
       (e: MouseEvent) => {
         if (Date.now() - lastTouchTime < 500) return
@@ -220,17 +249,18 @@ export function useFoliateInput(
       true,
     )
 
-    doc.addEventListener('touchstart', (e: TouchEvent) => handleTouchStart(e, doc), { passive: true })
-    doc.addEventListener('touchmove', (e: TouchEvent) => handleTouchMove(e, doc), { passive: true })
-    doc.addEventListener('touchend', (e: TouchEvent) => handleTouchEnd(e, doc), { passive: true })
-    doc.addEventListener('touchcancel', (e: TouchEvent) => handleTouchEnd(e, doc, true), { passive: true })
+    listen('touchstart', (e: TouchEvent) => handleTouchStart(e, doc), { passive: true })
+    listen('touchmove', (e: TouchEvent) => handleTouchMove(e, doc), { passive: true })
+    listen('touchend', (e: TouchEvent) => handleTouchEnd(e, doc), { passive: true })
+    listen('touchcancel', (e: TouchEvent) => handleTouchEnd(e, doc, true), { passive: true })
 
-    doc.addEventListener('selectionchange', () => handleSelectionChange(doc))
+    listen('selectionchange', () => handleSelectionChange(doc))
   }
 
   function handleWindowMessage(e: MessageEvent) {
     if (e.origin !== window.location.origin) return
     if (e.data?.type !== 'foliate-click') return
+    if (e.source && ![...documentCleanups.keys()].some((doc) => doc.defaultView === e.source)) return
     if (isTapNavigationSuppressed()) return
     const view = getViewEl()
     if (!view) return
@@ -261,7 +291,7 @@ export function useFoliateInput(
     lastClickTime = now
     lastClickZone = currentZone
 
-    setTimeout(() => {
+    schedule(() => {
       if (isTapNavigationSuppressed()) return
       if (Date.now() - lastClickTime < DOUBLE_CLICK_MS) return
       if (!longHoldTimeout) return
@@ -277,12 +307,12 @@ export function useFoliateInput(
         if (!canProceedNavigation()) return
         isNavigating = true
         navigateLeft()
-        setTimeout(() => (isNavigating = false), 300)
+        schedule(() => (isNavigating = false), 300)
       } else if (currentZone === 'right' && !isMobile) {
         if (!canProceedNavigation()) return
         isNavigating = true
         navigateRight()
-        setTimeout(() => (isNavigating = false), 300)
+        schedule(() => (isNavigating = false), 300)
       } else if (isMobile) {
         // Touch has no page zones: any tap that is not a double tap toggles the chrome. On a
         // pointer device the middle zone is deliberately inert, so it must not fall through here.
@@ -383,11 +413,20 @@ export function useFoliateInput(
   document.addEventListener('keydown', handleKeydown)
   document.addEventListener('click', handleParentClick, true)
 
+  function detachDocument(doc: Document) {
+    documentCleanups.get(doc)?.()
+    documentCleanups.delete(doc)
+    clearTimers()
+  }
+
   function cleanup() {
+    for (const detach of documentCleanups.values()) detach()
+    documentCleanups.clear()
+    clearTimers()
     window.removeEventListener('message', handleWindowMessage)
     document.removeEventListener('keydown', handleKeydown)
     document.removeEventListener('click', handleParentClick, true)
   }
 
-  return { attachIframeClicks, suppressNextTapNavigation, cleanup }
+  return { detachDocument, attachIframeClicks, suppressNextTapNavigation, cleanup }
 }

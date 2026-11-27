@@ -67,6 +67,21 @@ describe('useFoliateAnnotations', () => {
     vi.useRealTimers()
   })
 
+  it('re-adds only the annotations for the newly attached section', () => {
+    const anns = useFoliateAnnotations()
+    anns.addAnnotations(null, [
+      { cfi: 'one', color: 'red', style: 'highlight' },
+      { cfi: 'two', color: 'blue', style: 'underline' },
+    ])
+    const view = { resolveCFI: (cfi: string) => ({ index: cfi === 'one' ? 1 : 2 }), addAnnotation: vi.fn<(annotation: { value: string }) => void>() }
+    anns.reAddAll(view, 2)
+    expect(view.addAnnotation).toHaveBeenCalledExactlyOnceWith({ value: 'two' })
+    anns.deleteAnnotation(null, 'two')
+    view.addAnnotation.mockClear()
+    anns.reAddAll(view, 2)
+    expect(view.addAnnotation).not.toHaveBeenCalled()
+  })
+
   it('hydrates draw callback using stored style/color', () => {
     const anns = useFoliateAnnotations()
     const draw = vi.fn<(drawer: unknown, options: { color: string }) => void>()

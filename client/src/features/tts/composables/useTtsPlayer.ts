@@ -213,8 +213,11 @@ export function useTtsPlayer() {
     })
     readingSession.startSession()
 
+    const generation = prefetchGeneration
     try {
-      chapterBlocks = await textSource(startChapter)
+      const blocks = await textSource(startChapter)
+      if (generation !== prefetchGeneration || getTextBlocks !== textSource) return
+      chapterBlocks = blocks
       if (chapterBlocks.length === 0) {
         await advanceChapter()
       } else {
@@ -229,7 +232,7 @@ export function useTtsPlayer() {
         await fetchAndPlay(safeStartBlock)
       }
     } catch (err) {
-      handleError(err)
+      if (generation === prefetchGeneration && getTextBlocks === textSource) handleError(err)
     }
   }
 
@@ -254,7 +257,7 @@ export function useTtsPlayer() {
       queueCurrentPositionSave(blockIdx)
       prefetchAhead(blockIdx)
     } catch (err) {
-      handleError(err)
+      if (gen === prefetchGeneration) handleError(err)
     }
   }
 
@@ -326,11 +329,16 @@ export function useTtsPlayer() {
     currentBlockIndex.value = 0
     stopAllSources()
     if (!getTextBlocks) return
-    chapterBlocks = await getTextBlocks(next)
-    if (chapterBlocks.length > 0) {
-      await fetchAndPlay(0)
-    } else {
-      await advanceChapter()
+    const generation = prefetchGeneration
+    const textSource = getTextBlocks
+    try {
+      const blocks = await textSource(next)
+      if (generation !== prefetchGeneration || getTextBlocks !== textSource || currentChapterIndex.value !== next) return
+      chapterBlocks = blocks
+      if (chapterBlocks.length > 0) await fetchAndPlay(0)
+      else await advanceChapter()
+    } catch (err) {
+      if (generation === prefetchGeneration && getTextBlocks === textSource) handleError(err)
     }
   }
 
