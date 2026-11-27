@@ -824,7 +824,23 @@ function onRelocateHandler(detail: RelocateDetail) {
   }
 }
 
+// SCRUM-104: the paginator skips its page-flip animation while `reduced-motion` is set.
+const reducedMotionQuery = typeof window !== 'undefined' ? window.matchMedia?.('(prefers-reduced-motion: reduce)') : undefined
+const prefersReducedMotion = ref(reducedMotionQuery?.matches ?? false)
+const onReducedMotionChange = (event: MediaQueryListEvent) => (prefersReducedMotion.value = event.matches)
+reducedMotionQuery?.addEventListener?.('change', onReducedMotionChange)
+onUnmounted(() => reducedMotionQuery?.removeEventListener?.('change', onReducedMotionChange))
+
+function syncReducedMotion(renderer: FoliateRenderer | null | undefined) {
+  if (!renderer) return
+  if (prefersReducedMotion.value) renderer.setAttribute('reduced-motion', '')
+  else renderer.removeAttribute('reduced-motion')
+}
+
+watch(prefersReducedMotion, () => syncReducedMotion(getRenderer()))
+
 function onApplyStylesHandler(renderer: FoliateRenderer) {
+  syncReducedMotion(renderer)
   if (shouldApplyStyles.value) {
     applyToRenderer(renderer, isFixedLayout.value ? { flow: 'paginated' } : undefined)
   }
@@ -1036,9 +1052,9 @@ function seedState(partial: Partial<ReaderState>) {
   if (renderer) applyToRenderer(renderer, isFixedLayout.value ? { flow: 'paginated' } : undefined)
 }
 
-async function reopenEpubAtCurrentLocation() {
+async function reopenEpubAtCurrentLocation(atCfi: string | null = null) {
   const fallbackFraction = fraction.value > 0 ? fraction.value : progress.percentage.value > 0 ? progress.percentage.value / 100 : undefined
-  await open(bookId, fileId, fileFormat, null, fallbackFraction, {
+  await open(bookId, fileId, fileFormat, atCfi, fallbackFraction, {
     fixedLayoutSpread: state.value.fixedLayoutSpread,
   })
   setChapters(getChapters())
@@ -1049,11 +1065,15 @@ async function reopenEpubAtCurrentLocation() {
 // Also enables style injection from this point forward (user has opted in by changing something).
 async function applyUpdate(partial: Partial<ReaderState>) {
   const shouldReopenForSpread = partial.fixedLayoutSpread !== undefined && partial.fixedLayoutSpread !== state.value.fixedLayoutSpread
+  // Switching paginated <-> scrolled rebuilds the renderer from scratch so no layout state of the
+  // previous mode can survive (fixed-layout books always paginate, so they never need it).
+  const shouldReopenForFlow = partial.flow !== undefined && partial.flow !== state.value.flow && !isFixedLayout.value
+  const resumeCfi = shouldReopenForFlow ? cfi.value || null : null
   shouldApplyStyles.value = true
   seedState(partial)
   bookSettings.updateBookSettings(partial)
-  if (shouldReopenForSpread) {
-    await reopenEpubAtCurrentLocation()
+  if (shouldReopenForFlow || shouldReopenForSpread) {
+    await reopenEpubAtCurrentLocation(resumeCfi)
   }
 }
 
