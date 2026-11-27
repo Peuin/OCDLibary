@@ -247,7 +247,14 @@ const hasActiveTextSelection = (doc) => {
 }
 
 class View {
-  #observer = new ResizeObserver(() => this.expand())
+  #observer = new ResizeObserver(() => this.#scheduleExpand())
+  #expandFrame
+  #destroyed = false
+  #cancelLoad
+  #resourceDocument
+  #onResourceLoad = (event) => {
+    if (!this.#column && !this.#vertical && event.target?.localName === 'img') this.#scheduleExpand()
+  }
   #element = document.createElement('div')
   #iframe = document.createElement('iframe')
   #contentRange = document.createRange()
@@ -294,37 +301,52 @@ class View {
   async load(src, afterLoad, beforeRender) {
     if (typeof src !== 'string') throw new Error(`${src} is not string`)
     return new Promise((resolve) => {
-      this.#iframe.addEventListener(
-        'load',
-        () => {
-          const doc = this.document
-          afterLoad?.(doc)
+      const onLoad = () => {
+        this.#cancelLoad = null
+        if (this.#destroyed) return resolve(false)
+        const doc = this.document
+        afterLoad?.(doc)
 
-          // it needs to be visible for Firefox to get computed style
-          this.#iframe.style.display = 'block'
-          const { vertical, rtl } = getDirection(doc)
-          const background = getBackground(doc)
-          this.#iframe.style.display = 'none'
+        // it needs to be visible for Firefox to get computed style
+        this.#iframe.style.display = 'block'
+        const { vertical, rtl } = getDirection(doc)
+        const background = getBackground(doc)
+        this.#iframe.style.display = 'none'
 
-          this.#vertical = vertical
-          this.#rtl = rtl
+        this.#vertical = vertical
+        this.#rtl = rtl
 
-          this.#contentRange.selectNodeContents(doc.body)
-          const layout = beforeRender?.({ vertical, rtl, background })
-          this.#iframe.style.display = 'block'
-          this.render(layout)
-          this.#observer.observe(doc.body)
+        this.#contentRange.selectNodeContents(doc.body)
+        const layout = beforeRender?.({ vertical, rtl, background })
+        this.#iframe.style.display = 'block'
+        this.render(layout)
+        this.#observer.observe(doc.body)
+        this.#resourceDocument = doc
+        doc.addEventListener('load', this.#onResourceLoad, true)
+        doc.addEventListener('error', this.#onResourceLoad, true)
 
-          // the resize observer above doesn't work in Firefox
-          // (see https://bugzilla.mozilla.org/show_bug.cgi?id=1832939)
-          // until the bug is fixed we can at least account for font load
-          doc.fonts.ready.then(() => this.expand())
+        // the resize observer above doesn't work in Firefox
+        // (see https://bugzilla.mozilla.org/show_bug.cgi?id=1832939)
+        // until the bug is fixed we can at least account for font load
+        doc.fonts.ready.then(() => this.#scheduleExpand())
 
-          resolve()
-        },
-        { once: true },
-      )
+        resolve(true)
+      }
+      this.#cancelLoad = () => {
+        this.#iframe.removeEventListener('load', onLoad)
+        resolve(false)
+      }
+      this.#iframe.addEventListener('load', onLoad, { once: true })
       this.#iframe.src = src
+    })
+  }
+  #scheduleExpand() {
+    if (this.#destroyed) return
+    if (this.#column || this.#vertical) return this.expand()
+    if (this.#expandFrame != null) return
+    this.#expandFrame = requestAnimationFrame(() => {
+      this.#expandFrame = null
+      this.expand()
     })
   }
   render(layout) {
@@ -404,6 +426,7 @@ class View {
     }
   }
   expand() {
+    if (this.#destroyed || !this.document?.documentElement) return
     const { documentElement } = this.document
     if (this.#column) {
       const side = this.#vertical ? 'height' : 'width'
@@ -459,7 +482,14 @@ class View {
     return this.#overlayer
   }
   destroy() {
-    if (this.document) this.#observer.unobserve(this.document.body)
+    this.#destroyed = true
+    this.#observer.disconnect()
+    if (this.#expandFrame != null) cancelAnimationFrame(this.#expandFrame)
+    this.#resourceDocument?.removeEventListener('load', this.#onResourceLoad, true)
+    this.#resourceDocument?.removeEventListener('error', this.#onResourceLoad, true)
+    this.#resourceDocument = null
+    this.#cancelLoad?.()
+    this.#cancelLoad = null
   }
 }
 
@@ -493,9 +523,15 @@ export class Paginator extends HTMLElement {
   // `#view` / `#index` stay the active section, so single-view code paths keep working.
   #slots = new Map()
   #pendingSlots = new Map()
+  #cancelSlotLoads = new Map()
   #slotGeneration = 0
   #lastActiveOffset = 0
-  #windowSync = Promise.resolve()
+  #windowSync = false
+  #windowTimer
+  #windowRequested = false
+  #readingAnchor
+  #compensatedScrollTop
+  #virtualNavigation = 0
   windowRadius = DEFAULT_WINDOW_RADIUS
   maxMountedSections = MAX_MOUNTED_SECTIONS
   constructor() {
@@ -605,7 +641,18 @@ export class Paginator extends HTMLElement {
     this.#footer = this.#root.getElementById('footer')
 
     this.#observer.observe(this.#container)
-    this.#container.addEventListener('scroll', () => this.dispatchEvent(new Event('scroll')))
+    this.#container.addEventListener('scroll', () => {
+      this.dispatchEvent(new Event('scroll'))
+      if (!this.#isVirtual() || !this.#view) return
+      if (this.#compensatedScrollTop === this.#container.scrollTop) {
+        this.#compensatedScrollTop = undefined
+        return
+      }
+      this.#compensatedScrollTop = undefined
+      this.#updateActiveFromScroll()
+      this.#rememberReadingAnchor()
+      this.#scheduleWindowSync()
+    })
     this.#container.addEventListener(
       'scroll',
       debounce(() => {
@@ -760,6 +807,7 @@ export class Paginator extends HTMLElement {
     const gap = (-g / (g - 1)) * size
 
     const flow = this.getAttribute('flow')
+    this.#container.style.overflowAnchor = flow === 'scrolled' && !vertical ? 'none' : ''
     if (flow === 'scrolled') {
       // FIXME: vertical-rl only, not -lr
       this.setAttribute('dir', vertical ? 'rtl' : 'ltr')
@@ -832,13 +880,39 @@ export class Paginator extends HTMLElement {
     const offset = this.#offsetOf(this.#view)
     const delta = offset - this.#lastActiveOffset
     this.#lastActiveOffset = offset
-    if (Math.abs(delta) > 0.5) this.#container.scrollTop += delta
+    if (Math.abs(delta) > 0.5) this.#adjustScroll(delta)
+  }
+  #adjustScroll(delta) {
+    this.#container.scrollTop += delta
+    this.#compensatedScrollTop = this.#container.scrollTop
+  }
+  #anchorTop(anchor) {
+    const rect = [...(uncollapse(anchor.range.cloneRange()).getClientRects?.() ?? [])].find((r) => r.height > 0)
+    return rect ? this.#offsetOf(anchor.view) + this.#margin + rect.top - this.start : null
+  }
+  #rememberReadingAnchor() {
+    const range = this.#getVisibleRange().cloneRange()
+    range.collapse(true)
+    const anchor = { view: this.#view, range }
+    const top = this.#anchorTop(anchor)
+    this.#readingAnchor = top == null ? null : { ...anchor, top }
+    this.#lastActiveOffset = this.#offsetOf(this.#view)
   }
   #onSlotExpand(slot) {
-    if (!this.#isVirtual() || slot.view === this.#view) return this.#scrollToAnchor(this.#anchor)
-    if (slot.index < this.#index) this.#compensate()
+    if (!this.#isVirtual()) {
+      if (slot.view === this.#view) return this.#scrollToAnchor(this.#anchor)
+      return
+    }
+    if (this.#slots.get(slot.index) !== slot) return
+    const anchor = this.#readingAnchor
+    if (anchor?.view === this.#view) {
+      const top = this.#anchorTop(anchor)
+      if (top != null && Math.abs(top - anchor.top) > 0.5) this.#adjustScroll(top - anchor.top)
+      this.#lastActiveOffset = this.#offsetOf(this.#view)
+    } else if (slot.index < this.#index) this.#compensate()
   }
   #setActiveSlot(slot) {
+    if (this.#view !== slot.view) this.#readingAnchor = null
     this.#index = slot.index
     this.#view = slot.view
     this.#lastActiveOffset = this.#offsetOf(slot.view)
@@ -859,21 +933,31 @@ export class Paginator extends HTMLElement {
     view.document?.fonts?.ready?.then(() => view.expand())
     return true
   }
-  async #mountSlot(index) {
+  async #mountSlot(index, wanted = () => true) {
     const mounted = this.#slots.get(index)
     if (mounted) return mounted
     const pending = this.#pendingSlots.get(index)
     if (pending) return pending
     const generation = this.#slotGeneration
+    let cancelled = false
+    let cancel
+    const cancellation = new Promise((resolve) => {
+      cancel = () => {
+        cancelled = true
+        const slot = this.#slots.get(index)
+        if (slot && !slot.ready) this.#unmountSlot(index)
+        resolve(null)
+      }
+    })
     const promise = (async () => {
       const src = await this.sections[index].load()
       if (!src) throw new Error(`Failed to load section ${index}`)
       // the window was reset (long jump, mode change) while this section was loading
-      if (generation !== this.#slotGeneration || !this.#isVirtual()) {
+      if (cancelled || generation !== this.#slotGeneration || !this.#isVirtual() || !wanted()) {
         this.sections[index]?.unload?.()
         return null
       }
-      const slot = { index, view: null }
+      const slot = { index, view: null, ready: false }
       const view = new View({ container: this, onExpand: () => this.#onSlotExpand(slot) })
       slot.view = view
       const nextIndex = [...this.#slots.keys()].filter((i) => i > index).sort((a, b) => a - b)[0]
@@ -894,8 +978,13 @@ export class Paginator extends HTMLElement {
       }
       const isActive = () => this.#slots.get(this.#index) === slot || !this.#view
       const beforeRender = (args) => this.#beforeRender(args, { applyBackground: isActive() })
-      await view.load(src, afterLoad, beforeRender)
+      const loaded = await view.load(src, afterLoad, beforeRender)
       if (this.#slots.get(index) !== slot) return null
+      if (!loaded || cancelled || generation !== this.#slotGeneration || !wanted()) {
+        this.#unmountSlot(index)
+        return null
+      }
+      slot.ready = true
       this.dispatchEvent(
         new CustomEvent('create-overlayer', {
           detail: {
@@ -908,11 +997,15 @@ export class Paginator extends HTMLElement {
       return slot
     })()
     this.#pendingSlots.set(index, promise)
-    try {
-      return await promise
-    } finally {
-      this.#pendingSlots.delete(index)
+    this.#cancelSlotLoads.set(index, cancel)
+    const cleanup = () => {
+      if (this.#pendingSlots.get(index) === promise) this.#pendingSlots.delete(index)
+      if (this.#cancelSlotLoads.get(index) === cancel) this.#cancelSlotLoads.delete(index)
     }
+    // Keep the raw load registered until it settles: a new request for the same
+    // spine item must not race an obsolete load's eventual unload().
+    promise.then(cleanup, cleanup)
+    return Promise.race([promise, cancellation])
   }
   #unmountSlot(index) {
     const slot = this.#slots.get(index)
@@ -924,7 +1017,10 @@ export class Paginator extends HTMLElement {
     if (this.#view && index < this.#index) this.#compensate()
   }
   #destroyAllSlots() {
+    this.#cancelWindowSync()
     this.#slotGeneration++
+    this.#readingAnchor = null
+    for (const cancel of this.#cancelSlotLoads.values()) cancel()
     for (const index of [...this.#slots.keys()]) {
       const slot = this.#slots.get(index)
       slot.view.destroy()
@@ -936,6 +1032,10 @@ export class Paginator extends HTMLElement {
   }
   // Leaving the windowed mode keeps only the active section as the single view.
   #releaseInactiveSlots() {
+    this.#virtualNavigation++
+    this.#cancelWindowSync()
+    this.#readingAnchor = null
+    for (const cancel of this.#cancelSlotLoads.values()) cancel()
     if (!this.#slots.size) return
     this.#slotGeneration++
     for (const index of [...this.#slots.keys()]) if (index !== this.#index) this.#unmountSlot(index)
@@ -944,35 +1044,60 @@ export class Paginator extends HTMLElement {
   // Entering the windowed mode turns the current single view into the active slot.
   #adoptActiveView() {
     if (!this.#view || this.#slots.size) return
-    this.#slots.set(this.#index, { index: this.#index, view: this.#view })
+    this.#slots.set(this.#index, { index: this.#index, view: this.#view, ready: true })
+  }
+  #cancelWindowSync() {
+    clearTimeout(this.#windowTimer)
+    this.#windowRequested = false
   }
   #scheduleWindowSync() {
-    this.#windowSync = this.#windowSync.then(() => this.#syncWindow()).catch((e) => console.warn(e))
-    return this.#windowSync
+    clearTimeout(this.#windowTimer)
+    this.#windowTimer = setTimeout(() => {
+      this.#windowRequested = true
+      void this.#drainWindowSync()
+    }, 80)
+  }
+  async #drainWindowSync() {
+    if (this.#windowSync || !this.#windowRequested) return
+    this.#windowRequested = false
+    this.#windowSync = true
+    try {
+      await this.#syncWindow()
+    } catch (e) {
+      console.warn(e)
+    } finally {
+      this.#windowSync = false
+      if (this.#windowRequested) void this.#drainWindowSync()
+    }
+  }
+  #targetWindow() {
+    const heights = new Map([...this.#slots].map(([i, slot]) => [i, slot.view.element.getBoundingClientRect().height]))
+    return computeSectionWindow({
+      sections: this.sections,
+      activeIndex: this.#index,
+      radius: this.windowRadius,
+      maxSections: this.maxMountedSections,
+      heights,
+      viewportSize: this.size,
+    })
   }
   async #syncWindow() {
+    const generation = this.#slotGeneration
     // a few passes: section heights are only known after mounting, and short sections widen the window
     for (let pass = 0; pass < this.maxMountedSections; pass++) {
-      if (!this.#isVirtual() || !this.#view) return
+      if (!this.#isVirtual() || !this.#view || generation !== this.#slotGeneration) return
       const activeIndex = this.#index
-      const heights = new Map([...this.#slots].map(([i, slot]) => [i, slot.view.element.getBoundingClientRect().height]))
-      const target = computeSectionWindow({
-        sections: this.sections,
-        activeIndex,
-        radius: this.windowRadius,
-        maxSections: this.maxMountedSections,
-        heights,
-        viewportSize: this.size,
-      })
+      const target = this.#targetWindow()
       const targetSet = new Set(target)
       for (const index of [...this.#slots.keys()]) if (!targetSet.has(index)) this.#unmountSlot(index)
       const missing = orderMounts(target, activeIndex).filter((i) => !this.#slots.has(i))
       if (!missing.length) return
       for (const index of missing) {
         // the reader moved on; the newer sync owns the window now
-        if (this.#index !== activeIndex || !this.#isVirtual()) return
+        if (this.#index !== activeIndex || !this.#isVirtual() || generation !== this.#slotGeneration) return
         try {
-          await this.#mountSlot(index)
+          await this.#mountSlot(index, () => generation === this.#slotGeneration && this.#targetWindow().includes(index))
+          if (this.#index !== activeIndex || generation !== this.#slotGeneration) return
         } catch (e) {
           console.warn(e)
         }
@@ -982,24 +1107,31 @@ export class Paginator extends HTMLElement {
   // While scrolling, the section under the top edge of the viewport becomes active.
   #updateActiveFromScroll() {
     if (!this.#isVirtual() || this.#slots.size < 2) return
-    const boxes = [...this.#slots.values()].map((slot) => {
-      const top = this.#offsetOf(slot.view)
-      return { index: slot.index, top, bottom: top + slot.view.element.getBoundingClientRect().height }
-    })
+    const boxes = [...this.#slots.values()]
+      .filter((slot) => slot.ready)
+      .map((slot) => {
+        const top = this.#offsetOf(slot.view)
+        return { index: slot.index, top, bottom: top + slot.view.element.getBoundingClientRect().height }
+      })
     const index = findActiveSection(boxes, this.start + 1)
     if (index == null || index === this.#index) return
     this.#setActiveSlot(this.#slots.get(index))
+    const target = new Set(this.#targetWindow())
+    for (const [pendingIndex, cancel] of this.#cancelSlotLoads) if (!target.has(pendingIndex)) cancel()
     this.#scheduleWindowSync()
   }
   async #goToVirtual({ index, anchor, select }) {
+    const navigation = ++this.#virtualNavigation
     const hasFocus = this.#view?.document?.hasFocus()
-    let slot = this.#slots.get(index) ?? (await this.#pendingSlots.get(index))
-    if (!slot?.view?.document) {
+    let slot = this.#slots.get(index)
+    if (!slot?.ready) slot = await this.#pendingSlots.get(index)
+    if (navigation !== this.#virtualNavigation) return
+    if (!slot?.ready) {
       // outside the mounted window: start a fresh window at the target section
       this.#destroyAllSlots()
       this.#view = null
       slot = await this.#mountSlot(index)
-      if (!slot) return
+      if (!slot || navigation !== this.#virtualNavigation) return
     }
     this.#setActiveSlot(slot)
     await this.scrollToAnchor((typeof anchor === 'function' ? anchor(slot.view.document) : anchor) ?? 0, select)
@@ -1198,6 +1330,7 @@ export class Paginator extends HTMLElement {
     return getVisibleRange(this.#view.document, this.start - size, this.end - size, this.#getRectMapper())
   }
   #afterScroll(reason) {
+    if (!this.#view?.document) return
     const userMoved = reason !== 'selection' && reason !== 'navigation' && reason !== 'anchor'
     if (userMoved) this.#updateActiveFromScroll()
     if (this.#isVirtual()) this.#lastActiveOffset = this.#offsetOf(this.#view)
@@ -1219,6 +1352,7 @@ export class Paginator extends HTMLElement {
       detail.size = 1 / (pages - 2)
     }
     this.dispatchEvent(new CustomEvent('relocate', { detail }))
+    if (this.#isVirtual()) this.#rememberReadingAnchor()
   }
   async #display(promise) {
     const { index, src, anchor, onLoad, select } = await promise
@@ -1266,6 +1400,8 @@ export class Paginator extends HTMLElement {
         this.setStyles(this.#styles)
         this.dispatchEvent(new CustomEvent('load', { detail }))
       }
+      // A cancelled prefetch may still own this item's blob until load() settles.
+      await this.#pendingSlots.get(index)?.catch(() => {})
       await this.#display(
         Promise.resolve(this.sections[index].load())
           .then((src) => {
@@ -1387,7 +1523,9 @@ export class Paginator extends HTMLElement {
     this.#view.document.defaultView.focus()
   }
   destroy() {
-    this.#observer.unobserve(this)
+    this.#virtualNavigation++
+    this.#cancelWindowSync()
+    this.#observer.disconnect()
     if (this.#slots.size) this.#destroyAllSlots()
     else {
       this.#view?.destroy()
