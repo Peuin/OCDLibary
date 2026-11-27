@@ -768,6 +768,12 @@ export const routes: RouteRecordRaw[] = [
   },
   ...PODCAST_STANDALONE_ROUTES,
   {
+    path: '/privacy-policy',
+    name: 'privacy-policy',
+    component: () => import('@/features/auth/PrivacyPolicyPage.vue'),
+    meta: { public: true, title: () => t('auth.privacyPolicy.title') },
+  },
+  {
     path: '/login',
     name: 'login',
     component: () => import('@/features/auth/LoginPage.vue'),

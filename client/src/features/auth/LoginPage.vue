@@ -339,6 +339,15 @@ async function handleOidcLogin(provider: OidcProviderPublic) {
         {{ t('auth.login.noAccount') }}
         <RouterLink to="/register" class="text-primary hover:underline">{{ t('auth.login.signUp') }}</RouterLink>
       </p>
+
+      <p class="mt-4 text-center text-sm">
+        <RouterLink
+          to="/privacy-policy"
+          class="inline-flex min-h-11 items-center rounded-sm px-2 text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {{ t('auth.privacyPolicy.title') }}
+        </RouterLink>
+      </p>
     </div>
   </div>
 </template>

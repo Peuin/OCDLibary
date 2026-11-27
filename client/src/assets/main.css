@@ -442,9 +442,10 @@
     @apply border-destructive focus-visible:border-destructive focus-visible:ring-destructive/40;
   }
   /* Page-level strips (title bars, filter rows) float over the shell's background image. One
-     surface definition keeps every list page's bars at the same radius, edge and depth. */
+     surface definition keeps every list page's bars at the same radius, edge and depth.
+     Kept translucent with a light blur so the Carmel cross behind the page tops stays visible. */
   .page-bar {
-    @apply rounded-2xl border border-border/60 bg-card/95 shadow-sm backdrop-blur-md;
+    @apply rounded-2xl border border-border/60 bg-card/60 shadow-sm backdrop-blur-[2px];
   }
   .settings-card {
     @apply overflow-hidden rounded-lg border border-border bg-card divide-y divide-border shadow-xs;
