@@ -173,7 +173,12 @@ export class FixedLayout extends HTMLElement {
       transform(right)
     }
   }
+  #unloadFrames() {
+    for (const { doc, index } of this.getContents()) this.dispatchEvent(new CustomEvent('unload', { detail: { doc, index } }))
+    this.#left = this.#right = this.#center = null
+  }
   async #showSpread({ left, right, center, side }) {
+    this.#unloadFrames()
     this.#root.replaceChildren()
     this.#left = null
     this.#right = null
@@ -322,6 +327,7 @@ export class FixedLayout extends HTMLElement {
       }))
   }
   destroy() {
+    this.#unloadFrames()
     this.#observer.unobserve(this)
   }
 }

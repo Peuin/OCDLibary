@@ -31,6 +31,66 @@ function makeDoc(options: { selection: Selection | null; iframeRect?: RectLike }
 }
 
 describe('useFoliateSelection', () => {
+  it('uses the selected neighbour document index instead of the active section', () => {
+    vi.useFakeTimers()
+    const range = makeRange('Neighbour text', { left: 10, top: 40, bottom: 60, width: 50 })
+    const selection = { isCollapsed: false, rangeCount: 1, getRangeAt: () => range } as unknown as Selection
+    const active = makeDoc({ selection: null })
+    const neighbour = makeDoc({ selection })
+    const getCFI = vi.fn<(index: number, range: Range) => string>(() => 'neighbour-cfi')
+    const handler = useFoliateSelection(() => ({
+      renderer: {
+        getContents: () => [
+          { index: 3, doc: active },
+          { index: 4, doc: neighbour },
+        ],
+      },
+      getCFI,
+    }))
+    const selected = vi.fn<(detail: unknown) => void>()
+    handler.setHandler(selected)
+    handler.handleSelectionEnd(neighbour)
+    vi.advanceTimersByTime(10)
+    expect(getCFI).toHaveBeenCalledWith(4, range)
+    expect(selected).toHaveBeenCalledOnce()
+    handler.handleSelectionEnd(neighbour)
+    handler.detachDocument(neighbour)
+    vi.advanceTimersByTime(100)
+    expect(selected).toHaveBeenCalledOnce()
+    handler.cleanup()
+    vi.useRealTimers()
+  })
+
+  it('preserves the final selection popup when native selectionchange arrives after mouseup', () => {
+    vi.useFakeTimers()
+    const range = makeRange('Final selection', { left: 0, top: 0, bottom: 20, width: 30 })
+    const doc = makeDoc({ selection: { isCollapsed: false, rangeCount: 1, getRangeAt: () => range } as unknown as Selection })
+    const handler = useFoliateSelection(() => ({ renderer: { getContents: () => [{ index: 2, doc }] }, getCFI: () => 'final-cfi' }))
+    const selected = vi.fn<(detail: unknown) => void>()
+    handler.setHandler(selected)
+    handler.handleInteractionStart(doc)
+    handler.handleInteractionEnd(doc)
+    handler.handleSelectionChange(doc)
+    vi.advanceTimersByTime(50)
+    expect(selected).toHaveBeenCalledOnce()
+    handler.cleanup()
+    vi.useRealTimers()
+  })
+
+  it('ignores a selection from an unloaded document', () => {
+    vi.useFakeTimers()
+    const range = makeRange('Stale text', { left: 0, top: 0, bottom: 20, width: 30 })
+    const doc = makeDoc({ selection: { isCollapsed: false, rangeCount: 1, getRangeAt: () => range } as unknown as Selection })
+    const handler = useFoliateSelection(() => ({ renderer: { getContents: () => [] } }))
+    const selected = vi.fn<(detail: unknown) => void>()
+    handler.setHandler(selected)
+    handler.handleSelectionEnd(doc)
+    vi.advanceTimersByTime(20)
+    expect(selected).not.toHaveBeenCalled()
+    handler.cleanup()
+    vi.useRealTimers()
+  })
+
   it('emits selection details including popup position and CFI', () => {
     vi.useFakeTimers()
 
@@ -49,7 +109,7 @@ describe('useFoliateSelection', () => {
 
     const getCFI = vi.fn<(index: number, rangeArg: Range) => string | null>(() => 'epubcfi(/6/2)')
     const getView = () => ({
-      renderer: { getContents: () => [{ index: 5 }] },
+      renderer: { getContents: () => [{ index: 5, doc }] },
       getCFI,
     })
 
@@ -125,7 +185,7 @@ describe('useFoliateSelection', () => {
     } as unknown as Selection
 
     const foliateSelection = useFoliateSelection(() => ({
-      renderer: { getContents: () => [{ index: 2 }] },
+      renderer: { getContents: () => [{ index: 2, doc }] },
       getCFI: () => 'epubcfi(/6/10)',
     }))
 
@@ -164,7 +224,7 @@ describe('useFoliateSelection', () => {
       getRangeAt: () => range,
     } as unknown as Selection
     const foliateSelection = useFoliateSelection(() => ({
-      renderer: { getContents: () => [{ index: 2 }] },
+      renderer: { getContents: () => [{ index: 2, doc }] },
       getCFI: () => 'epubcfi(/6/10)',
     }))
     const onSelected = vi.fn<(detail: unknown) => void>()
@@ -211,7 +271,7 @@ describe('useFoliateSelection', () => {
       },
     } as unknown as Document
     const foliateSelection = useFoliateSelection(() => ({
-      renderer: { getContents: () => [{ index: 2 }] },
+      renderer: { getContents: () => [{ index: 2, doc }] },
       getCFI: () => 'epubcfi(/6/10)',
     }))
     const onSelected = vi.fn<(detail: unknown) => void>()

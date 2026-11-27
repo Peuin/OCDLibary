@@ -121,6 +121,13 @@ describe('useFoliate.open', () => {
     expect(relocated).toHaveBeenCalledTimes(2)
   })
 
+  it('resolves a narration fragment section without relying on the active viewport', async () => {
+    const foliate = useFoliate(() => container)
+    await foliate.open(1, 1, 'epub')
+    Object.assign(viewEl!, { resolveNavigation: (target: string) => ({ index: target.includes('chapter-2') ? 1 : 0 }) })
+    expect(await foliate.getSectionIndexForTarget('chapter-2.xhtml#sentence')).toBe(1)
+  })
+
   it('navigates to CFI when cfi is provided', async () => {
     const foliate = useFoliate(() => container)
 

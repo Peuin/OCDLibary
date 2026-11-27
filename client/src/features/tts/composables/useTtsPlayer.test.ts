@@ -377,6 +377,51 @@ describe('useTtsPlayer (AudioContext)', () => {
     })
   })
 
+  it('automatically reads the next chapter when the last audio block ends', async () => {
+    const player = useTtsPlayer()
+    const source = vi
+      .fn<(index: number) => Promise<string[]>>()
+      .mockImplementation(async (index) => (index === 0 ? ['First section.'] : ['Next section.']))
+    await player.startPlayback(makeBook(2), 'provider1', 'voice1', 1, source)
+    simulateBlockEnd(0)
+    await vi.waitFor(() => expect(player.currentChapterIndex.value).toBe(1))
+    await vi.waitFor(() => expect(player.playbackState.value).toBe('playing'))
+    expect(source.mock.calls.map(([index]) => index)).toEqual([0, 1])
+    expect(ttsApi.synthesize).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'Next section.' }))
+  })
+
+  it('reports a failed next chapter load without an unhandled playback rejection', async () => {
+    const player = useTtsPlayer()
+    await player.startPlayback(makeBook(2), 'provider1', 'voice1', 1, async (index) => {
+      if (index === 1) throw new Error('Chapter unavailable')
+      return ['First section.']
+    })
+    simulateBlockEnd(0)
+    await vi.waitFor(() => expect(player.playbackState.value).toBe('error'))
+    expect(player.error.value).toBe('Chapter unavailable')
+  })
+
+  it('ignores an old chapter text load after a new playback has started', async () => {
+    let release!: (blocks: string[]) => void
+    const player = useTtsPlayer()
+    const oldSource = (index: number) =>
+      index === 0
+        ? Promise.resolve(['First section.'])
+        : new Promise<string[]>((resolve) => {
+            release = resolve
+          })
+    await player.startPlayback(makeBook(2), 'provider1', 'voice1', 1, oldSource)
+    simulateBlockEnd(0)
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+    await player.startPlayback(makeBook(1), 'provider1', 'voice1', 1, async () => ['New session.'])
+    const count = vi.mocked(ttsApi.synthesize).mock.calls.length
+    release(['Stale next section.'])
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(ttsApi.synthesize).toHaveBeenCalledTimes(count)
+    expect(player.currentChapterIndex.value).toBe(0)
+  })
+
   describe('nextBlock / prevBlock', () => {
     it('nextBlock fetches next block', async () => {
       const player = await startWithBlocks(['Block 0.', 'Block 1.', 'Block 2.'])

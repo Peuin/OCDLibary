@@ -61,6 +61,53 @@ function mockChapterText(paragraphs: string[]) {
   })
 }
 
+describe('windowed TTS source ownership', () => {
+  it('rejects a prefetched neighbour source and filters relocate ranges by document', async () => {
+    const { composable, doc, overlayer } = await setup(['Active text'])
+    const neighbour = makeChapterDoc(['Neighbour text'])
+    const neighbourLayer = makeOverlayer()
+    const { view } = makeView(doc, overlayer)
+    view.renderer.getContents.mockReturnValue([
+      { index: 3, doc, overlayer },
+      { index: 4, doc: neighbour, overlayer: neighbourLayer },
+    ])
+    composable.setFoliateSource(doc, view)
+    await Promise.resolve()
+    composable.setFoliateSource(neighbour, view)
+    view.dispatchEvent(new CustomEvent('relocate', { detail: { range: rangeInParagraph(neighbour, 0) } }))
+    expect(composable.getVisibleRange()).toBeNull()
+    expect(composable.highlightBlock(0)).toBe(true)
+    expect(overlayer.add).toHaveBeenCalled()
+    expect(neighbourLayer.add).not.toHaveBeenCalled()
+    view.renderer.getContents.mockReturnValue([{ index: 4, doc: neighbour, overlayer: neighbourLayer }])
+    overlayer.add.mockClear()
+    expect(composable.highlightBlock(0)).toBe(false)
+    expect(overlayer.add).not.toHaveBeenCalled()
+    expect(neighbourLayer.add).not.toHaveBeenCalled()
+  })
+
+  it('clears old highlights on section rollover and cannot resurrect ready after unload', async () => {
+    const { composable, doc, overlayer } = await setup(['Old section'])
+    const next = makeChapterDoc(['Next section'])
+    const nextLayer = makeOverlayer()
+    const { view } = makeView(next, nextLayer)
+    view.renderer.getContents.mockReturnValue([
+      { index: 1, doc: next, overlayer: nextLayer },
+      { index: 0, doc, overlayer },
+    ])
+    composable.setFoliateSource(next, view)
+    await Promise.resolve()
+    expect(composable.highlightBlock(0)).toBe(true)
+    expect(overlayer.remove).toHaveBeenCalledWith('__tts_highlight__')
+    expect(nextLayer.add).toHaveBeenCalledOnce()
+    composable.setFoliateSource(next, view)
+    view.dispatchEvent(new CustomEvent('unload', { detail: { doc: next } }))
+    await Promise.resolve()
+    expect(composable.foliateReady.value).toBe(false)
+    expect(composable.highlightBlock(0)).toBe(false)
+  })
+})
+
 afterEach(() => {
   useFoliateTts().clearFoliateSource()
   vi.clearAllMocks()

@@ -381,6 +381,42 @@ describe('Paginator windowed scrolled mode', () => {
     expect(sections[4]!.load).toHaveBeenCalledTimes(1)
   })
 
+  it('retries an anchor clamped by the viewport once the next section supplies scroll space', async () => {
+    const el = await openPaginator(makeSections(10), 'scrolled', { states: new Map() })
+    let top = 0
+    Object.defineProperty(container, 'scrollTop', {
+      configurable: true,
+      get: () => top,
+      set: (value: number) => {
+        const max = Math.max(0, [...container.children].reduce((height, child) => height + child.getBoundingClientRect().height, 0) - 600)
+        top = Math.min(max, Math.max(0, value))
+      },
+    })
+    const relocated: number[] = []
+    el.addEventListener('relocate', (event) => relocated.push((event as CustomEvent).detail.fraction))
+    await el.goTo({ index: 4, anchor: 0.95 })
+    expect(relocated.at(-1)).toBeLessThan(0.95)
+    await flush()
+    expect(relocated.at(-1)).toBeCloseTo(0.95)
+  })
+
+  it('emits one document unload per slot and releases old document input before removal', async () => {
+    const el = await openPaginator(makeSections(10), 'scrolled')
+    await el.goTo({ index: 4 })
+    await flush()
+    const original = new Map(el.getContents().map((item) => [item.index, item.doc]))
+    const unloaded: { index: number; doc: Document }[] = []
+    el.addEventListener('unload', (event) => unloaded.push((event as CustomEvent).detail))
+    await el.goTo({ index: 5 })
+    await flush()
+    expect(unloaded.filter((item) => item.index === 3)).toHaveLength(1)
+    expect(unloaded[0]!.doc).toBe(original.get(3))
+    el.destroy()
+    el.destroy()
+    expect(unloaded.map((item) => item.doc).length).toBe(new Set(unloaded.map((item) => item.doc)).size)
+    expect(unloaded.map((item) => item.index).sort()).toEqual([3, 4, 5, 6])
+  })
+
   it('unloads every mounted section on destroy', async () => {
     const sections = makeSections(10)
     const el = await openPaginator(sections, 'scrolled')

@@ -16,6 +16,7 @@ interface FoliateRenderer extends EventTarget {
 }
 
 interface FoliateViewElement extends HTMLElement {
+  lastLocation?: { range?: Range }
   renderer?: FoliateRenderer
   resolveCFI?: (cfi: string) => { index?: number; anchor?: (doc: Document) => Range } | undefined
 }
@@ -69,6 +70,7 @@ let foliateViewRef: FoliateViewElement | null = null
 let chapterDoc: Document | null = null
 let chapterBlockRanges: Range[] = []
 let cachedVisibleRange: Range | null = null
+let sourceGeneration = 0
 let relocateCleanup: (() => void) | null = null
 
 function createSvgElement(tag: string): SVGElement {
@@ -126,22 +128,25 @@ function getContentForRange(range: Range): FoliateContent | null {
   const contents = rendererRef?.getContents?.()
   if (!contents?.length) return null
   const rangeDoc = range.commonAncestorContainer.ownerDocument
-  return contents.find((content) => content.doc === rangeDoc) ?? contents[0] ?? null
+  return contents.find((content) => content.doc === rangeDoc) ?? null
 }
 
 function applyHighlight(range: Range) {
   try {
     const content = getContentForRange(range)
-    const overlayer = content?.overlayer ?? rendererRef?.getContents?.()[0]?.overlayer
-    if (!overlayer) return
+    const overlayer = content?.overlayer
+    if (!overlayer) return false
+    clearHighlight()
     const ctor = overlayer.constructor as { highlight?: (rects: DOMRectList, options?: { color?: string }) => Element } | undefined
     const draw = ctor?.highlight ?? drawHighlight
     overlayer.remove(TTS_HIGHLIGHT_KEY)
     overlayer.add(TTS_HIGHLIGHT_KEY, range, draw as (rects: DOMRectList, opts: unknown) => Element, {
       color: TTS_HIGHLIGHT_COLOR,
     })
+    return true
   } catch {
     // Overlayer may not be attached yet on the very first paint; safe to ignore.
+    return false
   }
 }
 
@@ -157,7 +162,7 @@ function clearHighlight() {
 function scrollRangeIntoView(range: Range) {
   if (!rendererRef) return
   try {
-    void rendererRef.scrollToAnchor?.(range.cloneRange(), false)
+    void rendererRef.scrollToAnchor?.(range.cloneRange(), false)?.catch(() => {})
   } catch {
     // Range can become stale while a chapter is being redrawn; ignore.
   }
@@ -165,6 +170,11 @@ function scrollRangeIntoView(range: Range) {
 
 export function useFoliateTts() {
   function setFoliateSource(doc: Document, viewEl: HTMLElement) {
+    const foliateView = viewEl as FoliateViewElement
+    const contents = foliateView.renderer?.getContents?.()
+    if (contents?.length && contents[0]?.doc !== doc) return
+    const generation = ++sourceGeneration
+    clearHighlight()
     foliateReady.value = false
     chapterBlockRanges = []
     cachedVisibleRange = null
@@ -172,25 +182,34 @@ export function useFoliateTts() {
     relocateCleanup?.()
     const onRelocate = (evt: Event) => {
       const range = (evt as CustomEvent).detail?.range as Range | undefined
-      if (range) cachedVisibleRange = range
+      if (range?.startContainer.ownerDocument === chapterDoc) cachedVisibleRange = range
     }
     viewEl.addEventListener('relocate', onRelocate)
-    relocateCleanup = () => viewEl.removeEventListener('relocate', onRelocate)
+    const onUnload = (event: Event) => {
+      if ((event as CustomEvent).detail?.doc === chapterDoc) clearFoliateSource()
+    }
+    viewEl.addEventListener('unload', onUnload)
+    relocateCleanup = () => {
+      viewEl.removeEventListener('relocate', onRelocate)
+      viewEl.removeEventListener('unload', onUnload)
+    }
 
-    const foliateView = viewEl as FoliateViewElement
     foliateViewRef = foliateView
     rendererRef = foliateView.renderer ?? null
     chapterDoc = doc
     chapterBlockRanges = collectBlockRanges(doc)
+    const visible = foliateView.lastLocation?.range
+    if (visible?.startContainer.ownerDocument === doc) cachedVisibleRange = visible
 
     // Toggle ready on a later tick so per-chapter watchers observe a real
     // false -> true transition and re-run the highlight sync after each load.
     void Promise.resolve().then(() => {
-      foliateReady.value = true
+      if (generation === sourceGeneration) foliateReady.value = true
     })
   }
 
   function clearFoliateSource() {
+    sourceGeneration++
     clearHighlight()
     relocateCleanup?.()
     relocateCleanup = null
@@ -225,7 +244,7 @@ export function useFoliateTts() {
   function highlightBlock(blockIndex: number, scrollIntoView = true): boolean {
     const range = chapterBlockRanges[blockIndex]
     if (!range) return false
-    applyHighlight(range)
+    if (!applyHighlight(range)) return false
     if (scrollIntoView) scrollRangeIntoView(range)
     return true
   }

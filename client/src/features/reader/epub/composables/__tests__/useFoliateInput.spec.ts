@@ -60,6 +60,33 @@ describe('useFoliateInput', () => {
     vi.useRealTimers()
   })
 
+  it('detaches all iframe listeners and allows the same document to mount again without duplicates', () => {
+    const doc = makeDocTarget()
+    const other = makeDocTarget()
+    const next = vi.fn<() => void>()
+    const view = { next, prev: vi.fn<() => void>(), getBoundingClientRect: () => new DOMRect() }
+    const selectionEnd = vi.fn<(doc: Document) => void>()
+    const input = useFoliateInput(() => view, undefined, selectionEnd, vi.fn<() => void>())
+    input.attachIframeClicks(doc)
+    input.attachIframeClicks(doc)
+    input.attachIframeClicks(other)
+    doc.dispatchEvent(new Event('mouseup'))
+    expect(selectionEnd).toHaveBeenCalledTimes(1)
+    input.detachDocument(doc)
+    doc.dispatchEvent(new Event('mouseup'))
+    doc.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown' }))
+    expect(selectionEnd).toHaveBeenCalledTimes(1)
+    expect(next).not.toHaveBeenCalled()
+    other.dispatchEvent(new Event('mouseup'))
+    expect(selectionEnd).toHaveBeenCalledTimes(2)
+    input.attachIframeClicks(doc)
+    doc.dispatchEvent(new Event('mouseup'))
+    expect(selectionEnd).toHaveBeenCalledTimes(3)
+    input.cleanup()
+    other.dispatchEvent(new Event('mouseup'))
+    expect(selectionEnd).toHaveBeenCalledTimes(3)
+  })
+
   it('keeps document keyboard shortcuts active in scrolled flow', () => {
     const prev = vi.fn<() => void>()
     const next = vi.fn<() => void>()

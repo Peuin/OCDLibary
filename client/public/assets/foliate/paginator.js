@@ -264,9 +264,10 @@ class View {
   #column = true
   #size
   #layout = {}
-  constructor({ container, onExpand }) {
+  constructor({ container, onExpand, onDestroy }) {
     this.container = container
     this.onExpand = onExpand
+    this.onDestroy = onDestroy
     this.#iframe.setAttribute('part', 'filter')
     this.#element.append(this.#iframe)
     Object.assign(this.#element.style, {
@@ -482,6 +483,8 @@ class View {
     return this.#overlayer
   }
   destroy() {
+    if (this.#destroyed) return
+    this.onDestroy?.(this.document)
     this.#destroyed = true
     this.#observer.disconnect()
     if (this.#expandFrame != null) cancelAnimationFrame(this.#expandFrame)
@@ -533,6 +536,7 @@ export class Paginator extends HTMLElement {
   #compensatedScrollTop
   #relocateTimer
   #relocateFrame
+  #pendingNavigationAnchor
   #virtualNavigation = 0
   windowRadius = DEFAULT_WINDOW_RADIUS
   maxMountedSections = MAX_MOUNTED_SECTIONS
@@ -651,6 +655,7 @@ export class Paginator extends HTMLElement {
         return
       }
       this.#compensatedScrollTop = undefined
+      this.#pendingNavigationAnchor = null
       const previousIndex = this.#index
       this.#updateActiveFromScroll()
       this.#rememberReadingAnchor()
@@ -765,7 +770,9 @@ export class Paginator extends HTMLElement {
       this.#view.destroy()
       this.#container.removeChild(this.#view.element)
     }
+    const index = this.#index
     this.#view = new View({
+      onDestroy: (doc) => this.dispatchEvent(new CustomEvent('unload', { detail: { doc, index } })),
       container: this,
       onExpand: () => this.#scrollToAnchor(this.#anchor),
     })
@@ -964,7 +971,11 @@ export class Paginator extends HTMLElement {
         return null
       }
       const slot = { index, view: null, ready: false }
-      const view = new View({ container: this, onExpand: () => this.#onSlotExpand(slot) })
+      const view = new View({
+        container: this,
+        onExpand: () => this.#onSlotExpand(slot),
+        onDestroy: (doc) => this.dispatchEvent(new CustomEvent('unload', { detail: { doc, index } })),
+      })
       slot.view = view
       const nextIndex = [...this.#slots.keys()].filter((i) => i > index).sort((a, b) => a - b)[0]
       const before = nextIndex == null ? null : this.#slots.get(nextIndex).view.element
@@ -1023,6 +1034,7 @@ export class Paginator extends HTMLElement {
     if (this.#view && index < this.#index) this.#compensate()
   }
   #destroyAllSlots() {
+    this.#pendingNavigationAnchor = null
     this.#cancelRelocate()
     this.#cancelWindowSync()
     this.#slotGeneration++
@@ -1039,6 +1051,7 @@ export class Paginator extends HTMLElement {
   }
   // Leaving the windowed mode keeps only the active section as the single view.
   #releaseInactiveSlots() {
+    this.#pendingNavigationAnchor = null
     this.#cancelRelocate()
     this.#virtualNavigation++
     this.#cancelWindowSync()
@@ -1105,6 +1118,11 @@ export class Paginator extends HTMLElement {
         if (this.#index !== activeIndex || !this.#isVirtual() || generation !== this.#slotGeneration) return
         try {
           await this.#mountSlot(index, () => generation === this.#slotGeneration && this.#targetWindow().includes(index))
+          const pending = this.#pendingNavigationAnchor
+          if (pending && pending.navigation === this.#virtualNavigation && pending.index === this.#index) {
+            this.#pendingNavigationAnchor = null
+            await this.#scrollToAnchor(pending.anchor, 'navigation')
+          }
           if (this.#index !== activeIndex || generation !== this.#slotGeneration) return
         } catch (e) {
           console.warn(e)
@@ -1129,6 +1147,7 @@ export class Paginator extends HTMLElement {
     this.#scheduleWindowSync()
   }
   async #goToVirtual({ index, anchor, select }) {
+    this.#pendingNavigationAnchor = null
     this.#cancelRelocate()
     const navigation = ++this.#virtualNavigation
     const hasFocus = this.#view?.document?.hasFocus()
@@ -1297,7 +1316,12 @@ export class Paginator extends HTMLElement {
       })
     else {
       element[scrollProp] = offset
-      if (this.#isVirtual()) this.#compensatedScrollTop = element[scrollProp]
+      if (this.#isVirtual()) {
+        this.#compensatedScrollTop = element[scrollProp]
+        // A near-end target can be clamped until the next section is mounted.
+        if (reason === 'navigation' && offset > element[scrollProp] + 1)
+          this.#pendingNavigationAnchor = { index: this.#index, anchor: this.#anchor, navigation: this.#virtualNavigation }
+      }
       this.#scrollBounds = [offset, this.atStart ? 0 : size, this.atEnd ? 0 : size]
       this.#afterScroll(reason)
     }
