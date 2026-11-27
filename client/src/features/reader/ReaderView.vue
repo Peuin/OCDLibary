@@ -356,7 +356,29 @@ function showResumeNarrationHighlight(doc: Document) {
   resumeNarrationHighlight = { el, cls }
 }
 
+let currentChapterViewEl: HTMLElement | null = null
+
+function renderedChapterDocs(): Document[] {
+  const contents = getRenderer()?.getContents?.() as { index: number; doc?: Document }[] | undefined
+  return (contents ?? []).flatMap((content) => (content.doc ? [content.doc] : []))
+}
+
 function onChapterLoadHandler(doc: Document, viewEl: HTMLElement) {
+  currentChapterViewEl = viewEl
+  // The windowed scrolled mode also loads the neighbouring chapters. The renderer lists
+  // the chapter being read first, so a mounted doc that is not first is only a neighbour.
+  const docs = renderedChapterDocs()
+  if (docs.includes(doc) && docs[0] !== doc) return
+  setCurrentChapterDoc(doc, viewEl)
+}
+
+// While scrolling across chapters the chapter being read changes without a new load.
+function syncCurrentChapterDoc() {
+  const active = renderedChapterDocs()[0]
+  if (active && active !== currentChapterDoc && currentChapterViewEl) setCurrentChapterDoc(active, currentChapterViewEl)
+}
+
+function setCurrentChapterDoc(doc: Document, viewEl: HTMLElement) {
   currentChapterDoc = doc
   setFoliateSource(doc, viewEl)
   if (getMediaOverlay()) {
@@ -769,6 +791,7 @@ function onRelocateHandler(detail: RelocateDetail) {
     }
   }
   onActivity()
+  syncCurrentChapterDoc()
   bookmarks.setCfi(detail?.cfi ?? null)
   toc.setActiveHref(detail?.tocItem?.href ?? '')
   const renderer = getRenderer()

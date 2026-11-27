@@ -1,3 +1,12 @@
+import {
+  DEFAULT_WINDOW_RADIUS,
+  MAX_MOUNTED_SECTIONS,
+  computeSectionWindow,
+  findActiveSection,
+  orderContents,
+  orderMounts,
+} from './virtual-scroller.js'
+
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const debounce = (f, wait, immediate) => {
@@ -480,6 +489,15 @@ export class Paginator extends HTMLElement {
   #touchState
   #touchScrolled
   #lastVisibleRange
+  // Windowed scrolled mode (GD1-15): spine index -> { index, view } for every mounted section.
+  // `#view` / `#index` stay the active section, so single-view code paths keep working.
+  #slots = new Map()
+  #pendingSlots = new Map()
+  #slotGeneration = 0
+  #lastActiveOffset = 0
+  #windowSync = Promise.resolve()
+  windowRadius = DEFAULT_WINDOW_RADIUS
+  maxMountedSections = MAX_MOUNTED_SECTIONS
   constructor() {
     super()
     this.#root.innerHTML = `<style>
@@ -661,7 +679,10 @@ export class Paginator extends HTMLElement {
   attributeChangedCallback(name, _, value) {
     switch (name) {
       case 'flow':
+        if (this.#isVirtual()) this.#adoptActiveView()
+        else this.#releaseInactiveSlots()
         this.render()
+        if (this.#isVirtual()) this.#scheduleWindowSync()
         break
       case 'gap':
       case 'margin':
@@ -698,7 +719,7 @@ export class Paginator extends HTMLElement {
     this.#container.append(this.#view.element)
     return this.#view
   }
-  #beforeRender({ vertical, rtl, background }) {
+  #beforeRender({ vertical, rtl, background }, { applyBackground = true } = {}) {
     this.#vertical = vertical
     const pageProgressionRtl = getPageProgressionRtl(this.bookDir, rtl)
     this.#rtl = pageProgressionRtl
@@ -706,7 +727,8 @@ export class Paginator extends HTMLElement {
 
     // set background to `doc` background
     // this is needed because the iframe does not fill the whole element
-    this.#background.style.background = background
+    // (a neighbouring section mounted in the scroll window must not repaint the active one's)
+    if (applyBackground) this.#background.style.background = background
 
     const { width, height } = this.#container.getBoundingClientRect()
     const size = vertical ? height : width
@@ -775,13 +797,214 @@ export class Paginator extends HTMLElement {
   }
   render() {
     if (!this.#view) return
-    this.#view.render(
-      this.#beforeRender({
-        vertical: this.#vertical,
-        rtl: this.#rtl,
-      }),
-    )
+    const layout = this.#beforeRender({
+      vertical: this.#vertical,
+      rtl: this.#rtl,
+    })
+    for (const view of this.#mountedViews()) view.render(layout)
     this.#scrollToAnchor(this.#anchor)
+  }
+  // ---- Windowed scrolled mode (GD1-15 P1) --------------------------------------------
+  // Only horizontal-writing reflowable sections use the window; vertical writing keeps the
+  // original single-view scrolled mode. Fixed-layout books never reach this renderer
+  // (`view.js` hands them to `foliate-fxl`), so they cannot enter this mode.
+  #isVirtual() {
+    return this.scrolled && !this.#vertical
+  }
+  #mountedViews() {
+    if (this.#slots.size) return [...this.#slots.values()].map((slot) => slot.view)
+    return this.#view ? [this.#view] : []
+  }
+  #slotFor(doc) {
+    if (!doc) return undefined
+    for (const slot of this.#slots.values()) if (slot.view.document === doc) return slot
+    return undefined
+  }
+  // Offset of a section's box inside the scroll content of #container.
+  #offsetOf(view) {
+    if (!view || !this.#isVirtual()) return 0
+    const containerTop = this.#container.getBoundingClientRect().top
+    return view.element.getBoundingClientRect().top - containerTop + this.#container.scrollTop
+  }
+  // Keep the active section still on screen after content above it changed height.
+  #compensate() {
+    if (!this.#isVirtual() || !this.#view) return
+    const offset = this.#offsetOf(this.#view)
+    const delta = offset - this.#lastActiveOffset
+    this.#lastActiveOffset = offset
+    if (Math.abs(delta) > 0.5) this.#container.scrollTop += delta
+  }
+  #onSlotExpand(slot) {
+    if (!this.#isVirtual() || slot.view === this.#view) return this.#scrollToAnchor(this.#anchor)
+    if (slot.index < this.#index) this.#compensate()
+  }
+  #setActiveSlot(slot) {
+    this.#index = slot.index
+    this.#view = slot.view
+    this.#lastActiveOffset = this.#offsetOf(slot.view)
+    const doc = slot.view.document
+    if (doc?.body) this.#background.style.background = getBackground(doc)
+  }
+  #applyStylesTo(view) {
+    const $$styles = this.#styleMap.get(view?.document)
+    if (!$$styles) return false
+    const styles = this.#styles
+    const [$beforeStyle, $style] = $$styles
+    if (Array.isArray(styles)) {
+      const [beforeStyle, style] = styles
+      $beforeStyle.textContent = beforeStyle
+      $style.textContent = style
+    } else $style.textContent = styles ?? ''
+    // needed because the resize observer doesn't work in Firefox
+    view.document?.fonts?.ready?.then(() => view.expand())
+    return true
+  }
+  async #mountSlot(index) {
+    const mounted = this.#slots.get(index)
+    if (mounted) return mounted
+    const pending = this.#pendingSlots.get(index)
+    if (pending) return pending
+    const generation = this.#slotGeneration
+    const promise = (async () => {
+      const src = await this.sections[index].load()
+      if (!src) throw new Error(`Failed to load section ${index}`)
+      // the window was reset (long jump, mode change) while this section was loading
+      if (generation !== this.#slotGeneration || !this.#isVirtual()) {
+        this.sections[index]?.unload?.()
+        return null
+      }
+      const slot = { index, view: null }
+      const view = new View({ container: this, onExpand: () => this.#onSlotExpand(slot) })
+      slot.view = view
+      const nextIndex = [...this.#slots.keys()].filter((i) => i > index).sort((a, b) => a - b)[0]
+      const before = nextIndex == null ? null : this.#slots.get(nextIndex).view.element
+      this.#container.insertBefore(view.element, before)
+      this.#slots.set(index, slot)
+      if (this.#view && index < this.#index) this.#compensate()
+      const afterLoad = (doc) => {
+        if (doc.head) {
+          const $styleBefore = doc.createElement('style')
+          doc.head.prepend($styleBefore)
+          const $style = doc.createElement('style')
+          doc.head.append($style)
+          this.#styleMap.set(doc, [$styleBefore, $style])
+        }
+        this.#applyStylesTo(view)
+        this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
+      }
+      const isActive = () => this.#slots.get(this.#index) === slot || !this.#view
+      const beforeRender = (args) => this.#beforeRender(args, { applyBackground: isActive() })
+      await view.load(src, afterLoad, beforeRender)
+      if (this.#slots.get(index) !== slot) return null
+      this.dispatchEvent(
+        new CustomEvent('create-overlayer', {
+          detail: {
+            doc: view.document,
+            index,
+            attach: (overlayer) => (view.overlayer = overlayer),
+          },
+        }),
+      )
+      return slot
+    })()
+    this.#pendingSlots.set(index, promise)
+    try {
+      return await promise
+    } finally {
+      this.#pendingSlots.delete(index)
+    }
+  }
+  #unmountSlot(index) {
+    const slot = this.#slots.get(index)
+    if (!slot) return
+    slot.view.destroy()
+    slot.view.element.remove()
+    this.#slots.delete(index)
+    this.sections[index]?.unload?.()
+    if (this.#view && index < this.#index) this.#compensate()
+  }
+  #destroyAllSlots() {
+    this.#slotGeneration++
+    for (const index of [...this.#slots.keys()]) {
+      const slot = this.#slots.get(index)
+      slot.view.destroy()
+      slot.view.element.remove()
+      this.sections[index]?.unload?.()
+    }
+    this.#slots.clear()
+    if (this.#view && !this.#view.element.isConnected) this.#view = null
+  }
+  // Leaving the windowed mode keeps only the active section as the single view.
+  #releaseInactiveSlots() {
+    if (!this.#slots.size) return
+    this.#slotGeneration++
+    for (const index of [...this.#slots.keys()]) if (index !== this.#index) this.#unmountSlot(index)
+    this.#slots.clear()
+  }
+  // Entering the windowed mode turns the current single view into the active slot.
+  #adoptActiveView() {
+    if (!this.#view || this.#slots.size) return
+    this.#slots.set(this.#index, { index: this.#index, view: this.#view })
+  }
+  #scheduleWindowSync() {
+    this.#windowSync = this.#windowSync.then(() => this.#syncWindow()).catch((e) => console.warn(e))
+    return this.#windowSync
+  }
+  async #syncWindow() {
+    // a few passes: section heights are only known after mounting, and short sections widen the window
+    for (let pass = 0; pass < this.maxMountedSections; pass++) {
+      if (!this.#isVirtual() || !this.#view) return
+      const activeIndex = this.#index
+      const heights = new Map([...this.#slots].map(([i, slot]) => [i, slot.view.element.getBoundingClientRect().height]))
+      const target = computeSectionWindow({
+        sections: this.sections,
+        activeIndex,
+        radius: this.windowRadius,
+        maxSections: this.maxMountedSections,
+        heights,
+        viewportSize: this.size,
+      })
+      const targetSet = new Set(target)
+      for (const index of [...this.#slots.keys()]) if (!targetSet.has(index)) this.#unmountSlot(index)
+      const missing = orderMounts(target, activeIndex).filter((i) => !this.#slots.has(i))
+      if (!missing.length) return
+      for (const index of missing) {
+        // the reader moved on; the newer sync owns the window now
+        if (this.#index !== activeIndex || !this.#isVirtual()) return
+        try {
+          await this.#mountSlot(index)
+        } catch (e) {
+          console.warn(e)
+        }
+      }
+    }
+  }
+  // While scrolling, the section under the top edge of the viewport becomes active.
+  #updateActiveFromScroll() {
+    if (!this.#isVirtual() || this.#slots.size < 2) return
+    const boxes = [...this.#slots.values()].map((slot) => {
+      const top = this.#offsetOf(slot.view)
+      return { index: slot.index, top, bottom: top + slot.view.element.getBoundingClientRect().height }
+    })
+    const index = findActiveSection(boxes, this.start + 1)
+    if (index == null || index === this.#index) return
+    this.#setActiveSlot(this.#slots.get(index))
+    this.#scheduleWindowSync()
+  }
+  async #goToVirtual({ index, anchor, select }) {
+    const hasFocus = this.#view?.document?.hasFocus()
+    let slot = this.#slots.get(index) ?? (await this.#pendingSlots.get(index))
+    if (!slot?.view?.document) {
+      // outside the mounted window: start a fresh window at the target section
+      this.#destroyAllSlots()
+      this.#view = null
+      slot = await this.#mountSlot(index)
+      if (!slot) return
+    }
+    this.#setActiveSlot(slot)
+    await this.scrollToAnchor((typeof anchor === 'function' ? anchor(slot.view.document) : anchor) ?? 0, select)
+    if (hasFocus) this.focusView()
+    this.#scheduleWindowSync()
   }
   get scrolled() {
     return this.getAttribute('flow') === 'scrolled'
@@ -890,13 +1113,16 @@ export class Paginator extends HTMLElement {
     })
   }
   // allows one to process rects as if they were LTR and horizontal
-  #getRectMapper() {
+  // In the windowed scrolled mode, rects of a section's document are shifted by that
+  // section's offset in the scroll content (`view` defaults to the active section).
+  #getRectMapper(view = this.#view) {
     if (this.scrolled) {
       const size = this.viewSize
       const margin = this.#margin
+      const offset = this.#offsetOf(view)
       return this.#vertical
         ? ({ left, right }) => ({ left: size - right - margin, right: size - left - margin })
-        : ({ top, bottom }) => ({ left: top + margin, right: bottom + margin })
+        : ({ top, bottom }) => ({ left: top + margin + offset, right: bottom + margin + offset })
     }
     const pxSize = this.pages * this.size
     return usesNegativePageScroll(this.#vertical, this.#rtl)
@@ -905,9 +1131,9 @@ export class Paginator extends HTMLElement {
         ? ({ top, bottom }) => ({ left: top, right: bottom })
         : (f) => f
   }
-  async #scrollToRect(rect, reason) {
+  async #scrollToRect(rect, reason, view) {
     if (this.scrolled) {
-      const offset = this.#getRectMapper()(rect).left - this.#margin
+      const offset = this.#getRectMapper(view)(rect).left - this.#margin
       return this.#scrollTo(offset, reason)
     }
     const offset = this.#getRectMapper()(rect).left
@@ -950,12 +1176,14 @@ export class Paginator extends HTMLElement {
       // previous column, there is an extra zero width rect in that column
       const rect = Array.from(rects).find((r) => r.width > 0 && r.height > 0) || rects[0]
       if (!rect) return
-      await this.#scrollToRect(rect, reason)
+      // an anchor may live in another mounted section (e.g. TTS reading ahead)
+      const doc = anchor?.startContainer?.ownerDocument ?? anchor?.ownerDocument
+      await this.#scrollToRect(rect, reason, this.#slotFor(doc)?.view)
       return
     }
     // if anchor is a fraction
     if (this.scrolled) {
-      await this.#scrollTo(anchor * this.viewSize, reason)
+      await this.#scrollTo(this.#offsetOf(this.#view) + anchor * this.viewSize, reason)
       return
     }
     const { pages } = this
@@ -970,16 +1198,21 @@ export class Paginator extends HTMLElement {
     return getVisibleRange(this.#view.document, this.start - size, this.end - size, this.#getRectMapper())
   }
   #afterScroll(reason) {
+    const userMoved = reason !== 'selection' && reason !== 'navigation' && reason !== 'anchor'
+    if (userMoved) this.#updateActiveFromScroll()
+    if (this.#isVirtual()) this.#lastActiveOffset = this.#offsetOf(this.#view)
     const range = this.#getVisibleRange()
     this.#lastVisibleRange = range
     // don't set new anchor if relocation was to scroll to anchor
-    if (reason !== 'selection' && reason !== 'navigation' && reason !== 'anchor') this.#anchor = range
+    if (userMoved) this.#anchor = range
     else this.#justAnchored = true
 
     const index = this.#index
     const detail = { reason, range, index }
-    if (this.scrolled) detail.fraction = this.start / this.viewSize
-    else if (this.pages > 0) {
+    if (this.scrolled) {
+      const local = (this.start - this.#offsetOf(this.#view)) / Math.max(1, this.viewSize)
+      detail.fraction = Math.min(1, Math.max(0, local))
+    } else if (this.pages > 0) {
       const { page, pages } = this
       this.#header.style.visibility = page > 1 ? 'visible' : 'hidden'
       detail.fraction = (page - 1) / (pages - 2)
@@ -1023,6 +1256,8 @@ export class Paginator extends HTMLElement {
     return index >= 0 && index <= this.sections.length - 1
   }
   async #goTo({ index, anchor, select }) {
+    if (this.#isVirtual()) return this.#goToVirtual({ index, anchor, select })
+    this.#releaseInactiveSlots()
     if (index === this.#index) await this.#display({ index, anchor, select })
     else {
       const oldIndex = this.#index
@@ -1062,6 +1297,12 @@ export class Paginator extends HTMLElement {
   }
   #scrollNext(distance) {
     if (!this.#view) return true
+    if (this.#isVirtual()) {
+      // scroll on through every mounted section; only past the last one do we need a jump
+      const contentSize = this.#container.scrollHeight
+      if (contentSize - this.end > 2) return this.#scrollTo(Math.min(contentSize, distance ? this.start + distance : this.end), null, true)
+      return true
+    }
     if (this.scrolled) {
       if (this.viewSize - this.end > 2) return this.#scrollTo(Math.min(this.viewSize, distance ? this.start + distance : this.end), null, true)
       return true
@@ -1113,7 +1354,15 @@ export class Paginator extends HTMLElement {
     const index = this.sections.findLastIndex((section) => section.linear !== 'no')
     return this.goTo({ index })
   }
+  // Every mounted section, active one first (callers reading `[0]` get the section being read).
   getContents() {
+    if (this.#slots.size)
+      return orderContents(
+        [...this.#slots.values()]
+          .filter((slot) => slot.view.document)
+          .map((slot) => ({ index: slot.index, overlayer: slot.view.overlayer, doc: slot.view.document })),
+        this.#index,
+      )
     if (this.#view)
       return [
         {
@@ -1126,29 +1375,25 @@ export class Paginator extends HTMLElement {
   }
   setStyles(styles) {
     this.#styles = styles
-    const $$styles = this.#styleMap.get(this.#view?.document)
-    if (!$$styles) return
-    const [$beforeStyle, $style] = $$styles
-    if (Array.isArray(styles)) {
-      const [beforeStyle, style] = styles
-      $beforeStyle.textContent = beforeStyle
-      $style.textContent = style
-    } else $style.textContent = styles
+    if (!this.#styleMap.get(this.#view?.document)) return
+    for (const view of this.#mountedViews()) this.#applyStylesTo(view)
 
     // NOTE: needs `requestAnimationFrame` in Chromium
-    requestAnimationFrame(() => (this.#background.style.background = getBackground(this.#view.document)))
-
-    // needed because the resize observer doesn't work in Firefox
-    this.#view?.document?.fonts?.ready?.then(() => this.#view.expand())
+    requestAnimationFrame(() => {
+      if (this.#view?.document) this.#background.style.background = getBackground(this.#view.document)
+    })
   }
   focusView() {
     this.#view.document.defaultView.focus()
   }
   destroy() {
     this.#observer.unobserve(this)
-    this.#view.destroy()
+    if (this.#slots.size) this.#destroyAllSlots()
+    else {
+      this.#view?.destroy()
+      this.sections[this.#index]?.unload?.()
+    }
     this.#view = null
-    this.sections[this.#index]?.unload?.()
     this.#mediaQuery.removeEventListener('change', this.#mediaQueryListener)
   }
 }
