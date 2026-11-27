@@ -4973,6 +4973,10 @@
       "errors": {
         "noToken": "Chưa cung cấp mã"
       }
+    },
+    "privacyPolicy": {
+      "title": "Chính sách bảo mật",
+      "backToLogin": "Quay lại đăng nhập"
     }
   },
   "author": {

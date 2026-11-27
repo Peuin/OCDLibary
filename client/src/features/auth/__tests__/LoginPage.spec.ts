@@ -142,3 +142,15 @@ describe('LoginPage post-registration notice', () => {
     expect(wrapper.find('[role="status"]').exists()).toBe(false)
   })
 })
+
+describe('LoginPage privacy policy', () => {
+  it.each([true, false])('keeps the policy accessible with password login %s', async (enabled) => {
+    statusState.passwordLoginEnabled = enabled
+    const wrapper = mountPage()
+    await flushPromises()
+
+    const link = wrapper.get('a[href="/privacy-policy"]')
+    expect(link.text()).toBe('Privacy Policy')
+    expect(link.element.closest('form')).toBeNull()
+  })
+})

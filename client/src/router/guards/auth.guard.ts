@@ -12,6 +12,9 @@ function permissionFallback(name: string | undefined) {
 
 export function registerAuthGuard(router: Router): void {
   router.beforeEach(async (to) => {
+    // The policy is public even when initial server setup is required.
+    if (to.name === 'privacy-policy') return true
+
     const { fetchSetupStatus } = useSetupStatus()
     const { fetchLoginOptions, loginOptions } = useLoginOptions()
     let requiresSetup = false

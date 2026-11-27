@@ -46,6 +46,7 @@ function makeRouter() {
     history: createMemoryHistory(),
     routes: [
       { path: '/', name: 'home', component: blank },
+      { path: '/privacy-policy', name: 'privacy-policy', component: blank, meta: { public: true } },
       { path: '/login', name: 'login', component: blank, meta: { public: true } },
       { path: '/register', name: 'register', component: blank, meta: { public: true } },
       { path: '/setup', name: 'setup', component: blank, meta: { public: true } },
@@ -139,5 +140,17 @@ describe('auth guard: password recovery', () => {
     await router.push(path)
 
     expect(router.currentRoute.value.fullPath).toBe(path)
+  })
+})
+
+describe('auth guard: static privacy policy', () => {
+  it.each([true, false])('allows signed-out access when setup required is %s', async (needsSetup) => {
+    statusState.needsSetup = needsSetup
+    statusState.passwordLoginEnabled = false
+    const router = makeRouter()
+
+    await router.push('/privacy-policy')
+
+    expect(router.currentRoute.value.path).toBe('/privacy-policy')
   })
 })
