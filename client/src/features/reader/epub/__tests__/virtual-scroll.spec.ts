@@ -15,6 +15,10 @@ type PaginatorEl = HTMLElement & {
   flushRelocate: () => void
   render: () => void
   destroy: () => void
+  next: (distance?: number) => Promise<void>
+  prev: (distance?: number) => Promise<void>
+  snap: (vx: number, vy: number) => void
+  scrollToAnchor: (anchor: number) => Promise<void>
 }
 
 type IndexBox = { index: number; top: number; bottom: number }
@@ -399,6 +403,99 @@ describe('Paginator windowed scrolled mode', () => {
 
     expect(el.getContents().map((c) => c.index)).toEqual([4, 3, 5])
     expect(sections[4]!.load).toHaveBeenCalledTimes(1)
+  })
+
+  it('pages through section boundaries with next()/prev() (keyboard navigation) without reloading mounted sections', async () => {
+    const sections = makeSections(10)
+    const el = await openPaginator(sections, 'scrolled', { states: new Map() })
+    let top = 0
+    Object.defineProperty(container, 'scrollTop', {
+      configurable: true,
+      get: () => top,
+      set: (value: number) => {
+        const max = Math.max(0, [...container.children].reduce((height, child) => height + child.getBoundingClientRect().height, 0) - 600)
+        top = Math.min(max, Math.max(0, value))
+      },
+    })
+    Object.defineProperty(container, 'scrollHeight', {
+      configurable: true,
+      get: () => [...container.children].reduce((height, child) => height + child.getBoundingClientRect().height, 0),
+    })
+    await el.goTo({ index: 4 })
+    await flush()
+    const startTop = top
+    const visited = new Set<number>()
+    const fractions: Array<[number, number]> = []
+    el.addEventListener('relocate', (event) => {
+      const { index, fraction } = (event as CustomEvent).detail
+      visited.add(index)
+      fractions.push([index, fraction])
+    })
+
+    for (let i = 0; i < 6; i++) {
+      await el.next()
+      await flush()
+    }
+    expect(top).toBeGreaterThan(startTop)
+    expect(visited.has(5)).toBe(true)
+    expect(sections[5]!.load).toHaveBeenCalledTimes(1)
+
+    const position = ([index, fraction]: [number, number]) => index + fraction
+    const afterNext = position(fractions.at(-1)!)
+    for (let i = 0; i < 3; i++) {
+      await el.prev()
+      await flush()
+    }
+    expect(position(fractions.at(-1)!)).toBeLessThan(afterNext)
+    expect(sections[4]!.load).toHaveBeenCalledTimes(1)
+  })
+
+  it('stays on the last section when next() is pressed at the end of the book', async () => {
+    const sections = makeSections(3)
+    const el = await openPaginator(sections, 'scrolled')
+    await el.goTo({ index: 2 })
+    await flush()
+    const before = el.getContents().map((c) => c.index)
+
+    await el.next()
+    await flush()
+    await el.next()
+    await flush()
+
+    expect(el.getContents().map((c) => c.index)).toEqual(before)
+    expect(sections[2]!.unload).not.toHaveBeenCalled()
+    await el.prev()
+    await flush()
+    expect(el.getContents().length).toBeGreaterThan(0)
+  })
+
+  it('ignores a paginated touch snap past the last page of the book', async () => {
+    const rejections: unknown[] = []
+    const onRejection = (reason: unknown) => rejections.push(reason)
+    process.on('unhandledRejection', onRejection)
+    try {
+      const sections = makeSections(3)
+      const el = await openPaginator(sections, 'paginated', { states: new Map() })
+      await el.goTo({ index: 2 })
+      await flush()
+      // two-page section; snap() reads the page bounds recorded by the last scroll
+      let left = 0
+      Object.defineProperty(container, 'scrollLeft', { configurable: true, get: () => left, set: (value: number) => (left = value) })
+      const twoPages = () => {
+        for (const child of container.children) (child as HTMLElement).getBoundingClientRect = () => new DOMRect(0, 0, 1600, 600)
+      }
+      twoPages()
+      // lands on the last page of the last section
+      await el.scrollToAnchor(0)
+      el.snap(1, 0)
+      await flush()
+      expect(el.getContents().map((c) => c.index)).toEqual([2])
+
+      await flush()
+      expect(rejections).toEqual([])
+    } finally {
+      process.off('unhandledRejection', onRejection)
+    }
   })
 
   it('retries an anchor clamped by the viewport once the next section supplies scroll space', async () => {

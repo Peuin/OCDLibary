@@ -1215,6 +1215,7 @@ export class Paginator extends HTMLElement {
     this.#scheduleWindowSync()
   }
   async #goToVirtual({ index, anchor, select }) {
+    if (!this.#canGoToIndex(index)) return
     this.#pendingNavigationAnchor = null
     this.#cancelRelocate()
     const navigation = ++this.#virtualNavigation
@@ -1284,9 +1285,11 @@ export class Paginator extends HTMLElement {
 
     this.#scrollToPage(page, 'snap').then(() => {
       const dir = page <= 0 ? -1 : page >= pages - 1 ? 1 : null
-      if (dir)
+      const index = dir ? this.#adjacentIndex(dir) : undefined
+      // At the first/last page of the book there is no adjacent section to snap into.
+      if (index != null)
         return this.#goTo({
-          index: this.#adjacentIndex(dir),
+          index,
           anchor: dir < 0 ? () => 1 : () => 0,
         })
     })
@@ -1526,6 +1529,7 @@ export class Paginator extends HTMLElement {
     return index >= 0 && index <= this.sections.length - 1
   }
   async #goTo({ index, anchor, select }) {
+    if (!this.#canGoToIndex(index)) return
     if (this.#isVirtual()) return this.#goToVirtual({ index, anchor, select })
     this.#releaseInactiveSlots()
     if (index === this.#index) await this.#display({ index, anchor, select })
@@ -1596,15 +1600,20 @@ export class Paginator extends HTMLElement {
   async #turnPage(dir, distance) {
     if (this.#locked) return
     this.#locked = true
-    const prev = dir === -1
-    const shouldGo = await (prev ? this.#scrollPrev(distance) : this.#scrollNext(distance))
-    if (shouldGo)
-      await this.#goTo({
-        index: this.#adjacentIndex(dir),
-        anchor: prev ? () => 1 : () => 0,
-      })
-    if (shouldGo || !this.hasAttribute('animated')) await wait(100)
-    this.#locked = false
+    try {
+      const prev = dir === -1
+      const shouldGo = await (prev ? this.#scrollPrev(distance) : this.#scrollNext(distance))
+      // At the first/last linear section there is nowhere to go: stay put instead of resetting the view.
+      const index = shouldGo ? this.#adjacentIndex(dir) : undefined
+      if (index != null)
+        await this.#goTo({
+          index,
+          anchor: prev ? () => 1 : () => 0,
+        })
+      if (shouldGo || !this.hasAttribute('animated')) await wait(100)
+    } finally {
+      this.#locked = false
+    }
   }
   prev(distance) {
     return this.#turnPage(-1, distance)
