@@ -449,6 +449,17 @@ describe('UsersPage roster', () => {
     expect(wrapper.text()).not.toContain('Default password')
   })
 
+  it('renders a clean fallback for a user without email', async () => {
+    stubApi({ users: [{ ...USER, email: null }] })
+    const wrapper = mount(UsersPage)
+    await flushPromises()
+
+    const row = wrapper.get('tbody tr')
+    expect(row.text()).toContain('No address')
+    expect(row.text()).not.toContain('null')
+    expect(row.text()).not.toContain('undefined')
+  })
+
   it('shows a filtered empty state that differs from the unfiltered one', async () => {
     vi.useFakeTimers()
     stubApi({ users: [], total: 0, summary: { total: 0, active: 0 } })

@@ -1345,6 +1345,7 @@ watch(
           >
             <BookCoverSurface
               class="book-cover-surface--spine-fitted group relative w-full overflow-hidden rounded-lg shadow-lg shadow-black/40"
+              :data-book-cover-id="book.id"
               :disable-spine="isPrimaryAudio"
               :is-comic="isPrimaryComic"
               :class="hasCover && coverLoaded && !coverFailed ? 'cursor-zoom-in' : ''"

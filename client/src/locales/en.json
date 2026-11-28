@@ -2015,7 +2015,13 @@
         "preferencesSynced": "Preferences will now be synced",
         "preferencesLocal": "Preferences will stay on this device",
         "storageUpdateFailed": "Failed to update storage mode",
-        "storageUpdateError": "An error occurred while updating storage mode"
+        "storageUpdateError": "An error occurred while updating storage mode",
+        "effectsLabel": "Effects",
+        "lightEffects": {
+          "label": "Light effects",
+          "hint": "Disable cover zoom and entrance animations when opening a book.",
+          "reducedMotion": "Your device asks for reduced motion, so books already open without animation."
+        }
       },
       "ebook": {
         "title": "eBook Reader",
@@ -4095,6 +4101,9 @@
       "fullName": "Full name",
       "email": "Email",
       "optional": "(optional)",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "initialPasswordHint": "The user must change this initial password at their first sign-in.",
       "libraryAccess": "Library Access",
       "noLibrariesSelected": "No libraries selected. User cannot view any books.",
       "permissions": "Permissions",
@@ -4171,7 +4180,8 @@
         "createSharedAccount": "Failed to create shared account",
         "createUser": "Failed to create user",
         "nameRequired": "Full name is required",
-        "usernameRequired": "Username is required"
+        "usernameRequired": "Username is required",
+        "usernameLength": "Username must be between 3 and 100 characters"
       },
       "drawerDescription": "Edit this account's profile, library access, permissions and restrictions.",
       "createHint": "New accounts hold no permissions until you grant them.",
@@ -7794,6 +7804,7 @@
       "saving": "Saving...",
       "deleted": "\"{name}\" deleted",
       "updateFailed": "Failed to update collection",
+      "updateForbidden": "Only the collection owner can edit this collection",
       "deleteFailed": "Failed to delete collection"
     },
     "addToSheet": {
@@ -8411,7 +8422,8 @@
       "collectionNone": "Not linked: books added by hand",
       "noCollections": "No public book collections. Make a collection public to link it.",
       "collectionUnavailable": "Linked collection is no longer public",
-      "collectionHint": "A linked shelf shows the collection's books and follows every change to the collection. Books you add on the shelf stay on the shelf only, and removing a collection book here only hides it from the shelf."
+      "collectionHint": "A linked shelf shows the collection's books and follows every change to the collection. Books you add on the shelf stay on the shelf only, and removing a collection book here only hides it from the shelf.",
+      "confirmUnlinkCollection": "Unlink this collection? The shelf will keep its current {count, plural, one {# book} other {# books}} as shelf-specific books."
     }
   },
   "email": {
@@ -9672,6 +9684,7 @@
         "searchPrompt": "Type a term to search this PDF.",
         "searchTooShort": "Enter at least {min} characters to search this PDF.",
         "noSearchResults": "No searchable text matched your query.",
+        "scannedNoText": "This document is a scanned image and has no text to search. OCR is required.",
         "page": "Page {page}",
         "filterOutline": "Filter outline",
         "noOutlineMatch": "No outline entries match your filter.",

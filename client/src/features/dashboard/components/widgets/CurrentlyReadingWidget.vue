@@ -7,6 +7,7 @@ import { FORMAT_TO_GROUP } from '@bookorbit/types'
 import { useCoverVersions } from '@/features/book/composables/useCoverVersions'
 import BookCoverArtwork from '@/features/book/components/BookCoverArtwork.vue'
 import BookCoverSurface from '@/features/book/components/BookCoverSurface.vue'
+import { openBookWithTransition } from '@/composables/useBookOpenTransition'
 import { useCurrentlyReadingWidget } from '../../composables/useCurrentlyReadingWidget'
 
 const { data, loading, error } = useCurrentlyReadingWidget()
@@ -22,9 +23,17 @@ function isComic(fileFormat: string | null): boolean {
   return fileFormat != null && FORMAT_TO_GROUP[fileFormat] === 'cbx'
 }
 
+// Covers rendered in this widget, by book id: the one opened morphs into the reader.
+const coverEls = new Map<number, HTMLElement>()
+function setCoverEl(bookId: number, component: unknown) {
+  const el = (component as { $el?: unknown } | null)?.$el
+  if (el instanceof HTMLElement) coverEls.set(bookId, el)
+  else coverEls.delete(bookId)
+}
+
 function continueReading(bookId: number, fileId: number | null, fileFormat: string | null) {
   if (fileId) {
-    void router.push({ name: 'reader', params: { bookId, fileId }, query: { format: fileFormat ?? 'epub' } })
+    void openBookWithTransition(router, { name: 'reader', params: { bookId, fileId }, query: { format: fileFormat ?? 'epub' } }, coverEls.get(bookId))
   } else {
     void router.push({ name: 'book-detail', params: { bookId } })
   }
@@ -74,8 +83,10 @@ function continueReading(bookId: number, fileId: number | null, fileFormat: stri
         >
           <!-- Cover thumbnail -->
           <BookCoverSurface
+            :ref="(component) => setCoverEl(book.bookId, component)"
             size="mini"
             class="book-cover-surface--spine-fitted h-14 w-9 shrink-0 overflow-hidden rounded"
+            :data-book-cover-id="book.bookId"
             :is-comic="isComic(book.fileFormat)"
           >
             <BookCoverArtwork

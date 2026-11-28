@@ -300,6 +300,47 @@ describe('UserFormDrawer saving', () => {
     expect((wrapper.find('#user-form-password').element as HTMLInputElement).value).toBe('')
   })
 
+  it('creates a password account with email when one is supplied', async () => {
+    const wrapper = await mountDrawer({ user: null })
+    await wrapper.find('#user-form-username').setValue('grace')
+    await wrapper.find('#user-form-password').setValue('SecureTest123')
+    await wrapper.find('#user-form-email').setValue('grace@example.com')
+
+    const save = wrapper.findAll('button').find((button) => button.text() === 'Save')
+    await save?.trigger('click')
+    await flushPromises()
+
+    const call = apiMock.mock.calls.find(([url]) => url === '/api/v1/users')
+    expect(JSON.parse(call?.[1]?.body as string)).toMatchObject({
+      username: 'grace',
+      email: 'grace@example.com',
+      password: 'SecureTest123',
+    })
+  })
+
+  it('lets admins reveal the initial password and explains the first sign-in change', async () => {
+    const wrapper = await mountDrawer({ user: null })
+    const input = wrapper.get<HTMLInputElement>('#user-form-password')
+
+    expect(input.attributes('type')).toBe('password')
+    expect(wrapper.text()).toContain('The user must change this initial password at their first sign-in.')
+
+    await wrapper.get('button[aria-label="Show password"]').trigger('click')
+    expect(input.attributes('type')).toBe('text')
+    expect(wrapper.find('button[aria-label="Hide password"]').exists()).toBe(true)
+
+    await wrapper.get('button[aria-label="Hide password"]').trigger('click')
+    expect(input.attributes('type')).toBe('password')
+  })
+
+  it('edits an account without email without rendering a null value', async () => {
+    const wrapper = await mountDrawer({ user: { ...USER, email: null } })
+
+    expect(wrapper.text()).toContain('@ada')
+    expect(wrapper.text()).not.toContain('null')
+    expect(wrapper.text()).not.toContain('undefined')
+  })
+
   it('asks the page to delete rather than confirming inside the editor', async () => {
     const wrapper = await mountDrawer({ canDelete: true })
     const remove = wrapper.findAll('button').find((button) => button.text() === 'Delete')

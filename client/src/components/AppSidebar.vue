@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { Aperture, BookCopy, FolderOpen, Podcast } from '@lucide/vue'
 import AppLogo from '@/components/AppLogo.vue'
-import { APP_FEATURES, Permission, type Library, type LibraryType, type MediaType } from '@bookorbit/types'
+import { APP_FEATURES, Permission, type Collection, type Library, type LibraryType, type MediaType } from '@bookorbit/types'
 import { formatCompactNumber, formatNumber } from '@/i18n/formatters'
 import { entityCount } from '@/lib/entity-count'
 import { Sidebar, SidebarContent, SidebarHeader, SidebarRail, SidebarSeparator, useSidebar } from '@/components/ui/sidebar'
@@ -30,6 +30,8 @@ import { useLibraryUploadEvents } from '@/features/library/composables/useLibrar
 import { useBookDockSummary } from '@/features/book-dock/composables/useBookDockSummary'
 import CreateSmartScopeDialog from '@/features/smart-scope/components/CreateSmartScopeDialog.vue'
 import CreateCollectionDialog from '@/features/collection/components/CreateCollectionDialog.vue'
+import EditCollectionDialog from '@/features/collection/components/EditCollectionDialog.vue'
+import CollectionContextMenu from '@/features/collection/components/CollectionContextMenu.vue'
 import LibraryCreatorModal from '@/features/library/components/LibraryCreatorModal.vue'
 import { useLibraryCreationRedirect } from '@/features/library/composables/useLibraryCreationRedirect'
 import SettingsSidebar from '@/features/settings/components/SettingsSidebar.vue'
@@ -95,6 +97,35 @@ const createLibraryOpen = ref(false)
 const createLibraryType = ref<LibraryType>('books')
 const createScopeMediaType = ref<MediaType>('books')
 const createCollectionMediaType = ref<MediaType>('books')
+const collectionContextMenu = ref<Collection | null>(null)
+const collectionContextMenuPosition = ref<{ x: number; y: number } | null>(null)
+const editingCollection = ref<Collection | null>(null)
+
+function closeCollectionContextMenu() {
+  collectionContextMenu.value = null
+  collectionContextMenuPosition.value = null
+}
+
+function openCollectionEditor(collection: Collection) {
+  editingCollection.value = collection
+  closeCollectionContextMenu()
+}
+
+function closeCollectionEditor() {
+  editingCollection.value = null
+}
+
+function handleCollectionContextMenu(item: { id: number; mediaType?: MediaType }, event: MouseEvent) {
+  event.preventDefault()
+  const source = item.mediaType === 'podcasts' ? podcastCollections.value : bookCollections.value
+  const collection = source.find((candidate) => candidate.id === item.id) ?? null
+  if (!canMutateCollection(collection)) {
+    closeCollectionContextMenu()
+    return
+  }
+  collectionContextMenu.value = collection
+  collectionContextMenuPosition.value = { x: event.clientX, y: event.clientY }
+}
 /** A podcast scope belongs to one library; the first is the sensible default target. */
 const defaultPodcastLibraryId = computed(() => podcastLibraries.value[0]?.id ?? null)
 
@@ -408,6 +439,7 @@ onUnmounted(() => stopLibraryUploadListener())
                 can-add
                 :add-label="t('components.sidebar.newCollection')"
                 @add="openCreateCollection"
+                @item-contextmenu="handleCollectionContextMenu"
                 @navigate="handleNavigate"
               />
             </SidebarSectionPopover>
@@ -471,6 +503,7 @@ onUnmounted(() => stopLibraryUploadListener())
                 :can-add="showModeSwitch"
                 :add-label="t('components.sidebar.newPodcastCollection')"
                 @add="openCreatePodcastCollection"
+                @item-contextmenu="handleCollectionContextMenu"
                 @navigate="handleNavigate"
               />
             </SidebarSectionPopover>
@@ -551,6 +584,7 @@ onUnmounted(() => stopLibraryUploadListener())
             can-reorder
             :persist-order="persistCollectionOrder"
             @add="openCreateCollection"
+            @item-contextmenu="handleCollectionContextMenu"
             @navigate="handleNavigate"
           />
         </template>
@@ -624,6 +658,7 @@ onUnmounted(() => stopLibraryUploadListener())
             can-reorder
             :persist-order="persistPodcastCollectionOrder"
             @add="openCreatePodcastCollection"
+            @item-contextmenu="handleCollectionContextMenu"
             @navigate="handleNavigate"
           />
         </template>
@@ -632,4 +667,12 @@ onUnmounted(() => stopLibraryUploadListener())
 
     <SidebarRail />
   </Sidebar>
+
+  <EditCollectionDialog v-if="editingCollection" :open="true" :collection="editingCollection" @close="closeCollectionEditor" />
+  <CollectionContextMenu
+    :collection="collectionContextMenu"
+    :position="collectionContextMenuPosition"
+    @edit="openCollectionEditor"
+    @close="closeCollectionContextMenu"
+  />
 </template>

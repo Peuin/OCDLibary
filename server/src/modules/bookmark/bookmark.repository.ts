@@ -28,6 +28,52 @@ export class BookmarkRepository {
       .orderBy(asc(bookmarks.createdAt), asc(bookmarks.id));
   }
 
+  async findByFileId(fileId: number, userId: number) {
+    return this.db
+      .select()
+      .from(bookmarks)
+      .where(and(eq(bookmarks.bookFileId, fileId), eq(bookmarks.userId, userId), isNotNull(bookmarks.pageNumber), isNull(bookmarks.deletedAt)))
+      .orderBy(asc(bookmarks.pageNumber), asc(bookmarks.id));
+  }
+
+  async findLivePdfByPage(userId: number, fileId: number, pageNumber: number): Promise<BookmarkRow | null> {
+    const [row] = await this.db
+      .select()
+      .from(bookmarks)
+      .where(and(eq(bookmarks.userId, userId), eq(bookmarks.bookFileId, fileId), eq(bookmarks.pageNumber, pageNumber), isNull(bookmarks.deletedAt)))
+      .orderBy(asc(bookmarks.id))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async createPdf(userId: number, bookId: number, fileId: number, data: Pick<NewBookmark, 'pageNumber' | 'title'>) {
+    const [row] = await this.db
+      .insert(bookmarks)
+      .values({
+        userId,
+        bookId,
+        bookFileId: fileId,
+        pageNumber: data.pageNumber,
+        cfi: null,
+        positionSeconds: null,
+        title: data.title,
+      })
+      .onConflictDoNothing()
+      .returning();
+    return row ?? null;
+  }
+
+  async restorePdfAtPage(userId: number, fileId: number, pageNumber: number, title: string): Promise<BookmarkRow | null> {
+    const [row] = await this.db
+      .update(bookmarks)
+      .set({ title, deletedAt: null })
+      .where(
+        and(eq(bookmarks.userId, userId), eq(bookmarks.bookFileId, fileId), eq(bookmarks.pageNumber, pageNumber), isNotNull(bookmarks.deletedAt)),
+      )
+      .returning();
+    return row ?? null;
+  }
+
   async findLiveByLocation(userId: number, bookId: number, data: Pick<NewBookmark, 'cfi' | 'positionSeconds'>): Promise<BookmarkRow | null> {
     if (data.cfi != null) {
       const [row] = await this.db
@@ -113,6 +159,23 @@ export class BookmarkRepository {
           eq(bookmarks.bookId, bookId),
           eq(bookmarks.userId, userId),
           isNotNull(bookmarks.cfi),
+          isNull(bookmarks.deletedAt),
+        ),
+      )
+      .returning({ id: bookmarks.id });
+    return result.length > 0;
+  }
+
+  async softDeletePdf(fileId: number, bookmarkId: number, userId: number) {
+    const result = await this.db
+      .update(bookmarks)
+      .set({ deletedAt: new Date() })
+      .where(
+        and(
+          eq(bookmarks.id, bookmarkId),
+          eq(bookmarks.bookFileId, fileId),
+          eq(bookmarks.userId, userId),
+          isNotNull(bookmarks.pageNumber),
           isNull(bookmarks.deletedAt),
         ),
       )

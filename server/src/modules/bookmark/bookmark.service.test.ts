@@ -4,6 +4,7 @@ import type { RequestUser } from '../../common/types/request-user';
 import { BookmarkService } from './bookmark.service';
 import { BookmarkResponseDto } from './dto/bookmark-response.dto';
 import type { CreateBookmarkDto } from './dto/create-bookmark.dto';
+import type { CreatePdfBookmarkDto } from './dto/create-pdf-bookmark.dto';
 import { EMPTY_CONTENT_FILTER_RULES } from '@bookorbit/types';
 
 function makeUser(overrides?: Partial<RequestUser>): RequestUser {
@@ -46,9 +47,15 @@ function makeService() {
     create: vi.fn(),
     restoreAtLocation: vi.fn().mockResolvedValue(null),
     softDelete: vi.fn(),
+    findByFileId: vi.fn(),
+    findLivePdfByPage: vi.fn(),
+    createPdf: vi.fn(),
+    restorePdfAtPage: vi.fn().mockResolvedValue(null),
+    softDeletePdf: vi.fn(),
   };
   const bookService = {
     verifyBookAccess: vi.fn().mockResolvedValue(undefined),
+    verifyFileAccess: vi.fn().mockResolvedValue({ bookId: 5, format: 'pdf' }),
   };
   const service = new BookmarkService(bookmarkRepo as never, bookService as never);
   return { service, bookmarkRepo, bookService };
@@ -150,6 +157,107 @@ describe('BookmarkService', () => {
       await expect(service.createBookmark(5, makeUser(), { title: 'x', cfi: 'epubcfi(/6/2)' })).rejects.toThrow(NotFoundException);
       expect(bookmarkRepo.findLiveByLocation).not.toHaveBeenCalled();
       expect(bookmarkRepo.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPdfBookmarks', () => {
+    it('checks file access and returns only the file bookmark DTOs', async () => {
+      const { service, bookmarkRepo, bookService } = makeService();
+      const row = makeBookmarkRow({ cfi: null, bookFileId: 70, pageNumber: 12 });
+      bookmarkRepo.findByFileId.mockResolvedValue([row]);
+
+      const result = await service.getPdfBookmarks(70, makeUser());
+
+      expect(bookService.verifyFileAccess).toHaveBeenCalledWith(70, expect.any(Object));
+      expect(bookmarkRepo.findByFileId).toHaveBeenCalledWith(70, 1);
+      expect(result[0]).toBeInstanceOf(BookmarkResponseDto);
+      expect(result[0]).toMatchObject({ bookFileId: 70, pageNumber: 12, cfi: null });
+    });
+
+    it('rejects non-PDF files before querying bookmarks', async () => {
+      const { service, bookmarkRepo, bookService } = makeService();
+      bookService.verifyFileAccess.mockResolvedValue({ bookId: 5, format: 'epub' });
+
+      await expect(service.getPdfBookmarks(70, makeUser())).rejects.toThrow('Bookmarks by page are only supported for PDF files');
+      expect(bookmarkRepo.findByFileId).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createPdfBookmark', () => {
+    const dto: CreatePdfBookmarkDto = { pageNumber: 12, title: 'Page 12 - Chapter 3' };
+
+    it('returns an existing bookmark for the same user, file, and page', async () => {
+      const { service, bookmarkRepo } = makeService();
+      const existing = makeBookmarkRow({ id: 15, cfi: null, bookFileId: 70, pageNumber: 12 });
+      bookmarkRepo.findLivePdfByPage.mockResolvedValue(existing);
+
+      const result = await service.createPdfBookmark(70, makeUser(), dto);
+
+      expect(bookmarkRepo.findLivePdfByPage).toHaveBeenCalledWith(1, 70, 12);
+      expect(bookmarkRepo.createPdf).not.toHaveBeenCalled();
+      expect(result.id).toBe(15);
+    });
+
+    it('creates a file-scoped PDF bookmark', async () => {
+      const { service, bookmarkRepo } = makeService();
+      const created = makeBookmarkRow({ id: 16, cfi: null, bookFileId: 70, pageNumber: 12, title: dto.title });
+      bookmarkRepo.findLivePdfByPage.mockResolvedValue(null);
+      bookmarkRepo.createPdf.mockResolvedValue(created);
+
+      const result = await service.createPdfBookmark(70, makeUser(), dto);
+
+      expect(bookmarkRepo.createPdf).toHaveBeenCalledWith(1, 5, 70, dto);
+      expect(result).toMatchObject({ id: 16, bookId: 5, bookFileId: 70, pageNumber: 12, cfi: null });
+    });
+
+    it('restores a tombstoned bookmark at the page', async () => {
+      const { service, bookmarkRepo } = makeService();
+      const restored = makeBookmarkRow({ id: 17, cfi: null, bookFileId: 70, pageNumber: 12, title: dto.title, deletedAt: null });
+      bookmarkRepo.findLivePdfByPage.mockResolvedValue(null);
+      bookmarkRepo.createPdf.mockResolvedValue(null);
+      bookmarkRepo.restorePdfAtPage.mockResolvedValue(restored);
+
+      const result = await service.createPdfBookmark(70, makeUser(), dto);
+
+      expect(bookmarkRepo.restorePdfAtPage).toHaveBeenCalledWith(1, 70, 12, dto.title);
+      expect(result.id).toBe(17);
+    });
+
+    it('re-reads a concurrent insert after the restore attempt loses a race', async () => {
+      const { service, bookmarkRepo } = makeService();
+      const concurrent = makeBookmarkRow({ id: 18, cfi: null, bookFileId: 70, pageNumber: 12 });
+      bookmarkRepo.findLivePdfByPage.mockResolvedValueOnce(null).mockResolvedValueOnce(concurrent);
+      bookmarkRepo.createPdf.mockResolvedValue(null);
+
+      const result = await service.createPdfBookmark(70, makeUser(), dto);
+
+      expect(result.id).toBe(18);
+    });
+
+    it('rejects non-PDF files before querying or creating a bookmark', async () => {
+      const { service, bookmarkRepo, bookService } = makeService();
+      bookService.verifyFileAccess.mockResolvedValue({ bookId: 5, format: 'mp3' });
+
+      await expect(service.createPdfBookmark(70, makeUser(), dto)).rejects.toThrow('Bookmarks by page are only supported for PDF files');
+      expect(bookmarkRepo.findLivePdfByPage).not.toHaveBeenCalled();
+      expect(bookmarkRepo.createPdf).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deletePdfBookmark', () => {
+    it('soft deletes a PDF bookmark scoped to the current user and file', async () => {
+      const { service, bookmarkRepo } = makeService();
+      bookmarkRepo.softDeletePdf.mockResolvedValue(true);
+
+      await expect(service.deletePdfBookmark(70, 19, makeUser())).resolves.toBeUndefined();
+      expect(bookmarkRepo.softDeletePdf).toHaveBeenCalledWith(70, 19, 1);
+    });
+
+    it('returns not found for a missing or foreign bookmark', async () => {
+      const { service, bookmarkRepo } = makeService();
+      bookmarkRepo.softDeletePdf.mockResolvedValue(false);
+
+      await expect(service.deletePdfBookmark(70, 19, makeUser())).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -85,6 +85,60 @@ describe('BookmarkRepository', () => {
     });
   });
 
+  describe('findByFileId', () => {
+    it('lists live PDF bookmarks for one user and file in page order', async () => {
+      const { repo, db } = makeRepository();
+      const rows = [makeRow({ id: 4, cfi: null, bookFileId: 70, pageNumber: 2 }), makeRow({ id: 5, cfi: null, bookFileId: 70, pageNumber: 3 })];
+      db._where.orderBy.mockResolvedValue(rows);
+
+      await expect(repo.findByFileId(70, 10)).resolves.toEqual(rows);
+      expect(db._where.orderBy).toHaveBeenCalled();
+    });
+  });
+
+  describe('findLivePdfByPage', () => {
+    it('returns the existing live bookmark at a file page', async () => {
+      const { repo, db } = makeRepository();
+      const row = makeRow({ id: 6, cfi: null, bookFileId: 70, pageNumber: 12 });
+      db._where.orderBy.mockReturnValue(db._orderBy);
+      db._orderBy.limit.mockResolvedValue([row]);
+
+      await expect(repo.findLivePdfByPage(10, 70, 12)).resolves.toEqual(row);
+      expect(db._orderBy.limit).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('createPdf', () => {
+    it('inserts an independent page bookmark tied to the PDF file and book', async () => {
+      const { repo, db } = makeRepository();
+      const row = makeRow({ id: 7, cfi: null, bookFileId: 70, pageNumber: 12, title: 'Page 12' });
+      db._conflict.returning.mockResolvedValue([row]);
+
+      await expect(repo.createPdf(10, 5, 70, { pageNumber: 12, title: 'Page 12' })).resolves.toEqual(row);
+      expect(db._insert.values).toHaveBeenCalledWith({
+        userId: 10,
+        bookId: 5,
+        bookFileId: 70,
+        pageNumber: 12,
+        cfi: null,
+        positionSeconds: null,
+        title: 'Page 12',
+      });
+      expect(db._values.onConflictDoNothing).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('restorePdfAtPage', () => {
+    it('restores the tombstoned owner of the file page', async () => {
+      const { repo, db } = makeRepository();
+      const row = makeRow({ id: 8, cfi: null, bookFileId: 70, pageNumber: 12, title: 'Page 12', deletedAt: null });
+      db._updateWhere.returning.mockResolvedValue([row]);
+
+      await expect(repo.restorePdfAtPage(10, 70, 12, 'Page 12')).resolves.toEqual(row);
+      expect(db._update.set).toHaveBeenCalledWith({ title: 'Page 12', deletedAt: null });
+    });
+  });
+
   describe('findLiveByLocation', () => {
     it('returns first bookmark for duplicate CFI location', async () => {
       const { repo, db } = makeRepository();
@@ -209,6 +263,23 @@ describe('BookmarkRepository', () => {
       const result = await repo.softDelete(5, 999, 10);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('softDeletePdf', () => {
+    it('returns true when a live PDF row matches user, file, and bookmark', async () => {
+      const { repo, db } = makeRepository();
+      db._updateWhere.returning.mockResolvedValue([{ id: 1 }]);
+
+      await expect(repo.softDeletePdf(70, 12, 10)).resolves.toBe(true);
+      expect(db._update.set).toHaveBeenCalledWith(expect.objectContaining({ deletedAt: expect.any(Date) }));
+    });
+
+    it('returns false when the PDF row is not in this file or user scope', async () => {
+      const { repo, db } = makeRepository();
+      db._updateWhere.returning.mockResolvedValue([]);
+
+      await expect(repo.softDeletePdf(70, 12, 11)).resolves.toBe(false);
     });
   });
 

@@ -723,7 +723,7 @@ export class View extends HTMLElement {
           return
         }
         const range = doc ? anchor(doc) : anchor
-        overlayer.add(value, range, Overlayer.outline)
+        overlayer.add(value, range, this.drawSearchAnnotation ?? Overlayer.outline)
       }
       return
     }

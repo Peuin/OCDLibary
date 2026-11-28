@@ -52,5 +52,7 @@ export interface DisplayPreferences {
     gridCardSecondaryLabel: GridCardLabelField;
     cardInfoMode: CardInfoMode;
     thumbnailClickAction: BookThumbnailClickAction;
+    /** Skip the cover zoom and reader entrance animations when opening a book. Missing means off. */
+    lightReaderEffects?: boolean;
 }
 //# sourceMappingURL=display-preferences.d.ts.map

@@ -21,6 +21,9 @@ describe('User DTO validation', () => {
     const bad = plainToInstance(CreateUserDto, { username: 'ab', permissionNames: [1, 2] });
     expect(await hasErrors(bad)).toBe(true);
 
+    const withoutProfileFields = plainToInstance(CreateUserDto, { username: 'alice', password: 'StrongPass123' });
+    expect(await hasErrors(withoutProfileFields)).toBe(false);
+
     const good = plainToInstance(CreateUserDto, {
       username: 'alice',
       password: 'StrongPass123',

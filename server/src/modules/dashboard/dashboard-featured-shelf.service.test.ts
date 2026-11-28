@@ -48,6 +48,7 @@ function makeService() {
   const repo = {
     findAll: vi.fn().mockResolvedValue([]),
     findById: vi.fn(),
+    findByIdForUpdate: vi.fn(),
     count: vi.fn().mockResolvedValue(0),
     insert: vi.fn(),
     update: vi.fn(),
@@ -57,7 +58,12 @@ function makeService() {
   };
   const imageStorage = { save: vi.fn(), delete: vi.fn(), getPathIfExists: vi.fn() };
   const appSettings = { getValue: vi.fn().mockResolvedValue(null), setValue: vi.fn() };
-  const shelfBookService = { assertLinkable: vi.fn().mockResolvedValue(undefined), relink: vi.fn().mockResolvedValue(undefined) };
+  const tx = {};
+  const shelfBookService = {
+    assertLinkable: vi.fn().mockResolvedValue(undefined),
+    relink: vi.fn().mockResolvedValue(undefined),
+    withTransaction: vi.fn((callback: (tx: unknown) => Promise<unknown>) => callback(tx)),
+  };
   const service = new DashboardFeaturedShelfService(
     repo as unknown as DashboardFeaturedShelfRepository,
     imageStorage as unknown as DashboardFeaturedShelfImageStorage,
@@ -129,24 +135,24 @@ describe('DashboardFeaturedShelfService', () => {
 
   it('clears the saint name when given an empty string and keeps the rest', async () => {
     const { service, repo } = makeService();
-    repo.findById.mockResolvedValue(shelfRow({ id: 3, saintName: 'Old', rows: 2 }));
+    repo.findByIdForUpdate.mockResolvedValue(shelfRow({ id: 3, saintName: 'Old', rows: 2 }));
     repo.update.mockImplementation((_id: number, values: Partial<DashboardFeaturedShelfRow>) => Promise.resolve(shelfRow({ id: 3, ...values })));
 
     await service.update(3, { saintName: '   ' }, makeUser());
 
-    expect(repo.update).toHaveBeenCalledWith(3, { collectionId: null, title: 'Linh đạo Cát Minh', saintName: null, rows: 2 });
+    expect(repo.update).toHaveBeenCalledWith(3, { collectionId: null, title: 'Linh đạo Cát Minh', saintName: null, rows: 2 }, {});
   });
 
   it('links a shelf to a collection through the shelf books, which moves its books', async () => {
     const { service, repo, shelfBookService } = makeService();
     const user = makeUser();
     const existing = shelfRow({ id: 3 });
-    repo.findById.mockResolvedValue(existing);
+    repo.findByIdForUpdate.mockResolvedValue(existing);
     repo.update.mockImplementation((_id: number, values: Partial<DashboardFeaturedShelfRow>) => Promise.resolve(shelfRow({ id: 3, ...values })));
 
     const updated = await service.update(3, { collectionId: 30 }, user);
 
-    expect(shelfBookService.relink).toHaveBeenCalledWith(existing, 30, user);
+    expect(shelfBookService.relink).toHaveBeenCalledWith(existing, 30, user, {});
     expect(updated.collectionId).toBe(30);
   });
 

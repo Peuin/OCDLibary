@@ -39,7 +39,7 @@ const props = withDefaults(
   { loading: false, canAdd: false, addLabel: undefined, countSortLabel: undefined },
 )
 
-const emit = defineEmits<{ add: [] }>()
+const emit = defineEmits<{ add: []; 'item-contextmenu': [item: EntityIndexItem, event: MouseEvent] }>()
 
 const { t } = useI18n()
 
@@ -105,6 +105,10 @@ function handleAdd() {
 
 function itemRoute(id: number) {
   return { name: props.routeName, params: { id } }
+}
+
+function handleItemContextMenu(event: MouseEvent, item: EntityIndexItem) {
+  emit('item-contextmenu', item, event)
 }
 
 function itemCountText(item: EntityIndexItem): string {
@@ -216,6 +220,7 @@ function itemCountText(item: EntityIndexItem): string {
           :key="item.id"
           :to="itemRoute(item.id)"
           class="flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-primary hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          @contextmenu="handleItemContextMenu($event, item)"
         >
           <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <AppIcon :icon="item.icon || fallbackIcon" :fallback="fallbackIcon" :size="18" />

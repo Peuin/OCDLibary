@@ -46,6 +46,7 @@ import { useRefreshingBooks } from '../composables/useRefreshingBooks'
 import { mergeBookCardWithDetail } from '../lib/book-card-mapper'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { useDisplaySettings, type GridCardLabelField } from '@/composables/useDisplaySettings'
+import { openBookWithTransition } from '@/composables/useBookOpenTransition'
 import { COVER_ASPECT_RATIO_KEY, DEFAULT_COVER_ASPECT_RATIO, coverAspectRatioValue, fittedCoverFrameStyle } from '../lib/cover-aspect-ratio'
 import { useBookDownload } from '@/features/book/composables/useBookDownload'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -184,6 +185,7 @@ const coverImageRatio = ref<number | null>(null)
 const isMissing = computed(() => props.book.status === 'missing')
 const showMobileOverlay = ref(false)
 const root = ref<HTMLElement | null>(null)
+const coverSurface = ref<unknown>(null)
 const coverSlotRatio = computed(() => coverAspectRatioValue(String(effectiveCoverAspectRatio.value)))
 const coverOverlayFrameStyle = computed(() => {
   if (bookCoverDisplayMode.value !== 'natural-bottom' || !props.book.hasCover || !coverLoaded.value || coverFailed.value) return { inset: '0' }
@@ -213,11 +215,21 @@ function handleArtworkError() {
 }
 
 function openFile(file: BookFileRef, mode?: 'peek') {
-  router.push({
-    name: 'reader',
-    params: { bookId: props.book.id, fileId: file.id },
-    query: mode === 'peek' ? { format: file.format ?? 'epub', mode } : { format: file.format ?? 'epub' },
-  })
+  void openBookWithTransition(
+    router,
+    {
+      name: 'reader',
+      params: { bookId: props.book.id, fileId: file.id },
+      query: mode === 'peek' ? { format: file.format ?? 'epub', mode } : { format: file.format ?? 'epub' },
+    },
+    elementOf(coverSurface.value),
+  )
+}
+
+// The rendered cover box: the element that morphs into the reader on open.
+function elementOf(component: unknown): HTMLElement | null {
+  const el = (component as { $el?: unknown } | null)?.$el
+  return el instanceof HTMLElement ? el : null
 }
 
 function peekPrimaryFile() {
@@ -435,8 +447,10 @@ const secondaryLabelText = computed(() => resolveBookLabel(gridCardSecondaryLabe
     <!-- Cover -->
     <div class="group">
       <BookCoverSurface
+        ref="coverSurface"
         class="book-cover-surface--spine-fitted relative w-full rounded-sm overflow-hidden transition-[box-shadow,transform,ring] duration-150 will-change-transform"
         :class="isMissing || selectionMode ? '' : 'group-hover:scale-[1.02]'"
+        :data-book-cover-id="book.id"
         :interactive="!isMissing && !selectionMode"
         :disable-spine="isAudiobook"
         :is-comic="isComic"

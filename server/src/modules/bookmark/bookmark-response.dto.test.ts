@@ -10,6 +10,8 @@ describe('BookmarkResponseDto', () => {
       cfi: null,
       title: '00:01:23',
       positionSeconds: null,
+      bookFileId: null,
+      pageNumber: null,
       createdAt,
     } as never);
 
@@ -19,6 +21,8 @@ describe('BookmarkResponseDto', () => {
       cfi: null,
       title: '00:01:23',
       positionSeconds: null,
+      bookFileId: null,
+      pageNumber: null,
       createdAt,
     });
   });
@@ -36,5 +40,21 @@ describe('BookmarkResponseDto', () => {
 
     expect(dto.cfi).toBe('epubcfi(/6/2)');
     expect(dto.positionSeconds).toBe(93.5);
+  });
+
+  it('exposes the associated PDF file and 1-based page', () => {
+    const dto = BookmarkResponseDto.from({
+      id: 10,
+      userId: 7,
+      bookId: 5,
+      bookFileId: 44,
+      pageNumber: 12,
+      cfi: null,
+      title: 'Page 12',
+      positionSeconds: null,
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+    } as never);
+
+    expect(dto).toMatchObject({ bookFileId: 44, pageNumber: 12 });
   });
 });

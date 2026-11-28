@@ -8,6 +8,7 @@ import * as schema from '../../db/schema';
 import { bookMetadata, books, collectionBooks, collectionPodcasts, collections, podcasts } from '../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 const visibleCollectionCondition = APP_FEATURES.podcasts ? undefined : eq(collections.mediaType, 'books');
 
@@ -101,6 +102,11 @@ export class CollectionRepository {
       .limit(1);
   }
 
+  async findByIdForUpdate(id: number, tx: Tx) {
+    const [row] = await tx.select().from(collections).where(eq(collections.id, id)).for('update').limit(1);
+    return row ?? null;
+  }
+
   findByIdForViewer(id: number, userId: number, isSuperuser: boolean, visibleBooksWhere: SQL | undefined) {
     return this.db
       .select(collectionFieldsWithVisibleBookCount)
@@ -130,8 +136,8 @@ export class CollectionRepository {
       .returning();
   }
 
-  delete(id: number, userId: number) {
-    return this.db
+  delete(id: number, userId: number, tx?: Tx) {
+    return (tx ?? this.db)
       .delete(collections)
       .where(and(eq(collections.id, id), eq(collections.userId, userId), visibleCollectionCondition))
       .returning();

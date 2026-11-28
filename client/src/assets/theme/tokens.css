@@ -129,6 +129,9 @@
 
   /* Shape */
   --radius: 0.625rem;
+  --reader-search-hit: color-mix(in oklch, var(--primary) 22%, transparent);
+  --reader-search-hit-active: color-mix(in oklch, var(--primary) 40%, transparent);
+  --reader-search-hit-active-outline: color-mix(in oklch, var(--primary) 60%, transparent);
 
   /* App shell (sidebar + header): one card gap, one material.
      --shell-surface-opacity is user-controlled and overwritten on <html>. */

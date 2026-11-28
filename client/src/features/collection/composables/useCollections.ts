@@ -110,7 +110,7 @@ export function useCollections() {
         ...(isPublic !== undefined && { isPublic }),
       }),
     })
-    if (!res.ok) throw new Error('Failed to update collection')
+    if (!res.ok) throw Object.assign(new Error('Failed to update collection'), { status: res.status })
     const updated: Collection = await res.json()
     collections.value = collections.value.map((c) => (c.id === id ? updated : c))
     return updated

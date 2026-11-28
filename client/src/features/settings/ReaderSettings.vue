@@ -7,6 +7,9 @@ import { api } from '@/lib/api'
 import { useAuth } from '@/features/auth/composables/useAuth'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
 import SettingsPageHeader from './SettingsPageHeader.vue'
+import ToggleSwitch from '@/components/ui/ToggleSwitch.vue'
+import { usePreferredReducedMotion } from '@vueuse/core'
+import { useDisplaySettings } from '@/composables/useDisplaySettings'
 
 const props = withDefaults(
   defineProps<{
@@ -20,6 +23,8 @@ const props = withDefaults(
 const { t } = useI18n()
 const { user } = useAuth()
 const { isDemoRestrictedAccount } = usePermissions()
+const { lightReaderEffects } = useDisplaySettings()
+const reducedMotion = usePreferredReducedMotion()
 
 const syncEnabled = computed(() => !isDemoRestrictedAccount.value && (user.value?.settings?.syncReaderPreferences ?? false))
 
@@ -113,6 +118,19 @@ async function setStorageMode(sync: boolean) {
             {{ t('settings.reader.general.myAccountHint') }}
           </span>
         </div>
+      </div>
+    </div>
+
+    <!-- Effects -->
+    <p class="settings-group-label mt-6">{{ t('settings.reader.general.effectsLabel') }}</p>
+    <div class="settings-card">
+      <div class="flex items-center justify-between gap-3 px-4 py-3.5 md:px-5 md:py-4 bg-card">
+        <div class="min-w-0">
+          <p class="settings-label">{{ t('settings.reader.general.lightEffects.label') }}</p>
+          <p class="settings-hint">{{ t('settings.reader.general.lightEffects.hint') }}</p>
+          <p v-if="reducedMotion === 'reduce'" class="settings-hint">{{ t('settings.reader.general.lightEffects.reducedMotion') }}</p>
+        </div>
+        <ToggleSwitch v-model="lightReaderEffects" :aria-label="t('settings.reader.general.lightEffects.label')" />
       </div>
     </div>
   </div>

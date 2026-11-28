@@ -213,6 +213,15 @@
   background-image: url('./backgrounds/carmel-dark.jpg');
 }
 
+/* On wide dashboard viewports, oversize the artwork slightly and pin its top edge. Cropping the
+   mostly empty bottom moves the cross below the fixed header without exposing a blank band. */
+@media (min-aspect-ratio: 16/9) {
+  .pattern-carmel:has(#dashboard-main)::before {
+    background-size: 110% auto;
+    background-position: center 0;
+  }
+}
+
 .pattern-vinyl::before {
   content: '';
   position: fixed;
@@ -859,4 +868,83 @@
 
 .driver-popover-arrow-side-bottom.driver-popover-arrow {
   border-top-color: var(--card) !important;
+}
+
+/* Opening a book (SCRUM-102). The reader shell wraps every format (EPUB, PDF, comics, audio).
+   Only `transform` and `opacity` animate, so the entrance stays on the compositor on phones.
+   `backwards` fill: once finished the frame has no transform, so fixed-position reader
+   chrome is laid out against the viewport again. */
+.reader-shell,
+.reader-shell__backdrop,
+.reader-shell__frame {
+  inset: 0;
+}
+.reader-shell {
+  position: fixed;
+}
+.reader-shell__backdrop,
+.reader-shell__frame {
+  position: absolute;
+}
+
+@keyframes reader-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes reader-frame-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(14px);
+  }
+}
+
+.reader-shell--entrance > .reader-shell__backdrop {
+  animation: reader-backdrop-in 0.45s ease-out backwards;
+}
+
+.reader-shell--entrance > .reader-shell__frame {
+  animation: reader-frame-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  will-change: transform, opacity;
+}
+
+/* Cover -> reader morph when the browser supports View Transitions. */
+::view-transition-group(book-cover-active),
+::view-transition-old(book-cover-active),
+::view-transition-new(book-cover-active) {
+  animation-duration: 0.45s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-shell--entrance > .reader-shell__backdrop,
+  .reader-shell--entrance > .reader-shell__frame {
+    animation: none;
+  }
+  ::view-transition-group(book-cover-active),
+  ::view-transition-old(book-cover-active),
+  ::view-transition-new(book-cover-active) {
+    animation: none;
+  }
+}
+
+/* The surface a cover grows into, lifted once the reader is mounted (BookOpenVeil). */
+.book-open-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+.book-open-veil-leave-active {
+  transition: opacity 0.15s ease-out;
+}
+.book-open-veil-leave-to {
+  opacity: 0;
+}
+.book-open-veil--back-fallback {
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.45s ease-out;
+  will-change: transform, opacity;
 }

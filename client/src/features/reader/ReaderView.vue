@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import { toast } from 'vue-sonner'
 import { useFoliate, type RelocateDetail } from './epub/composables/useFoliate'
 import type { SelectionDetail } from './epub/composables/useFoliateSelection'
@@ -54,12 +55,19 @@ import { findMatchingCfiRange } from './epub/utils'
 import { getFormatGroup } from '@bookorbit/types'
 import { resolveReaderResumeTarget } from '@/lib/reading-checkpoint'
 import { api } from '@/lib/api'
+import { useBookOpenTransition } from '@/composables/useBookOpenTransition'
 
 const PdfV4ReaderView = defineAsyncComponent(() => import('./pdf-v4/PdfV4ReaderView.vue'))
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+
+// Opening a book (SCRUM-102): either the cover grows in through a view transition (the veil
+// then lifts off the reader), or the reader runs its own CSS entrance. Never both, and
+// neither with light effects.
+const { veilVisible, lightEffects, leaveReader } = useBookOpenTransition()
+const readerEntrance = ref(!lightEffects.value && !veilVisible.value)
 const bookId = Number(route.params.bookId)
 const fileId = Number(route.params.fileId)
 const fileFormat = (route.query.format as string) || 'epub'
@@ -72,6 +80,11 @@ const isPeekMode = computed(() => {
   const mode = route.query.mode
   return (Array.isArray(mode) ? mode[0] : mode) === 'peek'
 })
+
+onBeforeRouteLeave((to) => {
+  if (to.name === 'reader') return true
+  return leaveReader(bookId)
+})
 const trackingEnabled = computed(() => !isPeekMode.value)
 const isTtsAvailable = normalizedFileFormat === 'epub'
 
@@ -79,6 +92,7 @@ const containerRef = ref<HTMLElement | null>(null)
 const showSidebar = ref(false)
 const showSettings = ref(false)
 const showSearch = ref(false)
+const epubSearchDocked = useBreakpoints(breakpointsTailwind).greaterOrEqual('md')
 const showTapZones = ref(false)
 const searchInitialQuery = ref('')
 const sectionFractions = ref<number[]>([])
@@ -156,6 +170,11 @@ const { results: searchResults, isSearching, search: doSearch, clear: clearSearc
 const selection = useReaderSelection()
 const { isSidebarPinned, toggleSidebarPinned, shouldCloseAfterNavigation } = useReaderSidebarPin(fileId)
 
+function toggleSearchPanel() {
+  if (showSearch.value) closeSearch()
+  else showSearch.value = true
+}
+
 function closeAnyPanel() {
   if (showTapZones.value) {
     showTapZones.value = false
@@ -174,9 +193,7 @@ const { showHelpModal } = useReaderKeyboardShortcuts({
   toggleSidebar: () => {
     showSidebar.value = !showSidebar.value
   },
-  toggleSearch: () => {
-    showSearch.value = !showSearch.value
-  },
+  toggleSearch: toggleSearchPanel,
   toggleBookmark: () => {
     bookmarks.toggle(bookId, cfi.value ?? '', chapterTitle.value)
   },
@@ -1315,440 +1332,449 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <PdfV4ReaderView v-if="isPdfFormat" :bookId="bookId" :fileId="fileId" :peek-mode="isPeekMode" />
-  <CbzReaderView v-else-if="isComicFormat" :bookId="bookId" :fileId="fileId" :peek-mode="isPeekMode" />
-  <AudiobookReaderView v-else-if="isAudioFormat" :bookId="bookId" :fileId="fileId" :peek-mode="isPeekMode" />
-  <div
-    v-else
-    class="fixed inset-0 overflow-hidden"
-    :style="
-      shouldApplyStyles ? { background: activeMode.bg, colorScheme: isDark ? 'dark' : 'light' } : { background: '#ffffff', colorScheme: 'light' }
-    "
-  >
-    <ReaderHeader
-      :chapterTitle="chapterTitle"
-      :isBookmarked="bookmarks.isCurrentCfiBookmarked.value"
-      :settings-open="showSettings"
-      :footerMode="footerMode"
-      :peek-mode="isPeekMode"
-      :isTtsActive="isTtsActive || (mediaOverlay.isActive.value && mediaOverlay.isPlaying.value)"
-      :isTtsAvailable="isTtsAvailable"
-      :isMediaOverlay="isMediaOverlayAvailable"
-      :isPinned="isPinned"
-      :showTapZones="showTapZones"
-      class="transition-all duration-300"
-      :class="headerVisible && !showTapZones ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'"
-      @back="router.back()"
-      @toggleSidebar="showSidebar = !showSidebar"
-      @toggleSearch="showSearch = !showSearch"
-      @toggleBookmark="bookmarks.toggle(bookId, cfi ?? '', chapterTitle)"
-      @update:settings-open="setSettingsOpen"
-      @toggleFullscreen="toggleFullscreen"
-      @toggleHelp="toggleHelpModal"
-      @cycleFooterMode="cycleFooterMode"
-      @startReading="startTrackedReading"
-      @startTts="handleStartListen"
-      @togglePin="togglePinned"
-      @toggleTapZones="showTapZones = !showTapZones"
-    >
-      <template #settingsPanel>
-        <ReaderSettingsPanel
-          :state="state"
-          :customFonts="customFonts"
-          :is-fixed-layout="isFixedLayout"
-          :can-reset="bookSettings.isCustomized.value"
-          @update="applyUpdate"
-          @reset="resetSettings"
-        />
-      </template>
-    </ReaderHeader>
-
-    <Transition name="bookmark-fade">
-      <div v-if="bookmarks.isCurrentCfiBookmarked.value" class="absolute left-8 z-30 pointer-events-none" aria-hidden="true">
-        <div class="w-7 h-14 bg-primary" style="clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%)" />
-      </div>
-    </Transition>
-
-    <div class="absolute inset-0">
-      <div v-if="loading" class="absolute inset-0 flex items-center justify-center z-10 bg-background">
-        <div class="flex flex-col items-center gap-3">
-          <div class="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-          <p class="text-sm text-muted-foreground">
-            {{ t('reader.loadingBook') }}
-          </p>
-        </div>
-      </div>
-
-      <div v-if="error && !loading" class="absolute inset-0 flex items-center justify-center z-10 p-8 bg-background">
-        <div class="text-center max-w-sm">
-          <p class="text-sm font-medium mb-2 text-foreground">
-            {{ t('reader.failedToLoadBook') }}
-          </p>
-          <p class="text-xs text-muted-foreground">{{ error }}</p>
-        </div>
-      </div>
-
-      <div ref="containerRef" class="absolute inset-0" />
+  <div class="reader-shell" :class="{ 'reader-shell--entrance': readerEntrance }">
+    <div class="reader-shell__backdrop bg-background" aria-hidden="true" />
+    <div class="reader-shell__frame" @animationend.self="readerEntrance = false">
+      <PdfV4ReaderView v-if="isPdfFormat" :bookId="bookId" :fileId="fileId" :peek-mode="isPeekMode" />
+      <CbzReaderView v-else-if="isComicFormat" :bookId="bookId" :fileId="fileId" :peek-mode="isPeekMode" />
+      <AudiobookReaderView v-else-if="isAudioFormat" :bookId="bookId" :fileId="fileId" :peek-mode="isPeekMode" />
       <div
-        v-if="isNavigationLocked"
-        class="absolute inset-0 z-[40] touch-none"
-        @pointerdown.stop.prevent="handleBlockedPageInteraction"
-        @touchstart.stop.prevent="handleBlockedPageInteraction"
-        @click.stop.prevent="handleBlockedPageInteraction"
-      />
+        v-else
+        class="fixed inset-0 overflow-hidden"
+        :style="
+          shouldApplyStyles ? { background: activeMode.bg, colorScheme: isDark ? 'dark' : 'light' } : { background: '#ffffff', colorScheme: 'light' }
+        "
+      >
+        <ReaderHeader
+          :chapterTitle="chapterTitle"
+          :isBookmarked="bookmarks.isCurrentCfiBookmarked.value"
+          :settings-open="showSettings"
+          :footerMode="footerMode"
+          :peek-mode="isPeekMode"
+          :isTtsActive="isTtsActive || (mediaOverlay.isActive.value && mediaOverlay.isPlaying.value)"
+          :isTtsAvailable="isTtsAvailable"
+          :isMediaOverlay="isMediaOverlayAvailable"
+          :isPinned="isPinned"
+          :showTapZones="showTapZones"
+          class="transition-all duration-300"
+          :class="headerVisible && !showTapZones ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'"
+          @back="router.back()"
+          @toggleSidebar="showSidebar = !showSidebar"
+          @toggleSearch="toggleSearchPanel"
+          @toggleBookmark="bookmarks.toggle(bookId, cfi ?? '', chapterTitle)"
+          @update:settings-open="setSettingsOpen"
+          @toggleFullscreen="toggleFullscreen"
+          @toggleHelp="toggleHelpModal"
+          @cycleFooterMode="cycleFooterMode"
+          @startReading="startTrackedReading"
+          @startTts="handleStartListen"
+          @togglePin="togglePinned"
+          @toggleTapZones="showTapZones = !showTapZones"
+        >
+          <template #settingsPanel>
+            <ReaderSettingsPanel
+              :state="state"
+              :customFonts="customFonts"
+              :is-fixed-layout="isFixedLayout"
+              :can-reset="bookSettings.isCustomized.value"
+              @update="applyUpdate"
+              @reset="resetSettings"
+            />
+          </template>
+        </ReaderHeader>
 
-      <!-- Tap/Click Zones Reference Overlay -->
-      <Transition name="fade">
-        <div v-if="showTapZones" class="absolute inset-0 z-20 pointer-events-none flex select-none">
-          <!-- Floating Exit Button -->
-          <button
-            class="absolute top-4 right-4 z-50 px-3.5 py-2 rounded-xl bg-background/90 text-foreground border border-border/80 shadow-lg hover:bg-background pointer-events-auto flex items-center gap-2 text-xs font-semibold cursor-pointer transition-all duration-200 active:scale-95 animate-pulse"
-            @click="showTapZones = false"
-            title="Close Guide"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="lucide lucide-x text-primary"
-            >
-              <line x1="18" x2="6" y1="6" y2="18" />
-              <line x1="6" x2="18" y1="6" y2="18" />
-            </svg>
-            <span>Exit Guide</span>
-          </button>
+        <Transition name="bookmark-fade">
+          <div v-if="bookmarks.isCurrentCfiBookmarked.value" class="absolute left-8 z-30 pointer-events-none" aria-hidden="true">
+            <div class="w-7 h-14 bg-primary" style="clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%)" />
+          </div>
+        </Transition>
 
-          <!-- Mobile Guide -->
-          <div v-if="isMobile" class="w-full h-full flex flex-col items-center justify-center bg-primary/[0.24] backdrop-blur-[4px] p-6 text-center">
-            <div
-              class="flex flex-col items-center gap-4 p-6 max-w-sm rounded-2xl bg-background/90 border border-border/70 shadow-2xl text-muted-foreground"
-            >
-              <div class="flex gap-4 items-center">
-                <span class="p-3 rounded-full bg-primary/10 text-primary">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    class="lucide lucide-touchpad"
-                  >
-                    <rect width="20" height="20" x="2" y="2" rx="2" />
-                    <path d="M12 14v4" />
-                    <path d="M10 16h4" />
-                    <circle cx="12" cy="8" r="2" />
-                  </svg>
-                </span>
-                <span class="p-3 rounded-full bg-primary/10 text-primary">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    class="lucide lucide-hand"
-                  >
-                    <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
-                    <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
-                    <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4.5" />
-                    <path
-                      d="M6 14.5V11a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v7.5A8.5 8.5 0 0 0 10.5 27h3A8.5 8.5 0 0 0 22 18.5V14a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v.5"
-                    />
-                  </svg>
-                </span>
-              </div>
-              <div>
-                <h3 class="text-sm font-semibold tracking-wide uppercase text-foreground mb-1">Mobile Interactions</h3>
-                <p class="text-xs text-muted-foreground mb-4">Optimized for handheld touch reading</p>
-                <div class="space-y-3 text-left">
-                  <div class="flex items-start gap-2.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                    <div>
-                      <p class="text-xs font-medium text-foreground">Tap Anywhere</p>
-                      <p class="text-[10px] text-muted-foreground">Toggles the header and footer overlays</p>
-                    </div>
-                  </div>
-                  <div class="flex items-start gap-2.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                    <div>
-                      <p class="text-xs font-medium text-foreground">Swipe Left / Right</p>
-                      <p class="text-[10px] text-muted-foreground">Turns pages smoothly forward or backward</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <div class="absolute inset-0">
+          <div v-if="loading" class="absolute inset-0 flex items-center justify-center z-10 bg-background">
+            <div class="flex flex-col items-center gap-3">
+              <div class="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              <p class="text-sm text-muted-foreground">
+                {{ t('reader.loadingBook') }}
+              </p>
             </div>
           </div>
 
-          <!-- Desktop Guide -->
-          <div v-else class="w-full h-full flex flex-col">
-            <!-- Top Zone (64px) -->
-            <div
-              class="h-16 w-full flex items-center justify-center border-b-2 border-dashed border-primary/40 bg-primary/[0.18] backdrop-blur-[3px] shrink-0"
-            >
-              <div
-                class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/90 border border-border/70 shadow-md text-muted-foreground text-center animate-pulse"
+          <div v-if="error && !loading" class="absolute inset-0 flex items-center justify-center z-10 p-8 bg-background">
+            <div class="text-center max-w-sm">
+              <p class="text-sm font-medium mb-2 text-foreground">
+                {{ t('reader.failedToLoadBook') }}
+              </p>
+              <p class="text-xs text-muted-foreground">{{ error }}</p>
+            </div>
+          </div>
+
+          <div ref="containerRef" class="absolute bottom-0 right-0 top-0" :class="showSearch && epubSearchDocked ? 'left-80' : 'left-0'" />
+          <div
+            v-if="isNavigationLocked"
+            class="absolute inset-0 z-[40] touch-none"
+            @pointerdown.stop.prevent="handleBlockedPageInteraction"
+            @touchstart.stop.prevent="handleBlockedPageInteraction"
+            @click.stop.prevent="handleBlockedPageInteraction"
+          />
+
+          <!-- Tap/Click Zones Reference Overlay -->
+          <Transition name="fade">
+            <div v-if="showTapZones" class="absolute inset-0 z-20 pointer-events-none flex select-none">
+              <!-- Floating Exit Button -->
+              <button
+                class="absolute top-4 right-4 z-50 px-3.5 py-2 rounded-xl bg-background/90 text-foreground border border-border/80 shadow-lg hover:bg-background pointer-events-auto flex items-center gap-2 text-xs font-semibold cursor-pointer transition-all duration-200 active:scale-95 animate-pulse"
+                @click="showTapZones = false"
+                title="Close Guide"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
+                  width="14"
+                  height="14"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="2.5"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  class="lucide lucide-menu text-primary"
+                  class="lucide lucide-x text-primary"
                 >
-                  <line x1="4" x2="20" y1="12" y2="12" />
-                  <line x1="4" x2="20" y1="6" y2="6" />
-                  <line x1="4" x2="20" y1="18" y2="18" />
+                  <line x1="18" x2="6" y1="6" y2="18" />
+                  <line x1="6" x2="18" y1="6" y2="18" />
                 </svg>
-                <span class="text-xs font-semibold tracking-wide uppercase text-foreground">Toggle Header</span>
-                <span class="text-[10px] text-muted-foreground">Click top edge (y &lt; 64px)</span>
-              </div>
-            </div>
+                <span>Exit Guide</span>
+              </button>
 
-            <!-- Central Content Area -->
-            <div class="flex-1 w-full flex min-h-0">
-              <!-- Left Zone (30%) -->
-              <div class="w-[30%] h-full flex flex-col items-center justify-center border-r-2 border-dashed border-primary/40 bg-primary/[0.08]">
+              <!-- Mobile Guide -->
+              <div
+                v-if="isMobile"
+                class="w-full h-full flex flex-col items-center justify-center bg-primary/[0.24] backdrop-blur-[4px] p-6 text-center"
+              >
                 <div
-                  class="flex flex-col items-center gap-2 p-4 mx-2 rounded-xl bg-background/90 border border-border/70 shadow-md text-muted-foreground animate-pulse text-center"
+                  class="flex flex-col items-center gap-4 p-6 max-w-sm rounded-2xl bg-background/90 border border-border/70 shadow-2xl text-muted-foreground"
                 >
-                  <span class="p-2 rounded-full bg-primary/10 text-primary">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      class="lucide lucide-chevron-left"
-                    >
-                      <path d="m15 18-6-6 6-6" />
-                    </svg>
-                  </span>
-                  <span class="text-xs font-semibold tracking-wide uppercase text-foreground">Previous Page</span>
-                  <span class="text-[10px] text-muted-foreground max-w-[120px]">Click left 30%</span>
+                  <div class="flex gap-4 items-center">
+                    <span class="p-3 rounded-full bg-primary/10 text-primary">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-touchpad"
+                      >
+                        <rect width="20" height="20" x="2" y="2" rx="2" />
+                        <path d="M12 14v4" />
+                        <path d="M10 16h4" />
+                        <circle cx="12" cy="8" r="2" />
+                      </svg>
+                    </span>
+                    <span class="p-3 rounded-full bg-primary/10 text-primary">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-hand"
+                      >
+                        <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+                        <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+                        <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4.5" />
+                        <path
+                          d="M6 14.5V11a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v7.5A8.5 8.5 0 0 0 10.5 27h3A8.5 8.5 0 0 0 22 18.5V14a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v.5"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-semibold tracking-wide uppercase text-foreground mb-1">Mobile Interactions</h3>
+                    <p class="text-xs text-muted-foreground mb-4">Optimized for handheld touch reading</p>
+                    <div class="space-y-3 text-left">
+                      <div class="flex items-start gap-2.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
+                        <div>
+                          <p class="text-xs font-medium text-foreground">Tap Anywhere</p>
+                          <p class="text-[10px] text-muted-foreground">Toggles the header and footer overlays</p>
+                        </div>
+                      </div>
+                      <div class="flex items-start gap-2.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
+                        <div>
+                          <p class="text-xs font-medium text-foreground">Swipe Left / Right</p>
+                          <p class="text-[10px] text-muted-foreground">Turns pages smoothly forward or backward</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <!-- Middle Zone (40%) -->
-              <div class="w-[40%] h-full flex flex-col items-center justify-center border-r-2 border-dashed border-primary/40 bg-transparent">
+              <!-- Desktop Guide -->
+              <div v-else class="w-full h-full flex flex-col">
+                <!-- Top Zone (64px) -->
                 <div
-                  class="flex flex-col items-center gap-2 p-4 mx-2 rounded-xl bg-background/90 border border-border/70 text-muted-foreground text-center shadow-md animate-pulse"
+                  class="h-16 w-full flex items-center justify-center border-b-2 border-dashed border-primary/40 bg-primary/[0.18] backdrop-blur-[3px] shrink-0"
                 >
-                  <span class="p-2 rounded-full bg-primary/10 text-primary">
+                  <div
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/90 border border-border/70 shadow-md text-muted-foreground text-center animate-pulse"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
+                      width="16"
+                      height="16"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
                       stroke-width="2"
                       stroke-linecap="round"
                       stroke-linejoin="round"
-                      class="lucide lucide-menu"
+                      class="lucide lucide-menu text-primary"
                     >
                       <line x1="4" x2="20" y1="12" y2="12" />
                       <line x1="4" x2="20" y1="6" y2="6" />
                       <line x1="4" x2="20" y1="18" y2="18" />
                     </svg>
-                  </span>
-                  <span class="text-xs font-semibold tracking-wide uppercase text-foreground">Toggle Header & Footer</span>
-                  <span class="text-[10px] text-muted-foreground max-w-[120px]">Click center 40%</span>
+                    <span class="text-xs font-semibold tracking-wide uppercase text-foreground">Toggle Header</span>
+                    <span class="text-[10px] text-muted-foreground">Click top edge (y &lt; 64px)</span>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Right Zone (30%) -->
-              <div class="w-[30%] h-full flex flex-col items-center justify-center bg-primary/[0.08]">
+                <!-- Central Content Area -->
+                <div class="flex-1 w-full flex min-h-0">
+                  <!-- Left Zone (30%) -->
+                  <div class="w-[30%] h-full flex flex-col items-center justify-center border-r-2 border-dashed border-primary/40 bg-primary/[0.08]">
+                    <div
+                      class="flex flex-col items-center gap-2 p-4 mx-2 rounded-xl bg-background/90 border border-border/70 shadow-md text-muted-foreground animate-pulse text-center"
+                    >
+                      <span class="p-2 rounded-full bg-primary/10 text-primary">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="lucide lucide-chevron-left"
+                        >
+                          <path d="m15 18-6-6 6-6" />
+                        </svg>
+                      </span>
+                      <span class="text-xs font-semibold tracking-wide uppercase text-foreground">Previous Page</span>
+                      <span class="text-[10px] text-muted-foreground max-w-[120px]">Click left 30%</span>
+                    </div>
+                  </div>
+
+                  <!-- Middle Zone (40%) -->
+                  <div class="w-[40%] h-full flex flex-col items-center justify-center border-r-2 border-dashed border-primary/40 bg-transparent">
+                    <div
+                      class="flex flex-col items-center gap-2 p-4 mx-2 rounded-xl bg-background/90 border border-border/70 text-muted-foreground text-center shadow-md animate-pulse"
+                    >
+                      <span class="p-2 rounded-full bg-primary/10 text-primary">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="lucide lucide-menu"
+                        >
+                          <line x1="4" x2="20" y1="12" y2="12" />
+                          <line x1="4" x2="20" y1="6" y2="6" />
+                          <line x1="4" x2="20" y1="18" y2="18" />
+                        </svg>
+                      </span>
+                      <span class="text-xs font-semibold tracking-wide uppercase text-foreground">Toggle Header & Footer</span>
+                      <span class="text-[10px] text-muted-foreground max-w-[120px]">Click center 40%</span>
+                    </div>
+                  </div>
+
+                  <!-- Right Zone (30%) -->
+                  <div class="w-[30%] h-full flex flex-col items-center justify-center bg-primary/[0.08]">
+                    <div
+                      class="flex flex-col items-center gap-2 p-4 mx-2 rounded-xl bg-background/90 border border-border/70 shadow-md text-muted-foreground animate-pulse text-center"
+                    >
+                      <span class="p-2 rounded-full bg-primary/10 text-primary">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          class="lucide lucide-chevron-right"
+                        >
+                          <path d="m9 18 6-6-6-6" />
+                        </svg>
+                      </span>
+                      <span class="text-xs font-semibold tracking-wide uppercase text-foreground">Next Page</span>
+                      <span class="text-[10px] text-muted-foreground max-w-[120px]">Click right 30%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bottom Zone (64px) -->
                 <div
-                  class="flex flex-col items-center gap-2 p-4 mx-2 rounded-xl bg-background/90 border border-border/70 shadow-md text-muted-foreground animate-pulse text-center"
+                  class="h-16 w-full flex items-center justify-center border-t-2 border-dashed border-primary/40 bg-primary/[0.18] backdrop-blur-[3px] shrink-0"
                 >
-                  <span class="p-2 rounded-full bg-primary/10 text-primary">
+                  <div
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/90 border border-border/70 shadow-md text-muted-foreground text-center animate-pulse"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
+                      width="16"
+                      height="16"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
                       stroke-width="2"
                       stroke-linecap="round"
                       stroke-linejoin="round"
-                      class="lucide lucide-chevron-right"
+                      class="lucide lucide-menu text-primary"
                     >
-                      <path d="m9 18 6-6-6-6" />
+                      <line x1="4" x2="20" y1="12" y2="12" />
+                      <line x1="4" x2="20" y1="6" y2="6" />
+                      <line x1="4" x2="20" y1="18" y2="18" />
                     </svg>
-                  </span>
-                  <span class="text-xs font-semibold tracking-wide uppercase text-foreground">Next Page</span>
-                  <span class="text-[10px] text-muted-foreground max-w-[120px]">Click right 30%</span>
+                    <span class="text-xs font-semibold tracking-wide uppercase text-foreground">Toggle Footer</span>
+                    <span class="text-[10px] text-muted-foreground">Click bottom edge (y &gt; height - 64px)</span>
+                  </div>
                 </div>
               </div>
             </div>
+          </Transition>
+        </div>
 
-            <!-- Bottom Zone (64px) -->
-            <div
-              class="h-16 w-full flex items-center justify-center border-t-2 border-dashed border-primary/40 bg-primary/[0.18] backdrop-blur-[3px] shrink-0"
-            >
-              <div
-                class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/90 border border-border/70 shadow-md text-muted-foreground text-center animate-pulse"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="lucide lucide-menu text-primary"
-                >
-                  <line x1="4" x2="20" y1="12" y2="12" />
-                  <line x1="4" x2="20" y1="6" y2="6" />
-                  <line x1="4" x2="20" y1="18" y2="18" />
-                </svg>
-                <span class="text-xs font-semibold tracking-wide uppercase text-foreground">Toggle Footer</span>
-                <span class="text-[10px] text-muted-foreground">Click bottom edge (y &gt; height - 64px)</span>
-              </div>
+        <ReaderFooter
+          :fraction="fraction"
+          :sectionIndex="sectionIndex"
+          :totalSections="totalSections"
+          :sectionFractions="sectionFractions"
+          :chapterStartFraction="chapterStartFraction"
+          :chapterEndFraction="chapterEndFraction"
+          :locationTotal="locationTotal"
+          :navigationLocked="isNavigationLocked"
+          class="transition-all duration-300"
+          :class="footerVisible && !showTapZones ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full pointer-events-none'"
+          @prevSection="navigateToSection(sectionIndex - 1)"
+          @nextSection="navigateToSection(sectionIndex + 1)"
+          @seek="navigateToFraction($event)"
+        />
+
+        <ReaderSidebar
+          v-if="showSidebar"
+          :chapters="chapters"
+          :bookmarks="bookmarks.bookmarks.value"
+          :annotations="annotations.annotations.value"
+          :currentCfi="cfi"
+          :locationMetaByCfi="sidebarLocationMetaByCfi"
+          :activeHref="activeHref"
+          :expandedHrefs="expandedHrefs"
+          :pinned="isSidebarPinned"
+          :navigationLocked="isNavigationLocked"
+          @close="showSidebar = false"
+          @togglePinned="toggleSidebarPinned"
+          @navigateChapter="navigateChapterFromSidebar"
+          @navigateBookmark="navigateFromSidebar"
+          @navigateAnnotation="navigateFromSidebar"
+          @navigateAnnotationChapter="navigateAnnotationChapterFromSidebar"
+          @deleteBookmark="handleSidebarDeleteBookmark"
+          @deleteAnnotation="handleSidebarDeleteAnnotation"
+          @toggleExpand="toggleExpand"
+        />
+
+        <ReaderSearchPanel
+          v-if="showSearch"
+          :results="searchResults"
+          :isSearching="isSearching"
+          :initialQuery="searchInitialQuery"
+          :navigationLocked="isNavigationLocked"
+          :layout="epubSearchDocked ? 'dock' : 'sheet'"
+          @search="onSearchQuery"
+          @clear="onSearchClear"
+          @navigate="navigateSearch($event)"
+          @close="closeSearch"
+        />
+
+        <NoteDialog
+          v-if="selection.showNoteDialog.value"
+          :selectedText="selection.text.value"
+          :modelValue="selection.noteText.value"
+          @update:modelValue="selection.noteText.value = $event"
+          @save="handleSaveNote"
+          @cancel="selection.showNoteDialog.value = false"
+        />
+
+        <SelectionPopup
+          :visible="selection.visible.value"
+          :position="selection.position.value"
+          :showBelow="selection.showBelow.value"
+          :selectedText="selection.text.value"
+          :overlappingAnnotationId="selection.overlappingAnnotationId.value"
+          :isTtsAvailable="isTtsAvailable"
+          @copy="selection.dismiss()"
+          @highlight="handleHighlight"
+          @search="() => openSearchWithText(selection.text.value)"
+          @translate="handleTranslate"
+          @define="handleDefine"
+          @note="handleOpenNoteDialog"
+          @deleteAnnotation="handleDeleteAnnotation"
+          @dismiss="selection.dismiss()"
+          @readFromHere="handleReadFromHere"
+        />
+
+        <Teleport to="body">
+          <Transition name="tts-resume-fade">
+            <div v-if="showTtsResumePrompt && !isTtsActive" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+              <TtsResumePrompt
+                :chapterIndex="ttsPosition.savedPosition.value?.chapterIndex ?? null"
+                :clearing="clearingSavedTtsPosition"
+                @resume="handleResumeTts"
+                @playFromHere="handlePlayFromCurrentPage"
+                @clearSavedPosition="handleClearSavedTtsPosition"
+                @cancel="dismissResumePrompt"
+              />
             </div>
-          </div>
-        </div>
-      </Transition>
+          </Transition>
+        </Teleport>
+
+        <DictionaryPopover
+          v-if="showDictionary"
+          :word="dictionaryWord"
+          :position="dictionaryPosition"
+          :lang="bookLanguage"
+          @close="showDictionary = false"
+        />
+
+        <TranslationPopover
+          v-if="showTranslation && !isMobile"
+          :text="translationText"
+          :position="translationPosition"
+          @close="showTranslation = false"
+        />
+
+        <TranslationSheet v-if="showTranslation && isMobile" :text="translationText" @close="showTranslation = false" />
+
+        <KeyboardShortcutsModal v-if="showHelpModal" @close="showHelpModal = false" />
+      </div>
     </div>
-
-    <ReaderFooter
-      :fraction="fraction"
-      :sectionIndex="sectionIndex"
-      :totalSections="totalSections"
-      :sectionFractions="sectionFractions"
-      :chapterStartFraction="chapterStartFraction"
-      :chapterEndFraction="chapterEndFraction"
-      :locationTotal="locationTotal"
-      :navigationLocked="isNavigationLocked"
-      class="transition-all duration-300"
-      :class="footerVisible && !showTapZones ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full pointer-events-none'"
-      @prevSection="navigateToSection(sectionIndex - 1)"
-      @nextSection="navigateToSection(sectionIndex + 1)"
-      @seek="navigateToFraction($event)"
-    />
-
-    <ReaderSidebar
-      v-if="showSidebar"
-      :chapters="chapters"
-      :bookmarks="bookmarks.bookmarks.value"
-      :annotations="annotations.annotations.value"
-      :currentCfi="cfi"
-      :locationMetaByCfi="sidebarLocationMetaByCfi"
-      :activeHref="activeHref"
-      :expandedHrefs="expandedHrefs"
-      :pinned="isSidebarPinned"
-      :navigationLocked="isNavigationLocked"
-      @close="showSidebar = false"
-      @togglePinned="toggleSidebarPinned"
-      @navigateChapter="navigateChapterFromSidebar"
-      @navigateBookmark="navigateFromSidebar"
-      @navigateAnnotation="navigateFromSidebar"
-      @navigateAnnotationChapter="navigateAnnotationChapterFromSidebar"
-      @deleteBookmark="handleSidebarDeleteBookmark"
-      @deleteAnnotation="handleSidebarDeleteAnnotation"
-      @toggleExpand="toggleExpand"
-    />
-
-    <ReaderSearchPanel
-      v-if="showSearch"
-      :results="searchResults"
-      :isSearching="isSearching"
-      :initialQuery="searchInitialQuery"
-      :navigationLocked="isNavigationLocked"
-      @search="onSearchQuery"
-      @clear="onSearchClear"
-      @navigate="navigateSearch($event)"
-      @close="closeSearch"
-    />
-
-    <NoteDialog
-      v-if="selection.showNoteDialog.value"
-      :selectedText="selection.text.value"
-      :modelValue="selection.noteText.value"
-      @update:modelValue="selection.noteText.value = $event"
-      @save="handleSaveNote"
-      @cancel="selection.showNoteDialog.value = false"
-    />
-
-    <SelectionPopup
-      :visible="selection.visible.value"
-      :position="selection.position.value"
-      :showBelow="selection.showBelow.value"
-      :selectedText="selection.text.value"
-      :overlappingAnnotationId="selection.overlappingAnnotationId.value"
-      :isTtsAvailable="isTtsAvailable"
-      @copy="selection.dismiss()"
-      @highlight="handleHighlight"
-      @search="() => openSearchWithText(selection.text.value)"
-      @translate="handleTranslate"
-      @define="handleDefine"
-      @note="handleOpenNoteDialog"
-      @deleteAnnotation="handleDeleteAnnotation"
-      @dismiss="selection.dismiss()"
-      @readFromHere="handleReadFromHere"
-    />
-
-    <Teleport to="body">
-      <Transition name="tts-resume-fade">
-        <div v-if="showTtsResumePrompt && !isTtsActive" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
-          <TtsResumePrompt
-            :chapterIndex="ttsPosition.savedPosition.value?.chapterIndex ?? null"
-            :clearing="clearingSavedTtsPosition"
-            @resume="handleResumeTts"
-            @playFromHere="handlePlayFromCurrentPage"
-            @clearSavedPosition="handleClearSavedTtsPosition"
-            @cancel="dismissResumePrompt"
-          />
-        </div>
-      </Transition>
-    </Teleport>
-
-    <DictionaryPopover
-      v-if="showDictionary"
-      :word="dictionaryWord"
-      :position="dictionaryPosition"
-      :lang="bookLanguage"
-      @close="showDictionary = false"
-    />
-
-    <TranslationPopover
-      v-if="showTranslation && !isMobile"
-      :text="translationText"
-      :position="translationPosition"
-      @close="showTranslation = false"
-    />
-
-    <TranslationSheet v-if="showTranslation && isMobile" :text="translationText" @close="showTranslation = false" />
-
-    <KeyboardShortcutsModal v-if="showHelpModal" @close="showHelpModal = false" />
   </div>
 </template>
 

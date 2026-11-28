@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { AppSettingsModule } from '../app-settings/app-settings.module';
 import { BookModule } from '../book/book.module';
 import { CollectionModule } from '../collection/collection.module';
+import { DashboardShelfBookPersistenceModule } from './dashboard-shelf-book-persistence.module';
 import { SmartScopeModule } from '../smart-scope/smart-scope.module';
 import { LibraryModule } from '../library/library.module';
 import { DashboardController } from './dashboard.controller';
@@ -18,7 +19,7 @@ import { DashboardWidgetRepository } from './dashboard-widget.repository';
 import { DashboardWidgetService } from './dashboard-widget.service';
 
 @Module({
-  imports: [BookModule, LibraryModule, SmartScopeModule, AppSettingsModule, CollectionModule],
+  imports: [BookModule, LibraryModule, SmartScopeModule, AppSettingsModule, CollectionModule, DashboardShelfBookPersistenceModule],
   controllers: [DashboardController, DashboardFeaturedShelfController],
   providers: [
     DashboardService,

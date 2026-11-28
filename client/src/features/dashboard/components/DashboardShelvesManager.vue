@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { ChevronDown, ChevronUp, GripVertical, Loader2, Plus, Trash2 } from '@lucide/vue'
 
 import { DASHBOARD_FEATURED_SHELF_MAX, DASHBOARD_FEATURED_SHELF_TITLE_MAX, type DashboardFeaturedShelf } from '@bookorbit/types'
 import { useCollections } from '@/features/collection/composables/useCollections'
-import { createFeaturedShelf, deleteFeaturedShelf, reorderFeaturedShelves, updateFeaturedShelf } from '../api/dashboard-featured-shelf.api'
+import {
+  createFeaturedShelf,
+  deleteFeaturedShelf,
+  fetchFeaturedShelfBookCount,
+  reorderFeaturedShelves,
+  updateFeaturedShelf,
+} from '../api/dashboard-featured-shelf.api'
 import { useDashboardSharedConfig } from '../composables/useDashboardSharedConfig'
 import { useDraggableList } from '../composables/useDraggableList'
 import { SHELF_ROW_OPTIONS } from '../lib/shelf-rows'
@@ -28,7 +34,7 @@ watch(
 
 const { draggedIndex, dragOverIndex, onDragStart, onDragOver, onDrop, onDragEnd, moveUp, moveDown } = useDraggableList(list)
 
-const busyId = ref<number | null>(null)
+const busyIds = reactive(new Set<number>())
 const creating = ref(false)
 // Only public book collections can be linked, since every user sees the shelf.
 const linkableCollections = computed(() => bookCollections.value.filter((collection) => collection.isPublic))
@@ -53,13 +59,13 @@ watch(list, async (next) => {
 })
 
 async function save(shelf: DashboardFeaturedShelf, patch: { title?: string; rows?: number }) {
-  busyId.value = shelf.id
+  busyIds.add(shelf.id)
   try {
     upsertShelf(await updateFeaturedShelf(shelf.id, patch))
   } catch (error) {
     toast.error(errorMessage(error))
   } finally {
-    busyId.value = null
+    busyIds.delete(shelf.id)
   }
 }
 
@@ -79,14 +85,14 @@ function handleRowsChange(shelf: DashboardFeaturedShelf, rows: number) {
 
 async function handleDelete(shelf: DashboardFeaturedShelf) {
   if (!window.confirm(t('dashboard.shelves.confirmDelete', { title: shelf.title }))) return
-  busyId.value = shelf.id
+  busyIds.add(shelf.id)
   try {
     await deleteFeaturedShelf(shelf.id)
     removeShelf(shelf.id)
   } catch (error) {
     toast.error(errorMessage(error))
   } finally {
-    busyId.value = null
+    busyIds.delete(shelf.id)
   }
 }
 
@@ -94,19 +100,36 @@ function linkedCollectionMissing(shelf: DashboardFeaturedShelf): boolean {
   return shelf.collectionId !== null && !linkableCollections.value.some((collection) => collection.id === shelf.collectionId)
 }
 
+function resetCollectionSelect(select: HTMLSelectElement, collectionId: number | null) {
+  select.value = collectionId ? String(collectionId) : ''
+}
+
 async function handleCollectionLink(shelf: DashboardFeaturedShelf, event: Event) {
-  const value = Number((event.target as HTMLSelectElement).value)
+  const select = event.target as HTMLSelectElement
+  const value = Number(select.value)
   const collectionId = Number.isFinite(value) && value > 0 ? value : null
   if (collectionId === shelf.collectionId) return
-  busyId.value = shelf.id
+  if (busyIds.has(shelf.id)) {
+    resetCollectionSelect(select, shelf.collectionId)
+    return
+  }
+  busyIds.add(shelf.id)
   try {
+    if (collectionId === null && shelf.collectionId !== null) {
+      const bookCount = await fetchFeaturedShelfBookCount(shelf.id)
+      if (!window.confirm(t('dashboard.shelves.confirmUnlinkCollection', { count: bookCount }))) {
+        resetCollectionSelect(select, shelf.collectionId)
+        return
+      }
+    }
     upsertShelf(await updateFeaturedShelf(shelf.id, { collectionId }))
     markShelfBooksChanged(shelf.id)
   } catch (error) {
     toast.error(errorMessage(error))
+    resetCollectionSelect(select, shelf.collectionId)
     list.value = [...orderedShelves.value]
   } finally {
-    busyId.value = null
+    busyIds.delete(shelf.id)
   }
 }
 
@@ -179,7 +202,7 @@ async function handleAddShelf() {
             :placeholder="t('dashboard.shelves.titleLabel')"
             data-testid="shelf-title-input"
             class="h-8 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            :disabled="busyId === shelf.id"
+            :disabled="busyIds.has(shelf.id)"
             @change="handleTitleChange(shelf, $event)"
           />
 
@@ -196,7 +219,7 @@ async function handleAddShelf() {
               :class="shelf.rows === rowOption ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
               :aria-pressed="shelf.rows === rowOption"
               :aria-label="t('dashboard.settings.shelfRows.option', { count: rowOption })"
-              :disabled="busyId === shelf.id"
+              :disabled="busyIds.has(shelf.id)"
               @click="handleRowsChange(shelf, rowOption)"
             >
               {{ rowOption }}
@@ -208,7 +231,7 @@ async function handleAddShelf() {
             class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-30"
             :aria-label="t('dashboard.shelves.delete')"
             :title="t('dashboard.shelves.delete')"
-            :disabled="busyId === shelf.id"
+            :disabled="busyIds.has(shelf.id)"
             @click="handleDelete(shelf)"
           >
             <Trash2 :size="14" />
@@ -222,13 +245,13 @@ async function handleAddShelf() {
         <div class="border-t border-border/50 px-3 pb-2.5 pt-2" data-testid="shelf-collection-link">
           <label :for="`shelf-collection-${shelf.id}`" class="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
             {{ t('dashboard.shelves.collectionLabel') }}
-            <Loader2 v-if="busyId === shelf.id" :size="11" class="animate-spin" aria-hidden="true" />
+            <Loader2 v-if="busyIds.has(shelf.id)" :size="11" class="animate-spin" aria-hidden="true" />
           </label>
           <select
             :id="`shelf-collection-${shelf.id}`"
             :value="shelf.collectionId ?? ''"
             class="h-8 w-full appearance-none rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            :disabled="busyId === shelf.id"
+            :disabled="busyIds.has(shelf.id)"
             @change="handleCollectionLink(shelf, $event)"
           >
             <option value="">{{ t('dashboard.shelves.collectionNone') }}</option>

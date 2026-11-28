@@ -5,6 +5,7 @@ vi.mock('../book/book.module', () => ({ BookModule: class BookModule {} }));
 import { MODULE_METADATA } from '@nestjs/common/constants';
 
 import { BookmarkController } from './bookmark.controller';
+import { PdfBookmarkController } from './pdf-bookmark.controller';
 import { BookmarkModule } from './bookmark.module';
 import { BookmarkRepository } from './bookmark.repository';
 import { BookmarkService } from './bookmark.service';
@@ -15,7 +16,7 @@ describe('BookmarkModule', () => {
     const controllers = Reflect.getMetadata(MODULE_METADATA.CONTROLLERS, BookmarkModule);
     const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, BookmarkModule) as Array<unknown>;
 
-    expect(controllers).toEqual([BookmarkController]);
+    expect(controllers).toEqual([BookmarkController, PdfBookmarkController]);
     expect(providers).toEqual(expect.arrayContaining([BookmarkService, BookmarkSyncService, BookmarkRepository]));
     expect(Reflect.getMetadata(MODULE_METADATA.EXPORTS, BookmarkModule)).toEqual([BookmarkSyncService]);
   });

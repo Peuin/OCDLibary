@@ -75,8 +75,7 @@ watch(
 
 const showSaintCard = computed(() => Boolean(props.featured && (props.featured.saintName || props.featured.imageUrl)))
 
-// The dashboard shows every shelf as a single row; the configured rows lay out the full shelf in "view all".
-const homeBands = computed(() => (books.value.length > 0 ? [books.value] : []))
+const homeBands = computed(() => chunkIntoBands(books.value, shelfRows.value))
 const bands = computed(() => chunkIntoBands(books.value, shelfRows.value))
 
 const viewAllOpen = ref(false)

@@ -7,6 +7,7 @@ import * as schema from '../../db/schema';
 import { dashboardFeaturedShelves } from '../../db/schema';
 
 type Db = NodePgDatabase<typeof schema>;
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 @Injectable()
 export class DashboardFeaturedShelfRepository {
@@ -21,6 +22,11 @@ export class DashboardFeaturedShelfRepository {
     return row ?? null;
   }
 
+  async findByIdForUpdate(id: number, tx: Tx) {
+    const [row] = await tx.select().from(dashboardFeaturedShelves).where(eq(dashboardFeaturedShelves.id, id)).for('update').limit(1);
+    return row ?? null;
+  }
+
   async count(): Promise<number> {
     const [row] = await this.db.select({ total: sql<number>`count(*)::int` }).from(dashboardFeaturedShelves);
     return row?.total ?? 0;
@@ -31,8 +37,8 @@ export class DashboardFeaturedShelfRepository {
     return row;
   }
 
-  async update(id: number, values: Partial<typeof dashboardFeaturedShelves.$inferInsert>) {
-    const [row] = await this.db.update(dashboardFeaturedShelves).set(values).where(eq(dashboardFeaturedShelves.id, id)).returning();
+  async update(id: number, values: Partial<typeof dashboardFeaturedShelves.$inferInsert>, tx?: Tx) {
+    const [row] = await (tx ?? this.db).update(dashboardFeaturedShelves).set(values).where(eq(dashboardFeaturedShelves.id, id)).returning();
     return row ?? null;
   }
 

@@ -743,6 +743,13 @@
       "when": 1791307353087,
       "tag": "0105_dashboard_shelf_books_hidden",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1795801710359,
+      "tag": "0106_pdf_bookmarks",
+      "breakpoints": true
     }
   ]
 }

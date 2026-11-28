@@ -85,15 +85,23 @@ export class DashboardFeaturedShelfService {
     const startedAt = Date.now();
     this.logger.log(`[${event}] [start] userId=${user.id} shelfId=${id} - shelf update started`);
     try {
-      const existing = await this.getShelfOrThrow(id);
-      if (dto.collectionId !== undefined) await this.shelfBookService.relink(existing, dto.collectionId, user);
-      const row = await this.repo.update(id, {
-        collectionId: dto.collectionId !== undefined ? dto.collectionId : existing.collectionId,
-        title: dto.title !== undefined ? this.resolveTitle(dto.title) : existing.title,
-        saintName: dto.saintName !== undefined ? this.resolveSaintName(dto.saintName) : existing.saintName,
-        rows: dto.rows !== undefined ? this.resolveRows(dto.rows) : existing.rows,
+      const row = await this.shelfBookService.withTransaction(async (tx) => {
+        const existing = await this.repo.findByIdForUpdate(id, tx);
+        if (!existing) throw new NotFoundException('Shelf not found');
+        if (dto.collectionId !== undefined) await this.shelfBookService.relink(existing, dto.collectionId, user, tx);
+        const updated = await this.repo.update(
+          id,
+          {
+            collectionId: dto.collectionId !== undefined ? dto.collectionId : existing.collectionId,
+            title: dto.title !== undefined ? this.resolveTitle(dto.title) : existing.title,
+            saintName: dto.saintName !== undefined ? this.resolveSaintName(dto.saintName) : existing.saintName,
+            rows: dto.rows !== undefined ? this.resolveRows(dto.rows) : existing.rows,
+          },
+          tx,
+        );
+        if (!updated) throw new NotFoundException('Shelf not found');
+        return updated;
       });
-      if (!row) throw new NotFoundException('Shelf not found');
       this.logger.log(`[${event}] [end] userId=${user.id} shelfId=${id} durationMs=${Date.now() - startedAt} - shelf updated`);
       return this.toResponse(row);
     } catch (error) {

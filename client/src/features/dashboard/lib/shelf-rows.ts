@@ -30,11 +30,15 @@ export function chunkIntoBands<T>(items: readonly T[], rows: number): T[][] {
   if (items.length === 0) return []
   if (bandCount === 1) return [[...items]]
 
-  const perBand = Math.ceil(items.length / bandCount)
+  const baseCount = Math.floor(items.length / bandCount)
+  const largerBandCount = items.length % bandCount
   const bands: T[][] = []
+  let offset = 0
   for (let band = 0; band < bandCount; band += 1) {
-    const slice = items.slice(band * perBand, (band + 1) * perBand)
+    const count = baseCount + (band < largerBandCount ? 1 : 0)
+    const slice = items.slice(offset, offset + count)
     if (slice.length > 0) bands.push(slice)
+    offset += count
   }
   return bands
 }
