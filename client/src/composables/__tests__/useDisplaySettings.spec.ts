@@ -30,6 +30,7 @@ function resetDisplaySettings() {
   settings.gridCardSecondaryLabel.value = 'hidden'
   settings.cardInfoMode.value = 'hover-overlay'
   settings.thumbnailClickAction.value = 'reader'
+  settings.lightReaderEffects.value = false
 }
 
 afterEach(() => {
@@ -248,5 +249,19 @@ describe('useDisplaySettings preferences helpers', () => {
   it('applies thumbnailClickAction from preferences', () => {
     applyDisplayPreferences({ thumbnailClickAction: 'details' })
     expect(settings.thumbnailClickAction.value).toBe('details')
+  })
+
+  it('keeps light reader effects off by default and round-trips the setting', () => {
+    expect(getDisplayPreferencesSnapshot().lightReaderEffects).toBe(false)
+
+    applyDisplayPreferences({ lightReaderEffects: true })
+    expect(settings.lightReaderEffects.value).toBe(true)
+    expect(getDisplayPreferencesSnapshot().lightReaderEffects).toBe(true)
+  })
+
+  it('ignores a non-boolean light reader effects value', () => {
+    expect(sanitizeDisplayPreferences({ lightReaderEffects: 'yes' })).not.toHaveProperty('lightReaderEffects')
+    applyDisplayPreferences({ lightReaderEffects: 1 })
+    expect(settings.lightReaderEffects.value).toBe(false)
   })
 })

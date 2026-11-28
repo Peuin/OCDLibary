@@ -60,7 +60,7 @@ const props = withDefaults(
   },
 )
 
-const emit = defineEmits<{ add: []; navigate: [] }>()
+const emit = defineEmits<{ add: []; navigate: []; 'item-contextmenu': [item: SidebarEntity, event: MouseEvent] }>()
 
 const { t } = useI18n()
 const { sections, toggleSection, setSectionCap } = useSidebarPrefs()
@@ -147,6 +147,10 @@ function handleAdd() {
 
 function handleNavigate() {
   emit('navigate')
+}
+
+function handleItemContextMenu(event: MouseEvent, item: SidebarEntity) {
+  emit('item-contextmenu', item, event)
 }
 
 function clearQuery() {
@@ -244,6 +248,7 @@ function onGripBlur(id: number) {
               :fallback-icon="fallbackIcon"
               :label="item.name"
               @navigate="handleNavigate"
+              @contextmenu="handleItemContextMenu($event, item)"
             >
               <template #badge>
                 <slot name="itemBadge" :item="item">

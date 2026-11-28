@@ -36,19 +36,26 @@ describe('admin-created password accounts', () => {
     expect(apiMock).not.toHaveBeenCalled()
   })
 
-  it.each([
-    'ValidPass1',
-    'Aa1!' + 'x'.repeat(4),
-    'Aa1' + 'x'.repeat(1021),
-    'P@ssw0rd!#$%',
-  ])('accepts valid password %j matching backend policy', async (password) => {
-    apiMock.mockResolvedValueOnce(makeResponse({ id: 42 }))
+  it.each(['ab', 'x'.repeat(101)])('rejects username outside the backend length contract %j', async (username) => {
     const form = useUserForm(ref(null), ref([]))
-    form.username.value = 'reader'
-    form.password.value = password
-    expect(await form.save()).toEqual({ ok: true })
-    expect(apiMock).toHaveBeenCalledTimes(1)
+    form.username.value = username
+    form.password.value = 'ValidPass1'
+    expect(await form.save()).toEqual({ ok: false, section: 'profile' })
+    expect(form.errorKey.value).toBe('usernameLength')
+    expect(apiMock).not.toHaveBeenCalled()
   })
+
+  it.each(['ValidPass1', 'Aa1!' + 'x'.repeat(4), 'Aa1' + 'x'.repeat(1021), 'P@ssw0rd!#$%'])(
+    'accepts valid password %j matching backend policy',
+    async (password) => {
+      apiMock.mockResolvedValueOnce(makeResponse({ id: 42 }))
+      const form = useUserForm(ref(null), ref([]))
+      form.username.value = 'reader'
+      form.password.value = password
+      expect(await form.save()).toEqual({ ok: true })
+      expect(apiMock).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it.each([true, false, 'network'] as const)('clears password after submission outcome %s', async (outcome) => {
     if (outcome === 'network') apiMock.mockRejectedValueOnce(new Error('Offline'))

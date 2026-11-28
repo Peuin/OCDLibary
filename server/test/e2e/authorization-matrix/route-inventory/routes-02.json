@@ -684,6 +684,42 @@
     "useGuards": []
   },
   {
+    "file": "server/src/modules/bookmark/pdf-bookmark.controller.ts",
+    "className": "PdfBookmarkController",
+    "methodName": "getBookmarks",
+    "httpMethod": "GET",
+    "path": "/books/files/:fileId/bookmarks",
+    "permissions": [],
+    "libraryAccess": [],
+    "isPublic": false,
+    "allowDefault": false,
+    "useGuards": []
+  },
+  {
+    "file": "server/src/modules/bookmark/pdf-bookmark.controller.ts",
+    "className": "PdfBookmarkController",
+    "methodName": "createBookmark",
+    "httpMethod": "POST",
+    "path": "/books/files/:fileId/bookmarks",
+    "permissions": [],
+    "libraryAccess": [],
+    "isPublic": false,
+    "allowDefault": false,
+    "useGuards": []
+  },
+  {
+    "file": "server/src/modules/bookmark/pdf-bookmark.controller.ts",
+    "className": "PdfBookmarkController",
+    "methodName": "deleteBookmark",
+    "httpMethod": "DELETE",
+    "path": "/books/files/:fileId/bookmarks/:bookmarkId",
+    "permissions": [],
+    "libraryAccess": [],
+    "isPublic": false,
+    "allowDefault": false,
+    "useGuards": []
+  },
+  {
     "file": "server/src/modules/catalog/catalog.controller.ts",
     "className": "CatalogController",
     "methodName": "searchAuthors",

@@ -6,6 +6,8 @@ export class BookmarkResponseDto {
   cfi!: string | null;
   title!: string;
   positionSeconds!: number | null;
+  bookFileId!: number | null;
+  pageNumber!: number | null;
   createdAt!: Date;
 
   static from(row: BookmarkRow): BookmarkResponseDto {
@@ -15,6 +17,8 @@ export class BookmarkResponseDto {
     dto.cfi = row.cfi ?? null;
     dto.title = row.title;
     dto.positionSeconds = row.positionSeconds ?? null;
+    dto.bookFileId = row.bookFileId ?? null;
+    dto.pageNumber = row.pageNumber ?? null;
     dto.createdAt = row.createdAt;
     return dto;
   }

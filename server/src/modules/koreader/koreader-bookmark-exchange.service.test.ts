@@ -218,15 +218,28 @@ describe('KoreaderBookmarkExchangeService', () => {
       expect(result.results[0].skippedConversion).toBe(1);
     });
 
-    it('never pushes an audio bookmark or a tombstone as an add', async () => {
+    it('ignores audio and PDF bookmarks and never pushes a tombstone as an add', async () => {
       bookmarkSync.listForSync.mockResolvedValue([
         makeBookmarkRow({ id: 101, cfi: null, positionSeconds: 90 }),
+        makeBookmarkRow({ id: 103, cfi: null, positionSeconds: null, bookFileId: 77, pageNumber: 12 }),
         makeBookmarkRow({ id: 102, deletedAt: new Date('2026-06-05T10:00:00Z') }),
       ]);
 
       const result = await service.exchange(makeUser(), makeExchangeDto([makeBook()]));
 
       expect(result.results[0].toApply.add).toEqual([]);
+      expect(positionConverter.cfiPointToXpointer).not.toHaveBeenCalled();
+    });
+
+    it('does not send PDF tombstones to KOReader', async () => {
+      bookmarkSync.listForSync.mockResolvedValue([
+        makeBookmarkRow({ id: 103, cfi: null, positionSeconds: null, bookFileId: 77, pageNumber: 12, deletedAt: new Date('2026-06-05T10:00:00Z') }),
+      ]);
+      bookmarkRepo.findLinksForBookmarks.mockResolvedValue([makeLinkRow({ bookmarkId: 103 })]);
+
+      const result = await service.exchange(makeUser(), makeExchangeDto([makeBook()]));
+
+      expect(result.results[0].toApply.delete).toEqual([]);
     });
 
     it('pushes a delete for a tombstone this device still holds', async () => {
@@ -355,6 +368,25 @@ describe('KoreaderBookmarkExchangeService', () => {
       );
 
       expect(bookmarkRepo.upsertLink).not.toHaveBeenCalled();
+    });
+
+    it('does not link a PDF bookmark returned in the shared sync rows', async () => {
+      bookmarkSync.listForSync.mockResolvedValue([makeBookmarkRow({ id: 103, cfi: null, positionSeconds: null, bookFileId: 77, pageNumber: 12 })]);
+
+      const result = await service.exchangeAck(
+        makeUser(),
+        makeAckDto([
+          {
+            hash: HASH_A,
+            applied: [{ serverId: 103, status: 'applied', key: 'f'.repeat(32) }],
+            deleted: [{ serverId: 103, status: 'applied' }],
+          },
+        ]),
+      );
+
+      expect(bookmarkRepo.upsertLink).not.toHaveBeenCalled();
+      expect(bookmarkRepo.deleteLinks).not.toHaveBeenCalled();
+      expect(result.results).toEqual([{ hash: HASH_A, acked: 0 }]);
     });
 
     it('drops the link once the device confirms the delete', async () => {

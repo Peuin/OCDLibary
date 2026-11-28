@@ -370,4 +370,40 @@ describe('useFoliate.open', () => {
     expect(mockGoTo).not.toHaveBeenCalledWith('epubcfi(/6/4!)')
     expect(mockGoToFraction).not.toHaveBeenCalled()
   })
+
+  it('installs the themed search drawer and redraws mounted overlays when the root theme changes', async () => {
+    let reader!: ReturnType<typeof useFoliate>
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          reader = useFoliate(() => container)
+          return () => null
+        },
+      }),
+    )
+
+    await reader.open(1, 1, 'epub', null, undefined)
+
+    const view = viewEl as unknown as {
+      drawSearchAnnotation?: (rects: DOMRectList) => SVGElement
+      renderer: { getContents?: () => { index: number; overlayer?: { redraw?: () => void } }[] }
+    }
+    expect(view.drawSearchAnnotation).toBeTypeOf('function')
+
+    document.documentElement.style.setProperty('--reader-search-hit', 'rgb(1 2 3 / 0.22)')
+    const node = view.drawSearchAnnotation!([{ left: 2, top: 3, width: 20, height: 10 }] as unknown as DOMRectList)
+    expect(node.getAttribute('fill')).toBe('rgb(1 2 3 / 0.22)')
+    expect(node.getAttribute('stroke')).toBeNull()
+    expect(node.style.opacity).toBe('')
+    expect(node.style.mixBlendMode).toBe('')
+
+    const redraw = vi.fn<() => void>()
+    view.renderer.getContents = () => [{ index: 0, overlayer: { redraw } }]
+    document.documentElement.classList.add('dark')
+    await vi.waitFor(() => expect(redraw).toHaveBeenCalled())
+
+    document.documentElement.classList.remove('dark')
+    document.documentElement.style.removeProperty('--reader-search-hit')
+    wrapper.unmount()
+  })
 })

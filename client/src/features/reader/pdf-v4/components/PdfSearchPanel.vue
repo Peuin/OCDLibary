@@ -6,6 +6,7 @@ import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import { MatchFlag } from '@embedpdf/models'
 import { useScroll } from '@embedpdf/plugin-scroll/vue'
 import { useSearch } from '@embedpdf/plugin-search/vue'
+import { usePdfTextForm } from '../composables/usePdfTextForm'
 
 const MIN_QUERY_LENGTH = 2
 const DEBOUNCE_MS = 250
@@ -19,11 +20,13 @@ const { t } = useI18n()
 
 const { state: scrollState, provides: scroll } = useScroll(() => props.documentId)
 const { state: searchState, provides: search } = useSearch(() => props.documentId)
+const { form: pdfTextForm, hasText: pdfHasText } = usePdfTextForm(() => props.documentId)
 
 const query = ref(searchState.value.query ?? '')
 const pending = ref(false)
 const progressPage = ref(0)
 const input = ref<HTMLInputElement | null>(null)
+let searchSequence = 0
 
 const normalizedQuery = computed(() => query.value.trim())
 const matchCase = computed(() => searchState.value.flags.includes(MatchFlag.MatchCase))
@@ -108,6 +111,35 @@ function toggleWholeWord() {
   updateFlag(MatchFlag.MatchWholeWord, !wholeWord.value)
 }
 
+function attachProgress(task: ReturnType<NonNullable<typeof search.value>['searchAllPages']> | undefined) {
+  task?.onProgress((progress) => {
+    progressPage.value = progress.page + 1
+  })
+}
+
+async function searchWithUnicodeFallback(normalized: string, sequence: number) {
+  const scope = search.value
+  if (!scope) return
+  const preferredForm = pdfTextForm.value
+  const alternateForm = preferredForm === 'NFC' ? 'NFD' : 'NFC'
+  const preferredQuery = normalized.normalize(preferredForm)
+  const alternateQuery = normalized.normalize(alternateForm)
+
+  try {
+    const preferredTask = scope.searchAllPages(preferredQuery)
+    attachProgress(preferredTask)
+    const preferredResult = await preferredTask.toPromise()
+    if (sequence !== searchSequence || preferredResult.total > 0 || preferredQuery === alternateQuery) return
+
+    progressPage.value = 0
+    const alternateTask = scope.searchAllPages(alternateQuery)
+    attachProgress(alternateTask)
+    await alternateTask.toPromise()
+  } catch {
+    // A newer input aborts the current task; the next watcher run owns the visible state.
+  }
+}
+
 watch(
   [query, () => props.active],
   ([nextQuery, active], _previous, onCleanup) => {
@@ -115,15 +147,13 @@ watch(
     pending.value = false
     progressPage.value = 0
     search.value?.stopSearch()
+    searchSequence += 1
     if (!active || normalized.length < MIN_QUERY_LENGTH) return
 
     pending.value = true
     const timer = window.setTimeout(() => {
       pending.value = false
-      const task = search.value?.searchAllPages(normalized)
-      task?.onProgress((progress) => {
-        progressPage.value = progress.page + 1
-      })
+      void searchWithUnicodeFallback(normalized, searchSequence)
     }, DEBOUNCE_MS)
     onCleanup(() => window.clearTimeout(timer))
   },
@@ -251,6 +281,7 @@ onUnmounted(() => search.value?.stopSearch())
         <template v-else-if="normalizedQuery.length < MIN_QUERY_LENGTH">
           {{ t('reader.pdf.sidebar.searchTooShort', { min: MIN_QUERY_LENGTH }) }}
         </template>
+        <template v-else-if="!pdfHasText">{{ t('reader.pdf.sidebar.scannedNoText') }}</template>
         <template v-else>{{ t('reader.pdf.sidebar.noSearchResults') }}</template>
       </p>
     </div>

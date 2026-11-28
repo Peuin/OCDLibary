@@ -1,12 +1,15 @@
-import type {
-  AddDashboardShelfBooksRequest,
-  AddDashboardShelfBooksResponse,
-  CreateDashboardFeaturedShelfRequest,
-  DashboardDefaultLayout,
-  DashboardFeaturedShelf,
-  DashboardSharedConfig,
-  ReorderDashboardFeaturedShelvesRequest,
-  UpdateDashboardFeaturedShelfRequest,
+import {
+  DASHBOARD_SHELF_BOOKS_MAX,
+  type AddDashboardShelfBooksRequest,
+  type AddDashboardShelfBooksResponse,
+  type CreateDashboardFeaturedShelfRequest,
+  type DashboardDefaultLayout,
+  type DashboardFeaturedShelf,
+  type DashboardScrollerBatchRequest,
+  type DashboardScrollerBatchResponse,
+  type DashboardSharedConfig,
+  type ReorderDashboardFeaturedShelvesRequest,
+  type UpdateDashboardFeaturedShelfRequest,
 } from '@bookorbit/types'
 import { api } from '@/lib/api'
 
@@ -32,6 +35,19 @@ export async function createFeaturedShelf(body: CreateDashboardFeaturedShelfRequ
 
 export async function updateFeaturedShelf(id: number, body: UpdateDashboardFeaturedShelfRequest): Promise<DashboardFeaturedShelf> {
   return readJson(await api(`/api/v1/dashboard/featured-shelves/${id}`, jsonRequest('PATCH', body)), 'Failed to update the shelf')
+}
+
+export async function fetchFeaturedShelfBookCount(shelfId: number): Promise<number> {
+  const body: DashboardScrollerBatchRequest = {
+    items: [{ id: `featured-shelf-${shelfId}`, type: 'featured-shelf', limit: DASHBOARD_SHELF_BOOKS_MAX, featuredShelfId: shelfId }],
+  }
+  const payload = await readJson<DashboardScrollerBatchResponse>(
+    await api('/api/v1/dashboard/scrollers/batch', jsonRequest('POST', body)),
+    'Failed to load the shelf books',
+  )
+  const result = payload.items.find((item) => item.id === `featured-shelf-${shelfId}`)
+  if (!result || result.failed) throw new Error('Failed to load the shelf books')
+  return result.books.length
 }
 
 export async function reorderFeaturedShelves(ids: number[]): Promise<DashboardFeaturedShelf[]> {

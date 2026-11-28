@@ -17,10 +17,14 @@ withDefaults(
   { fallbackIcon: undefined, dataTour: undefined },
 )
 
-const emit = defineEmits<{ navigate: [] }>()
+const emit = defineEmits<{ navigate: []; contextmenu: [event: MouseEvent] }>()
 
 function handleNavigate() {
   emit('navigate')
+}
+
+function handleContextMenu(event: MouseEvent) {
+  emit('contextmenu', event)
 }
 
 const slots = defineSlots<{
@@ -46,7 +50,7 @@ const trailingRoomClass = 'pr-6'
 <template>
   <SidebarMenuItem>
     <SidebarMenuButton as-child :is-active="isActive" :tooltip="tooltip" :class="[buttonClass, slots.trailing ? trailingRoomClass : '']">
-      <RouterLink :to="to" :data-tour="dataTour" @click="handleNavigate">
+      <RouterLink :to="to" :data-tour="dataTour" @click="handleNavigate" @contextmenu="handleContextMenu">
         <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center">
           <component
             :is="icon"

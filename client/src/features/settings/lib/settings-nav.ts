@@ -206,7 +206,7 @@ export const SETTINGS_NAV: readonly SettingsNavGroup[] = [
             labelKey: 'settings.reader.tabs.general',
             descriptionKey: 'settings.nav.descriptions.readerGeneral',
             icon: SlidersHorizontal,
-            keywords: 'resume progress sync screen awake defaults',
+            keywords: 'resume progress sync screen awake defaults animation effects reduced motion',
           },
           {
             id: 'tts',

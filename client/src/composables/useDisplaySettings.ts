@@ -173,6 +173,7 @@ const cardInfoMode = ref<CardInfoMode>(normalizeCardInfoMode(storage.get('cardIn
 const thumbnailClickAction = ref<BookThumbnailClickAction>(
   normalizeThumbnailClickAction(storage.get('thumbnailClickAction', DEFAULT_BOOK_THUMBNAIL_CLICK_ACTION)),
 )
+const lightReaderEffects = ref(storage.get<boolean>('lightReaderEffects', false) === true)
 
 watch(portraitCoverSize, (v) => storage.set('portraitCoverSize', v))
 watch(squareCoverSize, (v) => storage.set('squareCoverSize', v))
@@ -200,6 +201,7 @@ watch(gridCardPrimaryLabel, (value) => storage.set('gridCardPrimaryLabel', norma
 watch(gridCardSecondaryLabel, (value) => storage.set('gridCardSecondaryLabel', normalizeGridCardLabelField(value)))
 watch(cardInfoMode, (value) => storage.set('cardInfoMode', normalizeCardInfoMode(value)))
 watch(thumbnailClickAction, (value) => storage.set('thumbnailClickAction', normalizeThumbnailClickAction(value)))
+watch(lightReaderEffects, (v) => storage.set('lightReaderEffects', v))
 
 export function getDisplayPreferencesSnapshot(): DisplayPreferences {
   return {
@@ -229,6 +231,7 @@ export function getDisplayPreferencesSnapshot(): DisplayPreferences {
     gridCardSecondaryLabel: normalizeGridCardLabelField(gridCardSecondaryLabel.value),
     cardInfoMode: normalizeCardInfoMode(cardInfoMode.value),
     thumbnailClickAction: normalizeThumbnailClickAction(thumbnailClickAction.value),
+    lightReaderEffects: lightReaderEffects.value === true,
   }
 }
 
@@ -280,6 +283,7 @@ export function sanitizeDisplayPreferences(raw: unknown): Partial<DisplayPrefere
   if (BOOK_THUMBNAIL_CLICK_ACTION.includes(obj.thumbnailClickAction as BookThumbnailClickAction)) {
     out.thumbnailClickAction = obj.thumbnailClickAction as BookThumbnailClickAction
   }
+  if (typeof obj.lightReaderEffects === 'boolean') out.lightReaderEffects = obj.lightReaderEffects
 
   return out
 }
@@ -312,6 +316,7 @@ export function applyDisplayPreferences(raw: unknown): void {
   if (prefs.gridCardSecondaryLabel !== undefined) gridCardSecondaryLabel.value = prefs.gridCardSecondaryLabel
   if (prefs.cardInfoMode !== undefined) cardInfoMode.value = prefs.cardInfoMode
   if (prefs.thumbnailClickAction !== undefined) thumbnailClickAction.value = prefs.thumbnailClickAction
+  if (prefs.lightReaderEffects !== undefined) lightReaderEffects.value = prefs.lightReaderEffects
 }
 
 export function useDisplaySettings() {
@@ -342,5 +347,6 @@ export function useDisplaySettings() {
     gridCardSecondaryLabel,
     cardInfoMode,
     thumbnailClickAction,
+    lightReaderEffects,
   }
 }

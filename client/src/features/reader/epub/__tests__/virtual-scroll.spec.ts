@@ -498,6 +498,128 @@ describe('Paginator windowed scrolled mode', () => {
     }
   })
 
+  describe('paginated page flip and flow switching (SCRUM-104)', () => {
+    type FakeAnimation = {
+      cancel: ReturnType<typeof vi.fn<() => void>>
+      addEventListener: ReturnType<typeof vi.fn<(type: string, listener: () => void) => void>>
+    }
+    function stubAnimate() {
+      const animations: FakeAnimation[] = []
+      const animate = vi.fn<(keyframes: Keyframe[], options: KeyframeAnimationOptions) => Animation>(() => {
+        const animation: FakeAnimation = { cancel: vi.fn<() => void>(), addEventListener: vi.fn<(type: string, listener: () => void) => void>() }
+        animations.push(animation)
+        return animation as unknown as Animation
+      })
+      ;(container as HTMLElement & { animate: typeof animate }).animate = animate
+      return { animate, animations }
+    }
+    async function openTwoPageBook(flow: 'paginated' | 'scrolled') {
+      const sections = makeSections(5)
+      const el = await openPaginator(sections, flow, { states: new Map() })
+      let left = 0
+      Object.defineProperty(container, 'scrollLeft', { configurable: true, get: () => left, set: (value: number) => (left = value) })
+      await el.goTo({ index: 2 })
+      await flush()
+      for (const child of container.children) (child as HTMLElement).getBoundingClientRect = () => new DOMRect(0, 0, 3200, 600)
+      return { el, sections }
+    }
+
+    it('tilts the page with a light 3D flip when turning pages in paginated mode', async () => {
+      const { el } = await openTwoPageBook('paginated')
+      const { animate } = stubAnimate()
+
+      await el.next()
+      expect(animate).toHaveBeenCalledTimes(1)
+      const [keyframes, options] = animate.mock.calls[0]!
+      expect(keyframes[0]).toEqual({ transform: 'perspective(1800px) rotateY(-5deg)', filter: 'brightness(0.85)' })
+      expect(keyframes[1]).toEqual({ transform: 'perspective(1800px) rotateY(0deg)', filter: 'brightness(1)' })
+      expect(options).toEqual({ duration: 450, easing: 'cubic-bezier(0.42, 0.03, 0.21, 0.98)' })
+
+      await el.prev()
+      expect(animate.mock.calls[1]![0][0]).toMatchObject({ transform: 'perspective(1800px) rotateY(5deg)' })
+    })
+
+    it('does not flip when a two-page spread snaps to its current offset', async () => {
+      const { el } = await openTwoPageBook('paginated')
+      const { animate } = stubAnimate()
+      await el.scrollToAnchor(0)
+      container.scrollLeft = 800
+
+      el.snap(0, 0)
+      await flush()
+
+      expect(container.scrollLeft).toBe(800)
+      expect(animate).not.toHaveBeenCalled()
+    })
+
+    it('skips the flip in scrolled mode and when reduced motion is requested', async () => {
+      const { el } = await openTwoPageBook('scrolled')
+      const { animate } = stubAnimate()
+      await el.next()
+      expect(animate).not.toHaveBeenCalled()
+
+      el.setAttribute('flow', 'paginated')
+      await flush()
+      el.setAttribute('reduced-motion', '')
+      await el.next()
+      expect(animate).not.toHaveBeenCalled()
+
+      const matchMedia = vi.spyOn(globalThis, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
+      el.removeAttribute('reduced-motion')
+      await el.next()
+      expect(animate).not.toHaveBeenCalled()
+      matchMedia.mockRestore()
+    })
+
+    it('cancels a running flip and resets the cross axis when switching flow, without getting stuck', async () => {
+      const { el, sections } = await openTwoPageBook('paginated')
+      const { animations } = stubAnimate()
+      await el.next()
+      container.scrollLeft = 1600
+
+      el.setAttribute('flow', 'scrolled')
+      await flush()
+      expect(animations[0]!.cancel).toHaveBeenCalled()
+      expect(container.scrollLeft).toBe(0)
+      expect(el.getContents().map((c) => c.index)).toEqual([2, 1, 3])
+
+      container.scrollTop = 900
+      el.setAttribute('flow', 'paginated')
+      await flush()
+      expect(container.scrollTop).toBe(0)
+      expect(el.getContents().map((c) => c.index)).toEqual([2])
+
+      el.setAttribute('flow', 'scrolled')
+      await flush()
+      expect(el.getContents().map((c) => c.index)).toEqual([2, 1, 3])
+      expect(sections[2]!.unload).not.toHaveBeenCalled()
+    })
+
+    it('cancels the flip on destroy', async () => {
+      const { el } = await openTwoPageBook('paginated')
+      const { animations } = stubAnimate()
+      await el.next()
+      el.destroy()
+      expect(animations[0]!.cancel).toHaveBeenCalled()
+    })
+
+    it('lays out two columns side by side on a wide paginated viewport', async () => {
+      const { el } = await openTwoPageBook('paginated')
+      el.setAttribute('max-column-count', '2')
+      el.setAttribute('max-inline-size', '720px')
+      const top = container.parentElement!
+      expect(top.style.getPropertyValue('--_max-column-count')).toBe('2')
+      // jsdom cannot resolve the landscape container query, so mirror what it yields: spread = column count
+      top.style.setProperty('--_max-column-count-spread', top.style.getPropertyValue('--_max-column-count'))
+      el.render()
+      const doc = el.getContents()[0]!.doc!
+      // container is 800px wide in the layout mock: two columns of (800 / 2 - gap)
+      const columnWidth = parseFloat(doc.documentElement.style.columnWidth)
+      expect(columnWidth).toBeGreaterThan(300)
+      expect(columnWidth).toBeLessThan(400)
+    })
+  })
+
   it('retries an anchor clamped by the viewport once the next section supplies scroll space', async () => {
     const el = await openPaginator(makeSections(10), 'scrolled', { states: new Map() })
     let top = 0

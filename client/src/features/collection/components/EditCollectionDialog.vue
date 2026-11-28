@@ -26,6 +26,7 @@ const confirmingDelete = ref(false)
 const error = ref<string | null>(null)
 const trimmedName = computed(() => name.value.trim())
 const trimmedIcon = computed(() => icon.value.trim())
+const supportsKoboSync = computed(() => props.collection.mediaType !== 'podcasts')
 
 watch(
   () => props.open,
@@ -39,6 +40,7 @@ watch(
       confirmingDelete.value = false
     }
   },
+  { immediate: true },
 )
 
 async function submit() {
@@ -53,10 +55,17 @@ async function submit() {
   saving.value = true
   error.value = null
   try {
-    await updateCollection(props.collection.id, trimmedName.value, trimmedIcon.value, syncToKobo.value, isPublic.value)
+    await updateCollection(
+      props.collection.id,
+      trimmedName.value,
+      trimmedIcon.value,
+      supportsKoboSync.value ? syncToKobo.value : undefined,
+      isPublic.value,
+    )
     emit('close')
-  } catch {
-    error.value = t('collection.editDialog.updateFailed')
+  } catch (caught) {
+    const status = typeof caught === 'object' && caught !== null && 'status' in caught ? (caught as { status?: number }).status : undefined
+    error.value = status === 403 ? t('collection.editDialog.updateForbidden') : t('collection.editDialog.updateFailed')
   } finally {
     saving.value = false
   }
@@ -137,7 +146,7 @@ async function confirmDelete() {
             <ToggleSwitch v-model="isPublic" :aria-label="t('collection.visibleToAll')" />
           </div>
 
-          <div class="flex items-center justify-between py-1">
+          <div v-if="supportsKoboSync" class="flex items-center justify-between py-1">
             <div>
               <p class="text-sm font-medium text-foreground">{{ t('collection.editDialog.syncToKobo') }}</p>
               <p class="text-xs text-muted-foreground mt-0.5">{{ t('collection.editDialog.syncToKoboHint') }}</p>

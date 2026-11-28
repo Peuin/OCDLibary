@@ -535,6 +535,7 @@ export class Paginator extends HTMLElement {
   #touchScrolled
   #lastVisibleRange
   #destroyed = false
+  #flipAnimation = null
   #docCleanups = new WeakMap()
   #legacyAfterScroll
   #checkPointerSelection
@@ -615,6 +616,10 @@ export class Paginator extends HTMLElement {
             grid-column: 2 / 5;
             grid-row: 2;
             overflow: hidden;
+        }
+        :host(:not([flow="scrolled"])) #container {
+            transform-origin: center;
+            backface-visibility: hidden;
         }
         :host([flow="scrolled"]) #container {
             grid-column: 1 / -1;
@@ -773,6 +778,14 @@ export class Paginator extends HTMLElement {
   attributeChangedCallback(name, _, value) {
     switch (name) {
       case 'flow':
+        // a flip from paginated mode must never linger into the scrolled layout
+        this.#cancelPageFlip()
+        // drop the offset of the other axis so the new layout does not start shifted
+        if (this.scrolled) this.#container.scrollLeft = 0
+        else {
+          this.#container.scrollTop = 0
+          this.#container.scrollLeft = 0
+        }
         if (this.#isVirtual()) this.#adoptActiveView()
         else this.#releaseInactiveSlots()
         this.render()
@@ -1283,6 +1296,10 @@ export class Paginator extends HTMLElement {
     const d = velocity * (usesNegativePageScroll(this.#vertical, this.#rtl) ? -size : size)
     const page = Math.floor(Math.max(min, Math.min(max, (start + end) / 2 + (isNaN(d) ? 0 : d))) / size)
 
+    const targetOffset = getPageScrollOffset(page, size, this.#vertical, this.#rtl)
+    const currentOffset = this.#container[this.scrollProp]
+    if (!this.scrolled && targetOffset !== currentOffset)
+      this.#triggerPageFlip(page > Math.round(Math.abs(currentOffset) / size) ? 1 : -1)
     this.#scrollToPage(page, 'snap').then(() => {
       const dir = page <= 0 ? -1 : page >= pages - 1 ? 1 : null
       const index = dir ? this.#adjacentIndex(dir) : undefined
@@ -1602,6 +1619,7 @@ export class Paginator extends HTMLElement {
     this.#locked = true
     try {
       const prev = dir === -1
+      if (!this.scrolled && !(prev ? this.atStart : this.atEnd)) this.#triggerPageFlip(dir)
       const shouldGo = await (prev ? this.#scrollPrev(distance) : this.#scrollNext(distance))
       // At the first/last linear section there is nowhere to go: stay put instead of resetting the view.
       const index = shouldGo ? this.#adjacentIndex(dir) : undefined
@@ -1614,6 +1632,34 @@ export class Paginator extends HTMLElement {
     } finally {
       this.#locked = false
     }
+  }
+  // SCRUM-104: light 3D page flip for paginated EPUB. Web Animations only, no fill, so no
+  // inline transform/filter is left behind to skew overlay or selection hit testing.
+  #triggerPageFlip(dir) {
+    if (this.scrolled || this.hasAttribute('reduced-motion')) return
+    if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const container = this.#container
+    if (typeof container?.animate !== 'function') return
+    this.#cancelPageFlip()
+    const axis = this.#vertical ? 'rotateX' : 'rotateY'
+    const animation = container.animate(
+      [
+        { transform: `perspective(1800px) ${axis}(${dir * -5}deg)`, filter: 'brightness(0.85)' },
+        { transform: `perspective(1800px) ${axis}(0deg)`, filter: 'brightness(1)' },
+      ],
+      { duration: 450, easing: 'cubic-bezier(0.42, 0.03, 0.21, 0.98)' },
+    )
+    this.#flipAnimation = animation
+    const clear = () => {
+      if (this.#flipAnimation === animation) this.#flipAnimation = null
+    }
+    animation.addEventListener?.('finish', clear)
+    animation.addEventListener?.('cancel', clear)
+  }
+  #cancelPageFlip() {
+    const animation = this.#flipAnimation
+    this.#flipAnimation = null
+    animation?.cancel()
   }
   prev(distance) {
     return this.#turnPage(-1, distance)
@@ -1671,6 +1717,7 @@ export class Paginator extends HTMLElement {
   destroy() {
     if (this.#destroyed) return
     this.#destroyed = true
+    this.#cancelPageFlip()
     this.#legacyAfterScroll?.cancel()
     this.#checkPointerSelection?.cancel()
     cancelAnimationFrame(this.#styleFrame)

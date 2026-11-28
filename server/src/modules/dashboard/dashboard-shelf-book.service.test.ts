@@ -43,12 +43,17 @@ function makeService() {
     containsBook: vi.fn().mockResolvedValue(false),
     assertShelfLinkable: vi.fn().mockResolvedValue(undefined),
   };
+  const materializer = {
+    inTransaction: vi.fn((callback: (tx: unknown) => Promise<unknown>) => callback({})),
+    materializeLinkedBooks: vi.fn().mockResolvedValue(undefined),
+  };
   const service = new DashboardShelfBookService(
     repo as unknown as DashboardShelfBookRepository,
     shelfRepo as unknown as DashboardFeaturedShelfRepository,
     collectionService as unknown as CollectionService,
+    materializer as never,
   );
-  return { service, repo, shelfRepo, collectionService };
+  return { service, repo, shelfRepo, collectionService, materializer };
 }
 
 describe('DashboardShelfBookService', () => {
@@ -165,19 +170,17 @@ describe('DashboardShelfBookService', () => {
     await service.relink({ id: 7, collectionId: null } as never, 30, makeUser());
 
     expect(collectionService.assertShelfLinkable).toHaveBeenCalledWith(30);
-    expect(repo.removeHiddenBooks).toHaveBeenCalledWith(7);
+    expect(repo.removeHiddenBooks).toHaveBeenCalledWith(7, undefined);
     expect(repo.appendBooks).not.toHaveBeenCalled();
   });
 
   it('keeps a copy of the books the collection was showing when unlinking', async () => {
-    const { service, repo, collectionService } = makeService();
-    repo.findHiddenBookIds.mockResolvedValue([2]);
-    collectionService.findBookIdsInOrder.mockResolvedValue([9, 2]);
+    const { service, materializer } = makeService();
 
     await service.relink({ id: 7, collectionId: 30 } as never, null, makeUser());
 
-    expect(repo.removeHiddenBooks).toHaveBeenCalledWith(7);
-    expect(repo.appendBooks).toHaveBeenCalledWith(7, [9], 1);
+    expect(materializer.inTransaction).toHaveBeenCalledOnce();
+    expect(materializer.materializeLinkedBooks).toHaveBeenCalledWith(7, {}, 1);
   });
 
   it('reports a book that was not on the shelf', async () => {

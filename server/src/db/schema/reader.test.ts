@@ -1,4 +1,4 @@
-import { getTableConfig } from 'drizzle-orm/pg-core';
+import { PgDialect, getTableConfig } from 'drizzle-orm/pg-core';
 
 import {
   annotations,
@@ -23,6 +23,8 @@ const fkByColumn = (table: unknown) => {
     ]),
   );
 };
+
+const dialect = new PgDialect();
 
 describe('reader schema', () => {
   it('uses a composite primary key for reading progress and indexes by user', () => {
@@ -99,6 +101,18 @@ describe('reader schema', () => {
     expect(bookmarkIndexNames).toContain('bookmarks_user_book_idx');
     expect(bookmarkIndexNames).toContain('bookmarks_user_book_cfi_uidx');
     expect(bookmarkIndexNames).toContain('bookmarks_user_book_pos_uidx');
+    expect(bookmarks.bookFileId.notNull).toBe(false);
+    expect(bookmarks.pageNumber.notNull).toBe(false);
+    expect(bookmarkFks.get('book_file_id')?.onDelete).toBe('cascade');
+
+    const pdfLocationIndex = bookmarkConfig.indexes.find((idx) => idx.config.name === 'bookmarks_user_file_page_uidx');
+    expect(pdfLocationIndex?.config.unique).toBe(true);
+    expect(pdfLocationIndex?.config.columns.map((column) => column.name)).toEqual(['user_id', 'book_file_id', 'page_number']);
+    expect(bookmarkIndexNames).toContain('bookmarks_book_file_id_idx');
+
+    const pdfLocationCheck = bookmarkConfig.checks.find((check) => check.name === 'bookmarks_pdf_location_chk');
+    expect(pdfLocationCheck).toBeDefined();
+    expect(dialect.sqlToQuery(pdfLocationCheck!.value).sql).toContain('"page_number" >= 1');
     expect(annotationFks.get('user_id')?.onDelete).toBe('cascade');
     expect(annotationFks.get('book_id')?.onDelete).toBe('cascade');
     expect(annotations.color.default).toBe('yellow');

@@ -4,7 +4,9 @@ import type { DashboardFeaturedShelf } from '@bookorbit/types'
 
 const api = vi.hoisted(() => ({
   createFeaturedShelf: vi.fn<(body: { title: string }) => Promise<DashboardFeaturedShelf>>(),
-  updateFeaturedShelf: vi.fn<(id: number, body: { title?: string; rows?: number }) => Promise<DashboardFeaturedShelf>>(),
+  updateFeaturedShelf:
+    vi.fn<(id: number, body: { title?: string; rows?: number; collectionId?: number | null }) => Promise<DashboardFeaturedShelf>>(),
+  fetchFeaturedShelfBookCount: vi.fn<(id: number) => Promise<number>>(),
   reorderFeaturedShelves: vi.fn<(ids: number[]) => Promise<DashboardFeaturedShelf[]>>(),
   deleteFeaturedShelf: vi.fn<(id: number) => Promise<void>>(),
 }))
@@ -40,6 +42,7 @@ function titles(wrapper: ReturnType<typeof mount>): string[] {
 describe('DashboardShelvesManager', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    api.fetchFeaturedShelfBookCount.mockResolvedValue(6)
     useDashboardSharedConfig().replaceShelves([shelf(1, 'Linh đạo'), shelf(2, 'Sách Thánh Gioan')])
   })
 
@@ -106,7 +109,8 @@ describe('DashboardShelvesManager', () => {
     expect(useDashboardSharedConfig().shelfBookRevision(2)).toBeGreaterThan(0)
   })
 
-  it('unlinks a shelf when no collection is chosen', async () => {
+  it('unlinks a shelf once after confirming how many books stay', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     useDashboardSharedConfig().replaceShelves([shelf(1, 'Linh đạo', { collectionId: 30 })])
     api.updateFeaturedShelf.mockResolvedValue(shelf(1, 'Linh đạo'))
     const wrapper = mount(DashboardShelvesManager)
@@ -114,7 +118,101 @@ describe('DashboardShelvesManager', () => {
     await wrapper.get('[data-testid="shelf-collection-link"] select').setValue('')
     await flushPromises()
 
+    expect(api.fetchFeaturedShelfBookCount).toHaveBeenCalledWith(1)
+    expect(confirmSpy).toHaveBeenCalledWith('Unlink this collection? The shelf will keep its current 6 books as shelf-specific books.')
+    expect(api.updateFeaturedShelf).toHaveBeenCalledTimes(1)
     expect(api.updateFeaturedShelf).toHaveBeenCalledWith(1, { collectionId: null })
+    expect(useDashboardSharedConfig().shelfBookRevision(1)).toBeGreaterThan(0)
+  })
+
+  it('keeps the collection linked when unlink confirmation is cancelled', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    useDashboardSharedConfig().replaceShelves([shelf(1, 'Linh đạo', { collectionId: 30 })])
+    const wrapper = mount(DashboardShelvesManager)
+    const select = wrapper.get<HTMLSelectElement>('[data-testid="shelf-collection-link"] select')
+
+    await select.setValue('')
+    await flushPromises()
+
+    expect(api.updateFeaturedShelf).not.toHaveBeenCalled()
+    expect(select.element.value).toBe('30')
+  })
+
+  it('restores the linked collection when unlinking fails', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    useDashboardSharedConfig().replaceShelves([shelf(1, 'Linh đạo', { collectionId: 30 })])
+    api.updateFeaturedShelf.mockRejectedValue(new Error('nope'))
+    const wrapper = mount(DashboardShelvesManager)
+    const select = wrapper.get<HTMLSelectElement>('[data-testid="shelf-collection-link"] select')
+
+    await select.setValue('')
+    await flushPromises()
+
+    expect(api.updateFeaturedShelf).toHaveBeenCalledWith(1, { collectionId: null })
+    expect(select.element.value).toBe('30')
+  })
+
+  it('disables the collection select while unlinking is saving', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    useDashboardSharedConfig().replaceShelves([shelf(1, 'Linh đạo', { collectionId: 30 })])
+    let finishUpdate: ((value: DashboardFeaturedShelf) => void) | undefined
+    api.updateFeaturedShelf.mockImplementation(
+      () =>
+        new Promise<DashboardFeaturedShelf>((resolve) => {
+          finishUpdate = resolve
+        }),
+    )
+    const wrapper = mount(DashboardShelvesManager)
+    const select = wrapper.get<HTMLSelectElement>('[data-testid="shelf-collection-link"] select')
+
+    await select.setValue('')
+    await flushPromises()
+
+    expect(api.updateFeaturedShelf).toHaveBeenCalledWith(1, { collectionId: null })
+    expect(select.element.disabled).toBe(true)
+
+    finishUpdate?.(shelf(1, 'Linh đạo'))
+    await flushPromises()
+
+    expect(select.element.disabled).toBe(false)
+  })
+
+  it('keeps overlapping unlink saves disabled independently', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    useDashboardSharedConfig().replaceShelves([shelf(1, 'Linh đạo', { collectionId: 30 }), shelf(2, 'Sách Thánh Gioan', { collectionId: 31 })])
+    const finishers = new Map<number, (value: DashboardFeaturedShelf) => void>()
+    api.updateFeaturedShelf.mockImplementation(
+      (id) =>
+        new Promise<DashboardFeaturedShelf>((resolve) => {
+          finishers.set(id, resolve)
+        }),
+    )
+    const wrapper = mount(DashboardShelvesManager)
+    const selectAt = (index: number) => wrapper.findAll<HTMLSelectElement>('[data-testid="shelf-collection-link"] select')[index]!
+
+    await selectAt(0).setValue('')
+    await flushPromises()
+
+    expect(api.updateFeaturedShelf).toHaveBeenCalledWith(1, { collectionId: null })
+    expect(selectAt(0).element.disabled).toBe(true)
+
+    await selectAt(1).setValue('')
+    await flushPromises()
+
+    expect(api.updateFeaturedShelf).toHaveBeenCalledWith(2, { collectionId: null })
+    expect(selectAt(1).element.disabled).toBe(true)
+
+    finishers.get(1)?.(shelf(1, 'Linh đạo'))
+    await flushPromises()
+
+    expect(selectAt(0).element.disabled).toBe(false)
+    expect(selectAt(1).element.disabled).toBe(true)
+
+    finishers.get(2)?.(shelf(2, 'Sách Thánh Gioan'))
+    await flushPromises()
+
+    expect(selectAt(0).element.disabled).toBe(false)
+    expect(selectAt(1).element.disabled).toBe(false)
   })
 
   it('leaves the collection optional', () => {

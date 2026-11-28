@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { drawReaderSearchHighlight } from '@/features/reader/shared/lib/reader-search-highlight'
 
 vi.mock('../../../../../public/assets/foliate/paginator.js', () => ({}))
 
@@ -58,6 +59,7 @@ interface View extends HTMLElement {
   close: () => void
   search: (opts: { query: string }) => AsyncGenerator<unknown>
   clearSearch: () => void
+  drawSearchAnnotation?: (rects: DOMRectList) => SVGElement
   addAnnotation: (annotation: { value: string }) => Promise<unknown>
   getCFI: (index: number, range: Range) => string
   startMediaOverlay: () => unknown
@@ -133,7 +135,7 @@ describe('Foliate multi-section overlay integration', () => {
     expect(renderer.getContents()).toHaveLength(0)
   })
 
-  it('restores search outlines after remount and clears every mounted section without resurrection', async () => {
+  it('restores search annotations after remount and clears every mounted section without resurrection', async () => {
     const { view, renderer } = await setup()
     const first = await renderer.mount(0),
       second = await renderer.mount(1)
@@ -154,6 +156,21 @@ describe('Foliate multi-section overlay integration', () => {
     const cleared = await renderer.mount(1)
     await tick()
     expect(cleared.overlayer!.element.childElementCount).toBe(0)
+  })
+
+  it('uses the injected soft-background drawer for search results instead of the vendor outline fallback', async () => {
+    const { view, renderer } = await setup()
+    const first = await renderer.mount(0)
+    view.drawSearchAnnotation = (rects) => drawReaderSearchHighlight(rects, { color: 'rgb(1 2 3 / 0.22)' })
+
+    for await (const _ of view.search({ query: 'needle' })) void _
+    await tick()
+
+    const hit = first.overlayer!.element.querySelector('g')
+    expect(hit?.getAttribute('fill')).toBe('rgb(1 2 3 / 0.22)')
+    expect(hit?.getAttribute('stroke')).toBeNull()
+    expect((hit as SVGElement | null)?.style.opacity ?? '').toBe('')
+    expect(hit?.querySelector('rect')?.getAttribute('rx')).toBe('2')
   })
 
   it('attaches the overlayer before publishing its lifecycle event and draws in the CFI owner document', async () => {

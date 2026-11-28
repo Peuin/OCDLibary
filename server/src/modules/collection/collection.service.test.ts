@@ -56,6 +56,7 @@ function makeService() {
     findAllVisibleForUser: vi.fn(),
     findAllOwnedForUserWithMembership: vi.fn(),
     findById: vi.fn(),
+    findByIdForUpdate: vi.fn(),
     findByIdForViewer: vi.fn().mockResolvedValue([makeCollection()]),
     insert: vi.fn(),
     update: vi.fn(),
@@ -99,6 +100,10 @@ function makeService() {
   const podcastCatalogRepo = {
     listPodcasts: vi.fn(),
   };
+  const shelfBookMaterializer = {
+    inTransaction: vi.fn((callback: (tx: unknown) => Promise<unknown>) => callback({})),
+    materializeCollectionShelves: vi.fn().mockResolvedValue(undefined),
+  };
 
   const service = new CollectionService(
     collectionRepo as never,
@@ -108,8 +113,19 @@ function makeService() {
     achievementEvents as never,
     podcastAccess as never,
     podcastCatalogRepo as never,
+    shelfBookMaterializer as never,
   );
-  return { service, collectionRepo, libraryService, queryBuilder, bookService, achievementEvents, podcastAccess, podcastCatalogRepo };
+  return {
+    service,
+    collectionRepo,
+    libraryService,
+    queryBuilder,
+    bookService,
+    achievementEvents,
+    podcastAccess,
+    podcastCatalogRepo,
+    shelfBookMaterializer,
+  };
 }
 
 describe('CollectionService', () => {
@@ -243,6 +259,17 @@ describe('CollectionService', () => {
       expect(collectionRepo.update).not.toHaveBeenCalled();
     });
 
+    it('rejects updates from a non-owner superuser', async () => {
+      const { service, collectionRepo } = makeService();
+      collectionRepo.findById.mockResolvedValue([makeCollection({ userId: 99 })]);
+
+      const error = await service.update(10, { name: 'Admin edit' }, makeUser({ id: 8, isSuperuser: true })).catch((reason: unknown) => reason);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect((error as ForbiddenException).getStatus()).toBe(403);
+      expect(collectionRepo.update).not.toHaveBeenCalled();
+    });
+
     it('returns the hydrated collection so derived counts remain available', async () => {
       const { service, collectionRepo } = makeService();
       const existing = makeCollection({ bookCount: 3 });
@@ -362,11 +389,13 @@ describe('CollectionService', () => {
     });
 
     it('propagates ownership checks on remove and deletes using owner id', async () => {
-      const { service, collectionRepo } = makeService();
+      const { service, collectionRepo, shelfBookMaterializer } = makeService();
       collectionRepo.findById.mockResolvedValue([makeCollection({ id: 12, userId: 4 })]);
+      collectionRepo.findByIdForUpdate.mockResolvedValue(makeCollection({ id: 12, userId: 4 }));
 
       await service.remove(12, makeUser({ id: 4 }));
-      expect(collectionRepo.delete).toHaveBeenCalledWith(12, 4);
+      expect(shelfBookMaterializer.materializeCollectionShelves).toHaveBeenCalledWith(12, expect.anything());
+      expect(collectionRepo.delete).toHaveBeenCalledWith(12, 4, expect.anything());
     });
 
     it('rejects non-owner remove attempts', async () => {

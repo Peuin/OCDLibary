@@ -7,6 +7,7 @@ import type { DashboardFeaturedShelfRow } from '../../db/schema';
 import { CollectionService } from '../collection/collection.service';
 import { DashboardFeaturedShelfRepository } from './dashboard-featured-shelf.repository';
 import { DashboardShelfBookRepository } from './dashboard-shelf-book.repository';
+import { DashboardShelfBookMaterializer, type DashboardShelfBookTx } from './dashboard-shelf-book-materializer';
 
 /**
  * The books on a dashboard shelf. A shelf linked to a collection follows it one way: whatever the
@@ -22,6 +23,7 @@ export class DashboardShelfBookService {
     private readonly repo: DashboardShelfBookRepository,
     private readonly shelfRepo: DashboardFeaturedShelfRepository,
     private readonly collectionService: CollectionService,
+    private readonly materializer: DashboardShelfBookMaterializer,
   ) {}
 
   /** The collection's books first, in its order, then the shelf's own, skipping hidden and repeated books. */
@@ -98,18 +100,20 @@ export class DashboardShelfBookService {
    * are dropped; unlinking keeps a copy of the books the collection was showing, so the shelf does not
    * suddenly empty.
    */
-  async relink(shelf: DashboardFeaturedShelfRow, collectionId: number | null, user: RequestUser): Promise<void> {
+  withTransaction<T>(callback: (tx: DashboardShelfBookTx) => Promise<T>): Promise<T> {
+    return this.materializer.inTransaction(callback);
+  }
+
+  async relink(shelf: DashboardFeaturedShelfRow, collectionId: number | null, user: RequestUser, tx?: DashboardShelfBookTx): Promise<void> {
     if (shelf.collectionId === collectionId) return;
-    if (collectionId !== null) await this.assertLinkable(collectionId);
-    if (collectionId === null && shelf.collectionId !== null) {
-      const hidden = new Set(await this.repo.findHiddenBookIds(shelf.id));
-      const shown = await this.findCollectionBookIds(shelf.collectionId, user, DASHBOARD_SHELF_BOOKS_MAX + hidden.size);
-      const room = DASHBOARD_SHELF_BOOKS_MAX - (await this.repo.countBooks(shelf.id));
-      await this.repo.removeHiddenBooks(shelf.id);
-      await this.repo.appendBooks(shelf.id, shown.filter((id) => !hidden.has(id)).slice(0, Math.max(room, 0)), user.id);
+    if (collectionId !== null) {
+      await this.assertLinkable(collectionId);
+      await this.repo.removeHiddenBooks(shelf.id, tx);
       return;
     }
-    await this.repo.removeHiddenBooks(shelf.id);
+    const materialize = (transaction: DashboardShelfBookTx) => this.materializer.materializeLinkedBooks(shelf.id, transaction, user.id);
+    if (tx) await materialize(tx);
+    else await this.materializer.inTransaction(materialize);
   }
 
   private async findCollectionBookIds(collectionId: number, user: RequestUser, limit: number, libraryIds?: number[]): Promise<number[]> {

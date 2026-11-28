@@ -421,6 +421,9 @@ export const bookmarks = pgTable(
     chapterId: varchar('chapter_id', { length: 80 }),
     // Audio: absolute book position in seconds (sum of preceding file durations + offset).
     positionSeconds: real('position_seconds'),
+    // PDF: physical page number in the source file, 1-based.
+    bookFileId: integer('book_file_id').references(() => bookFiles.id, { onDelete: 'cascade' }),
+    pageNumber: integer('page_number'),
     origin: varchar('origin', { length: 10 }).$type<BookmarkOrigin>().notNull().default('web'),
     // Canonical KOReader xpointer for a device-created bookmark, kept so it returns
     // to devices at its original position instead of surviving a double conversion.
@@ -448,7 +451,17 @@ export const bookmarks = pgTable(
     uniqueIndex('bookmarks_user_book_pos_uidx')
       .on(t.userId, t.bookId, t.positionSeconds)
       .where(sql`${t.positionSeconds} is not null and ${t.cfi} is null`),
+    uniqueIndex('bookmarks_user_file_page_uidx')
+      .on(t.userId, t.bookFileId, t.pageNumber)
+      .where(sql`${t.pageNumber} is not null`),
+    index('bookmarks_book_file_id_idx')
+      .on(t.bookFileId)
+      .where(sql`${t.bookFileId} is not null`),
     check('bookmarks_origin_chk', sql`${t.origin} in ('web', 'koreader')`),
+    check(
+      'bookmarks_pdf_location_chk',
+      sql`${t.pageNumber} is null or (${t.pageNumber} >= 1 and ${t.bookFileId} is not null and ${t.cfi} is null and ${t.positionSeconds} is null)`,
+    ),
   ],
 );
 

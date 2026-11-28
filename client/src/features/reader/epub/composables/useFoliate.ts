@@ -3,6 +3,7 @@ import { api, getAccessToken } from '@/lib/api'
 import { useFoliateAnnotations } from './useFoliateAnnotations'
 import { useFoliateSelection } from './useFoliateSelection'
 import { useFoliateInput } from './useFoliateInput'
+import { drawReaderSearchHighlight } from '../../shared/lib/reader-search-highlight'
 import { ensureMediaOverlayActiveClass } from '../../media-overlay/lib/media-overlay-highlight'
 import type { EpubBookInfo, EpubReaderSettings } from '@bookorbit/types'
 
@@ -30,7 +31,7 @@ export interface FoliateRenderer {
   setStyles?: (css: string) => void
   setAttribute: (name: string, value: string) => void
   removeAttribute: (name: string) => void
-  getContents?: () => { index: number }[]
+  getContents?: () => { index: number; overlayer?: { redraw?: () => void } }[]
 }
 
 export interface FoliateLocationContext {
@@ -118,6 +119,23 @@ export function useFoliate(
 
   const annotations = useFoliateAnnotations()
   const selection = useFoliateSelection(() => viewRef.value)
+  let searchThemeObserver: MutationObserver | null = null
+
+  function redrawMountedOverlays() {
+    for (const content of getViewEl()?.renderer?.getContents?.() ?? []) content.overlayer?.redraw?.()
+  }
+
+  function startSearchThemeObserver() {
+    searchThemeObserver?.disconnect()
+    if (typeof MutationObserver === 'undefined') return
+    searchThemeObserver = new MutationObserver(() => redrawMountedOverlays())
+    searchThemeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] })
+  }
+
+  function stopSearchThemeObserver() {
+    searchThemeObserver?.disconnect()
+    searchThemeObserver = null
+  }
   const input = useFoliateInput(
     () => viewRef.value,
     onMiddleTap,
@@ -180,6 +198,7 @@ export function useFoliate(
         getCFI?: (index: number, range: Range) => string | null
         addAnnotation?: (ann: { value: string }) => void
         deleteAnnotation?: (ann: { value: string }) => void
+        drawSearchAnnotation?: (rects: DOMRectList) => SVGElement
         search?: (opts: { query: string }) => AsyncIterable<unknown>
         clearSearch?: () => void
         mediaOverlay?: FoliateMediaOverlay | null
@@ -189,7 +208,9 @@ export function useFoliate(
       getViewEl()?.destroy?.()
       el.innerHTML = ''
       el.appendChild(view)
+      view.drawSearchAnnotation = drawReaderSearchHighlight
       viewRef.value = view
+      startSearchThemeObserver()
 
       // Safety timeout: if the 'load' event never fires (e.g. service worker or
       // iframe restrictions on iOS), clear the loading state with a helpful message
@@ -446,6 +467,7 @@ export function useFoliate(
   }
 
   onUnmounted(() => {
+    stopSearchThemeObserver()
     input.cleanup()
     selection.cleanup()
     getViewEl()?.destroy?.()

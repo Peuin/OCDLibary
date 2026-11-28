@@ -2015,7 +2015,13 @@
         "preferencesSynced": "Tùy chọn sẽ được đồng bộ từ bây giờ",
         "preferencesLocal": "Tùy chọn sẽ chỉ lưu trên thiết bị này",
         "storageUpdateFailed": "Không thể cập nhật chế độ lưu",
-        "storageUpdateError": "Đã xảy ra lỗi khi cập nhật chế độ lưu"
+        "storageUpdateError": "Đã xảy ra lỗi khi cập nhật chế độ lưu",
+        "effectsLabel": "Hiệu ứng",
+        "lightEffects": {
+          "label": "Hiệu ứng nhẹ",
+          "hint": "Tắt hiệu ứng phóng bìa và chuyển cảnh khi mở sách để thao tác nhanh hơn trên máy yếu.",
+          "reducedMotion": "Thiết bị đang bật giảm chuyển động, nên sách đã mở không có hiệu ứng."
+        }
       },
       "ebook": {
         "title": "Trình đọc sách điện tử",
@@ -4095,6 +4101,9 @@
       "fullName": "Họ tên",
       "email": "Email",
       "optional": "(tùy chọn)",
+      "showPassword": "Hiện mật khẩu",
+      "hidePassword": "Ẩn mật khẩu",
+      "initialPasswordHint": "Người dùng phải đổi mật khẩu ban đầu này ở lần đăng nhập đầu tiên.",
       "libraryAccess": "Quyền truy cập thư viện",
       "noLibrariesSelected": "Chưa chọn thư viện nào. Người dùng không thể xem sách.",
       "permissions": "Quyền hạn",
@@ -4171,7 +4180,8 @@
         "createSharedAccount": "Không thể tạo tài khoản chia sẻ",
         "createUser": "Không thể tạo người dùng",
         "nameRequired": "Yêu cầu họ tên",
-        "usernameRequired": "Yêu cầu tên đăng nhập"
+        "usernameRequired": "Yêu cầu tên đăng nhập",
+        "usernameLength": "Tên đăng nhập phải có từ 3 đến 100 ký tự"
       },
       "drawerDescription": "Chỉnh sửa hồ sơ, quyền truy cập thư viện, quyền hạn và hạn chế của tài khoản này.",
       "createHint": "Tài khoản mới không có quyền hạn cho đến khi bạn cấp.",
@@ -7794,6 +7804,7 @@
       "saving": "Đang lưu...",
       "deleted": "Đã xóa \"{name}\"",
       "updateFailed": "Không thể cập nhật bộ sưu tập",
+      "updateForbidden": "Chỉ chủ bộ sưu tập mới có thể sửa bộ sưu tập này",
       "deleteFailed": "Không thể xóa bộ sưu tập"
     },
     "addToSheet": {
@@ -8411,7 +8422,8 @@
       "collectionNone": "Không liên kết: tự thêm sách",
       "noCollections": "Chưa có bộ sưu tập sách công khai. Bật Công khai cho bộ sưu tập để liên kết.",
       "collectionUnavailable": "Bộ sưu tập đã liên kết không còn công khai",
-      "collectionHint": "Kệ liên kết hiển thị sách của bộ sưu tập và tự cập nhật khi bộ sưu tập thêm, xóa, sửa. Sách thêm ở kệ chỉ nằm trên kệ, không thêm vào bộ sưu tập; bỏ sách của bộ sưu tập khỏi kệ chỉ ẩn nó trên kệ."
+      "collectionHint": "Kệ liên kết hiển thị sách của bộ sưu tập và tự cập nhật khi bộ sưu tập thêm, xóa, sửa. Sách thêm ở kệ chỉ nằm trên kệ, không thêm vào bộ sưu tập; bỏ sách của bộ sưu tập khỏi kệ chỉ ẩn nó trên kệ.",
+      "confirmUnlinkCollection": "Gỡ liên kết bộ sưu tập? Kệ sẽ giữ nguyên {count, plural, one {# sách} other {# sách}} hiện có dưới dạng sách riêng."
     }
   },
   "email": {
@@ -9672,6 +9684,7 @@
         "searchPrompt": "Nhập từ khóa để tìm trong PDF này.",
         "searchTooShort": "Nhập ít nhất {min} ký tự để tìm trong PDF này.",
         "noSearchResults": "Không có văn bản nào khớp với từ khóa.",
+        "scannedNoText": "Tài liệu này là ảnh quét và không có chữ để tìm. Cần OCR.",
         "page": "Trang {page}",
         "filterOutline": "Lọc mục lục",
         "noOutlineMatch": "Không có mục nào khớp với bộ lọc.",

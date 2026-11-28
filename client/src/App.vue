@@ -24,6 +24,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { resolveRouteViewKey } from '@/router/view-key'
 import LegalNotices from '@/components/legal/LegalNotices.vue'
+import BookOpenVeil from '@/components/reader-transition/BookOpenVeil.vue'
 
 // Bottom-edge media and download surfaces publish their measured heights, so the toaster clears
 // whichever one currently sits highest.
@@ -98,6 +99,7 @@ provide(
     <ChangePasswordDialog v-if="isOpen" />
     <WhatsNewDialog v-if="popupOpen" />
     <LegalNotices />
+    <BookOpenVeil />
     <TtsMiniPlayer />
     <MediaOverlayMiniPlayer />
     <PodcastMiniPlayer v-if="APP_FEATURES.podcasts" />

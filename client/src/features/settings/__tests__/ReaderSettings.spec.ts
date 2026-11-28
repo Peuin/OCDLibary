@@ -224,3 +224,26 @@ describe('ReaderSettings', () => {
     })
   })
 })
+
+describe('ReaderSettings light effects', () => {
+  beforeEach(async () => {
+    const { useDisplaySettings } = await import('@/composables/useDisplaySettings')
+    useDisplaySettings().lightReaderEffects.value = false
+  })
+
+  it('shows the light effects switch off by default and turns the setting on', async () => {
+    const { useDisplaySettings } = await import('@/composables/useDisplaySettings')
+    const wrapper = mountComponent()
+
+    expect(wrapper.text()).toContain('Light effects')
+    const toggle = wrapper.find('button[role="switch"][aria-label="Light effects"]')
+    expect(toggle.exists()).toBe(true)
+    expect(toggle.attributes('aria-checked')).toBe('false')
+
+    await toggle.trigger('click')
+
+    expect(useDisplaySettings().lightReaderEffects.value).toBe(true)
+    expect(toggle.attributes('aria-checked')).toBe('true')
+    useDisplaySettings().lightReaderEffects.value = false
+  })
+})

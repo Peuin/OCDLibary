@@ -37,7 +37,7 @@ describe('PdfDocumentViewport', () => {
           PagePointerProvider: passthroughStub('page-pointer'),
           RenderLayer: layerStub('render'),
           TilingLayer: layerStub('tiling'),
-          SearchLayer: layerStub('search'),
+          PdfSearchHighlightLayer: layerStub('search'),
           SelectionLayer: layerStub('selection'),
           AnnotationLayer: layerStub('annotation'),
         },
@@ -49,6 +49,6 @@ describe('PdfDocumentViewport', () => {
 
     expect(pointer.get('[data-testid="render"]').attributes('scale')).toBe('0.5')
     expect(pointer.find('[data-testid="tiling"]').exists()).toBe(true)
-    expect(pointer.get('[data-testid="search"]').attributes('highlight-color')).toContain('var(--primary)')
+    expect(pointer.get('[data-testid="search"]').attributes('page-index')).toBe('3')
   })
 })

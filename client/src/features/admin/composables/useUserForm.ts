@@ -232,7 +232,9 @@ export function useUserForm(user: Ref<UserFormTarget | null>, defaultLibraryIds:
 
   function validate(): UserFormSaveResult | null {
     if ((isEdit.value || isSharedAccount.value) && !name.value.trim()) return fail('nameRequired', 'profile')
-    if (!isEdit.value && !username.value.trim()) return fail('usernameRequired', 'profile')
+    const trimmedUsername = username.value.trim()
+    if (!isEdit.value && !trimmedUsername) return fail('usernameRequired', 'profile')
+    if (!isEdit.value && (trimmedUsername.length < 3 || trimmedUsername.length > 100)) return fail('usernameLength', 'profile')
     if (!isEdit.value && !isSharedAccount.value && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,1024}$/.test(password.value)) {
       return fail('passwordInvalid', 'profile')
     }

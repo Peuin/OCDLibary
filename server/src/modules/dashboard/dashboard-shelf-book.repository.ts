@@ -9,6 +9,7 @@ import { books, dashboardShelfBooks } from '../../db/schema';
 import { buildContentFilterClauses } from '../../common/utils/content-filter-sql.utils';
 
 type Db = NodePgDatabase<typeof schema>;
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 @Injectable()
 export class DashboardShelfBookRepository {
@@ -103,8 +104,8 @@ export class DashboardShelfBookRepository {
       .onConflictDoUpdate({ target: [dashboardShelfBooks.shelfId, dashboardShelfBooks.bookId], set: { hidden: true } });
   }
 
-  async removeHiddenBooks(shelfId: number): Promise<void> {
-    await this.db.delete(dashboardShelfBooks).where(and(eq(dashboardShelfBooks.shelfId, shelfId), eq(dashboardShelfBooks.hidden, true)));
+  async removeHiddenBooks(shelfId: number, tx?: Tx): Promise<void> {
+    await (tx ?? this.db).delete(dashboardShelfBooks).where(and(eq(dashboardShelfBooks.shelfId, shelfId), eq(dashboardShelfBooks.hidden, true)));
   }
 
   async removeBook(shelfId: number, bookId: number): Promise<boolean> {

@@ -4,11 +4,11 @@ import { GlobalPointerProvider, PagePointerProvider } from '@embedpdf/plugin-int
 import { RenderLayer } from '@embedpdf/plugin-render/vue'
 import { Rotate } from '@embedpdf/plugin-rotate/vue'
 import { Scroller } from '@embedpdf/plugin-scroll/vue'
-import { SearchLayer } from '@embedpdf/plugin-search/vue'
 import { SelectionLayer } from '@embedpdf/plugin-selection/vue'
 import { TilingLayer } from '@embedpdf/plugin-tiling/vue'
 import { Viewport } from '@embedpdf/plugin-viewport/vue'
 import { ZoomGestureWrapper } from '@embedpdf/plugin-zoom/vue'
+import PdfSearchHighlightLayer from './PdfSearchHighlightLayer.vue'
 
 defineProps<{ documentId: string }>()
 </script>
@@ -23,12 +23,7 @@ defineProps<{ documentId: string }>()
               <PagePointerProvider :document-id="documentId" :page-index="page.pageIndex">
                 <RenderLayer :document-id="documentId" :page-index="page.pageIndex" :scale="0.5" class="pointer-events-none" />
                 <TilingLayer :document-id="documentId" :page-index="page.pageIndex" class="pointer-events-none" />
-                <SearchLayer
-                  :document-id="documentId"
-                  :page-index="page.pageIndex"
-                  highlight-color="color-mix(in oklch, var(--primary) 30%, transparent)"
-                  active-highlight-color="color-mix(in oklch, var(--primary) 55%, transparent)"
-                />
+                <PdfSearchHighlightLayer :document-id="documentId" :page-index="page.pageIndex" />
                 <SelectionLayer
                   :document-id="documentId"
                   :page-index="page.pageIndex"

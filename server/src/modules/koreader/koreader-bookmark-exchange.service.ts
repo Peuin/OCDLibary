@@ -285,7 +285,10 @@ export class KoreaderBookmarkExchangeService {
     const goneIds = working.links
       .filter((link) => !presentKeys.has(link.koreaderKey))
       .map((link) => link.bookmarkId)
-      .filter((bookmarkId) => working.byId.get(bookmarkId)?.deletedAt == null);
+      .filter((bookmarkId) => {
+        const bookmark = working.byId.get(bookmarkId);
+        return bookmark?.cfi != null && bookmark.deletedAt == null;
+      });
     if (goneIds.length === 0) return 0;
 
     const tombstoned = await this.bookmarkSync.tombstone(userId, goneIds);
@@ -303,7 +306,10 @@ export class KoreaderBookmarkExchangeService {
     const byId = new Map(working.bookmarks.map((bookmark) => [bookmark.id, bookmark]));
 
     const deleteEntries: BookmarkDeleteEntry[] = working.links
-      .filter((link) => byId.get(link.bookmarkId)?.deletedAt != null)
+      .filter((link) => {
+        const bookmark = byId.get(link.bookmarkId);
+        return bookmark?.cfi != null && bookmark.deletedAt != null;
+      })
       .map((link) => ({ serverId: link.bookmarkId, key: link.koreaderKey, datetime: link.deviceDatetime }));
 
     // Audio bookmarks have no device counterpart, and a CFI-less row cannot be placed.
@@ -345,6 +351,7 @@ export class KoreaderBookmarkExchangeService {
 
     for (const entry of book.applied) {
       if (entry.status !== 'applied' || !byId.has(entry.serverId)) continue;
+      if (byId.get(entry.serverId)?.cfi == null) continue;
       const key = entry.key ?? (entry.datetime && entry.pos ? buildBookmarkKey(entry.datetime, entry.pos) : null);
       // Without a device identity the bookmark could never be recognised as deleted there.
       if (!key) continue;
@@ -358,8 +365,10 @@ export class KoreaderBookmarkExchangeService {
       acked += 1;
     }
 
-    const deletedIds = book.deleted.filter((entry) => entry.status === 'applied' && byId.has(entry.serverId)).map((entry) => entry.serverId);
-    acked += await this.bookmarkRepo.deleteLinks(userId, deviceId, deletedIds);
+    const deletedIds = book.deleted
+      .filter((entry) => entry.status === 'applied' && byId.get(entry.serverId)?.cfi != null)
+      .map((entry) => entry.serverId);
+    if (deletedIds.length > 0) acked += await this.bookmarkRepo.deleteLinks(userId, deviceId, deletedIds);
     return acked;
   }
 

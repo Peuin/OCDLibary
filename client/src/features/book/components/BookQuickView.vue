@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSafeHtml } from '@/features/book/composables/useSafeHtml'
 import BookCoverArtwork from './BookCoverArtwork.vue'
 import BookCoverSurface from './BookCoverSurface.vue'
+import { openBookWithTransition } from '@/composables/useBookOpenTransition'
 import { useI18n } from 'vue-i18n'
 import { hasReadAlong, isReadAlongFormat, READ_ALONG_FORMAT_COLOR, READ_ALONG_FORMAT_TITLE } from '@/features/book/lib/file-capabilities'
 
@@ -33,6 +34,7 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const coverSurface = ref<unknown>(null)
 const { detail, loading, fetch } = useBookDetail()
 
 const coverLoaded = ref(false)
@@ -150,12 +152,22 @@ function handleCoverClick() {
 
 function openBookWithMode(mode?: 'peek') {
   if (!primaryFile.value || !detail.value) return
-  router.push({
-    name: 'reader',
-    params: { bookId: detail.value.id, fileId: primaryFile.value.id },
-    query: mode === 'peek' ? { format: primaryFile.value.format ?? 'epub', mode } : { format: primaryFile.value.format ?? 'epub' },
-  })
+  void openBookWithTransition(
+    router,
+    {
+      name: 'reader',
+      params: { bookId: detail.value.id, fileId: primaryFile.value.id },
+      query: mode === 'peek' ? { format: primaryFile.value.format ?? 'epub', mode } : { format: primaryFile.value.format ?? 'epub' },
+    },
+    elementOf(coverSurface.value),
+  )
   emit('update:open', false)
+}
+
+// The rendered cover box: the element that morphs into the reader on open.
+function elementOf(component: unknown): HTMLElement | null {
+  const el = (component as { $el?: unknown } | null)?.$el
+  return el instanceof HTMLElement ? el : null
 }
 
 function openBook() {
@@ -216,8 +228,10 @@ function handleDelete() {
             <div v-else-if="detail" class="flex gap-4 items-start">
               <!-- Cover -->
               <BookCoverSurface
+                ref="coverSurface"
                 size="mini"
                 class="book-cover-surface--spine-fitted w-24 shrink-0 rounded overflow-hidden relative"
+                :data-book-cover-id="detail.id"
                 :disable-spine="isPrimaryAudio"
                 :is-comic="isPrimaryComic"
                 :class="detail.coverSource && !coverFailed ? 'cursor-zoom-in' : ''"

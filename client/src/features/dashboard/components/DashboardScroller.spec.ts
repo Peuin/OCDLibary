@@ -335,12 +335,34 @@ describe('DashboardScroller', () => {
     expect(bandTitles(wrapper)).toEqual([['Book 1', 'Book 2', 'Book 3']])
   })
 
-  it('merges every configured row into a single band on the dashboard', () => {
+  it.each([
+    [1, [['Book 1', 'Book 2', 'Book 3', 'Book 4']]],
+    [
+      2,
+      [
+        ['Book 1', 'Book 2'],
+        ['Book 3', 'Book 4'],
+      ],
+    ],
+    [3, [['Book 1', 'Book 2'], ['Book 3'], ['Book 4']]],
+  ])('shows %i configured row(s) on the dashboard', (rows, expected) => {
     const books = Array.from({ length: 4 }, (_, index) => makeBook(index + 1, 'epub'))
 
-    const wrapper = mountScroller({ type: 'continue-reading', books, rows: 2 })
+    const wrapper = mountScroller({ type: 'continue-reading', books, rows })
 
-    expect(bandTitles(wrapper)).toEqual([['Book 1', 'Book 2', 'Book 3', 'Book 4']])
+    expect(bandTitles(wrapper)).toEqual(expected)
+  })
+
+  it('caps dashboard rows at two bands below the sm breakpoint', () => {
+    setCompactViewport(true)
+    const books = Array.from({ length: 4 }, (_, index) => makeBook(index + 1, 'epub'))
+
+    const wrapper = mountScroller({ type: 'continue-reading', books, rows: 3 })
+
+    expect(bandTitles(wrapper)).toEqual([
+      ['Book 1', 'Book 2'],
+      ['Book 3', 'Book 4'],
+    ])
   })
 
   it('opens the full shelf from view all', async () => {

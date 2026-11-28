@@ -6,7 +6,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { EPUB_READER_DEFAULTS, type AudiobookManifest } from '@bookorbit/types';
 
 import * as schema from '../src/db/schema';
-import { createEpubFixture, writeFixtureFile } from './e2e/reader-state-isolation/reader-state-isolation-fixture-builder';
+import { createEpubFixture, createPdfFixture, writeFixtureFile } from './e2e/reader-state-isolation/reader-state-isolation-fixture-builder';
 import {
   authHeader,
   closeReaderStateIsolationE2EContext,
@@ -58,6 +58,8 @@ describe('Reader state isolation (e2e)', { timeout: 120_000 }, () => {
   let hiddenLibrary!: CreatedLibrary;
 
   let sharedEpub!: LocatedBookFile;
+  let sharedPdf!: LocatedBookFile;
+  let sharedPdfOther!: LocatedBookFile;
   let sharedAudioA!: LocatedBookFile;
   let sharedAudioB!: LocatedBookFile;
   let hiddenAudio!: LocatedBookFile;
@@ -73,6 +75,8 @@ describe('Reader state isolation (e2e)', { timeout: 120_000 }, () => {
     hiddenLibrary = await createLibraryWithFolder(ctx, { name: `reader-hidden-library-${randomUUID()}` });
 
     const sharedEpubPath = await createEpubFixture(sharedLibrary.folderPath, 'shared-reader.epub', { title: 'Reader Shared EPUB' });
+    const sharedPdfPath = await createPdfFixture(sharedLibrary.folderPath, 'shared-reader.pdf', 'Reader Shared PDF');
+    const sharedPdfOtherPath = await createPdfFixture(sharedLibrary.folderPath, 'shared-reader-copy.pdf', 'Reader Shared PDF Copy');
     const sharedAudioAPath = await writeFixtureFile(sharedLibrary.folderPath, 'shared-audio-a.mp3', 'audio-a');
     const sharedAudioBPath = await writeFixtureFile(sharedLibrary.folderPath, 'shared-audio-b.mp3', 'audio-b');
     const hiddenAudioPath = await writeFixtureFile(hiddenLibrary.folderPath, 'hidden-audio.mp3', 'hidden-audio');
@@ -81,6 +85,8 @@ describe('Reader state isolation (e2e)', { timeout: 120_000 }, () => {
     await triggerAndWaitForLibraryScan(ctx, hiddenLibrary.libraryId);
 
     sharedEpub = await locateBookByAbsolutePath(ctx, sharedEpubPath);
+    sharedPdf = await locateBookByAbsolutePath(ctx, sharedPdfPath);
+    sharedPdfOther = await locateBookByAbsolutePath(ctx, sharedPdfOtherPath);
     sharedAudioA = await locateBookByAbsolutePath(ctx, sharedAudioAPath);
     sharedAudioB = await locateBookByAbsolutePath(ctx, sharedAudioBPath);
     hiddenAudio = await locateBookByAbsolutePath(ctx, hiddenAudioPath);
@@ -231,6 +237,100 @@ describe('Reader state isolation (e2e)', { timeout: 120_000 }, () => {
       });
       expect(userBAnnotationsResponse.statusCode).toBe(200);
       expect(userBAnnotationsResponse.json()).toMatchObject([{ id: annotationB.id, note: 'B Note' }]);
+    });
+
+    it('isolates PDF bookmarks by user and file, restores deleted pages, and rejects non-PDF files', async () => {
+      const pdfBookmarksUrl = `/api/v1/books/files/${sharedPdf.bookFileId}/bookmarks`;
+      const createA = await ctx.app.inject({
+        method: 'POST',
+        url: pdfBookmarksUrl,
+        headers: authHeader(userA.accessToken),
+        payload: { pageNumber: 12, title: 'Page 12 - Chapter 3' },
+      });
+      expect(createA.statusCode).toBe(201);
+      const bookmarkA = createA.json() as { id: number; bookId: number; bookFileId: number; pageNumber: number; cfi: string | null };
+      expect(bookmarkA).toMatchObject({
+        bookId: sharedPdf.bookId,
+        bookFileId: sharedPdf.bookFileId,
+        pageNumber: 12,
+        cfi: null,
+      });
+
+      const duplicateA = await ctx.app.inject({
+        method: 'POST',
+        url: pdfBookmarksUrl,
+        headers: authHeader(userA.accessToken),
+        payload: { pageNumber: 12, title: 'Changed title' },
+      });
+      expect(duplicateA.statusCode).toBe(201);
+      expect(duplicateA.json()).toMatchObject({ id: bookmarkA.id, title: 'Page 12 - Chapter 3' });
+
+      const samePageOtherFile = await ctx.app.inject({
+        method: 'POST',
+        url: `/api/v1/books/files/${sharedPdfOther.bookFileId}/bookmarks`,
+        headers: authHeader(userA.accessToken),
+        payload: { pageNumber: 12, title: 'Page 12 on another file' },
+      });
+      expect(samePageOtherFile.statusCode).toBe(201);
+      expect(samePageOtherFile.json().id).not.toBe(bookmarkA.id);
+
+      const createB = await ctx.app.inject({
+        method: 'POST',
+        url: pdfBookmarksUrl,
+        headers: authHeader(userB.accessToken),
+        payload: { pageNumber: 12, title: 'User B page 12' },
+      });
+      expect(createB.statusCode).toBe(201);
+      const bookmarkB = createB.json() as { id: number };
+      expect(bookmarkB.id).not.toBe(bookmarkA.id);
+
+      const listA = await ctx.app.inject({ method: 'GET', url: pdfBookmarksUrl, headers: authHeader(userA.accessToken) });
+      const listB = await ctx.app.inject({ method: 'GET', url: pdfBookmarksUrl, headers: authHeader(userB.accessToken) });
+      expect(listA.statusCode).toBe(200);
+      expect(listA.json()).toMatchObject([{ id: bookmarkA.id, pageNumber: 12 }]);
+      expect(listB.statusCode).toBe(200);
+      expect(listB.json()).toMatchObject([{ id: bookmarkB.id, pageNumber: 12 }]);
+
+      const foreignDelete = await ctx.app.inject({
+        method: 'DELETE',
+        url: `${pdfBookmarksUrl}/${bookmarkB.id}`,
+        headers: authHeader(userA.accessToken),
+      });
+      expect(foreignDelete.statusCode).toBe(404);
+
+      const deleteA = await ctx.app.inject({
+        method: 'DELETE',
+        url: `${pdfBookmarksUrl}/${bookmarkA.id}`,
+        headers: authHeader(userA.accessToken),
+      });
+      expect(deleteA.statusCode).toBe(204);
+
+      const restoreA = await ctx.app.inject({
+        method: 'POST',
+        url: pdfBookmarksUrl,
+        headers: authHeader(userA.accessToken),
+        payload: { pageNumber: 12, title: 'Restored page 12' },
+      });
+      expect(restoreA.statusCode).toBe(201);
+      expect(restoreA.json()).toMatchObject({ id: bookmarkA.id, title: 'Restored page 12' });
+
+      const nonPdf = await ctx.app.inject({
+        method: 'GET',
+        url: `/api/v1/books/files/${sharedEpub.bookFileId}/bookmarks`,
+        headers: authHeader(userA.accessToken),
+      });
+      expect(nonPdf.statusCode).toBe(400);
+
+      const invalidPage = await ctx.app.inject({
+        method: 'POST',
+        url: pdfBookmarksUrl,
+        headers: authHeader(userA.accessToken),
+        payload: { pageNumber: 0, title: 'Invalid page' },
+      });
+      expect(invalidPage.statusCode).toBe(400);
+
+      const inaccessible = await ctx.app.inject({ method: 'GET', url: pdfBookmarksUrl, headers: authHeader(outsider.accessToken) });
+      expect(inaccessible.statusCode).toBe(403);
     });
   });
 
@@ -588,20 +688,20 @@ describe('Reader state isolation (e2e)', { timeout: 120_000 }, () => {
       );
     });
 
-    it('returns 403 for reader-state operations against inaccessible libraries', async () => {
+    it('uses the existing 404 book scope and 403 file scope for inaccessible libraries', async () => {
       const bookmarkResponse = await ctx.app.inject({
         method: 'GET',
         url: `/api/v1/books/${sharedEpub.bookId}/bookmarks`,
         headers: authHeader(outsider.accessToken),
       });
-      expect(bookmarkResponse.statusCode).toBe(403);
+      expect(bookmarkResponse.statusCode).toBe(404);
 
       const annotationResponse = await ctx.app.inject({
         method: 'GET',
         url: `/api/v1/books/${sharedEpub.bookId}/annotations`,
         headers: authHeader(outsider.accessToken),
       });
-      expect(annotationResponse.statusCode).toBe(403);
+      expect(annotationResponse.statusCode).toBe(404);
 
       const preferenceResponse = await ctx.app.inject({
         method: 'GET',
@@ -649,7 +749,7 @@ describe('Reader state isolation (e2e)', { timeout: 120_000 }, () => {
           manifestRevision: '0'.repeat(64),
         },
       });
-      expect(audioProgressResponse.statusCode).toBe(403);
+      expect(audioProgressResponse.statusCode).toBe(404);
     });
   });
 

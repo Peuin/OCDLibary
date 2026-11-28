@@ -28,6 +28,7 @@ import { CreateCollectionDto } from './dto/create-collection.dto';
 import { ReorderCollectionsDto } from './dto/reorder-collections.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 import { CollectionRepository } from './collection.repository';
+import { DashboardShelfBookMaterializer } from '../dashboard/dashboard-shelf-book-materializer';
 
 const COLLECTION_PODCASTS_PAGE_SIZE = 50;
 const COLLECTION_NOT_FOUND_MESSAGE = 'Collection not found';
@@ -56,6 +57,7 @@ export class CollectionService {
     private readonly achievementEvents: AchievementEventsService,
     private readonly podcastAccess: PodcastAccessService,
     private readonly podcastCatalogRepo: PodcastCatalogRepository,
+    private readonly shelfBookMaterializer: DashboardShelfBookMaterializer,
   ) {}
 
   private assertReadAccess(collection: CollectionRow, user: RequestUser): void {
@@ -85,6 +87,14 @@ export class CollectionService {
   private async getWritableCollectionOrThrow(id: number, user: RequestUser): Promise<CollectionRow> {
     const collection = await this.getCollectionOrThrow(id);
     this.assertWriteAccess(collection, user);
+    return collection;
+  }
+
+  private async getOwnedCollectionOrThrow(id: number, user: RequestUser): Promise<CollectionRow> {
+    const collection = await this.getCollectionOrThrow(id);
+    if (collection.userId !== user.id) {
+      throw new ForbiddenException('Cannot modify this collection');
+    }
     return collection;
   }
 
@@ -196,7 +206,7 @@ export class CollectionService {
   }
 
   async update(id: number, dto: UpdateCollectionDto, user: RequestUser) {
-    const existing = await this.getWritableCollectionOrThrow(id, user);
+    const existing = await this.getOwnedCollectionOrThrow(id, user);
     if (dto.syncToKobo === true && existing.mediaType !== 'books') {
       throw new BadRequestException('Podcast collections cannot sync to Kobo');
     }
@@ -226,8 +236,14 @@ export class CollectionService {
   }
 
   async remove(id: number, user: RequestUser) {
-    const existing = await this.getWritableCollectionOrThrow(id, user);
-    await this.collectionRepo.delete(id, existing.userId);
+    await this.getWritableCollectionOrThrow(id, user);
+    await this.shelfBookMaterializer.inTransaction(async (tx) => {
+      const existing = await this.collectionRepo.findByIdForUpdate(id, tx);
+      if (!existing) throw new NotFoundException(COLLECTION_NOT_FOUND_MESSAGE);
+      this.assertWriteAccess(existing, user);
+      await this.shelfBookMaterializer.materializeCollectionShelves(id, tx);
+      await this.collectionRepo.delete(id, existing.userId, tx);
+    });
   }
 
   async reorder(dto: ReorderCollectionsDto, user: RequestUser) {

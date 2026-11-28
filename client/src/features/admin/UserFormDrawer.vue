@@ -5,6 +5,8 @@ import { useMediaQuery } from '@vueuse/core'
 import {
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
   KeyRound,
   Library as LibraryIcon,
   ShieldCheck,
@@ -87,6 +89,7 @@ const isNarrowViewport = useMediaQuery('(max-width: 639px)')
 
 const open = ref(true)
 const activeSection = ref<UserFormSection | null>(null)
+const showPassword = ref(false)
 
 const side = computed(() => (isNarrowViewport.value ? ('bottom' as const) : ('right' as const)))
 const sizeClass = computed(() => (isNarrowViewport.value ? 'h-full rounded-none' : 'w-full sm:max-w-[52.5rem]'))
@@ -203,8 +206,13 @@ watch(
   () => props.user,
   () => {
     activeSection.value = isWide.value ? 'profile' : null
+    showPassword.value = false
   },
 )
+
+watch(isSharedAccount, (shared) => {
+  if (shared) showPassword.value = false
+})
 
 watch(
   [() => props.user, () => props.passwordLoginEnabled],
@@ -242,6 +250,10 @@ function requestSuperuserChange() {
 
 function toggleAllLibraries() {
   setLibraries(allLibrariesSelected.value ? [] : props.libraries.map((library) => library.id))
+}
+
+function togglePasswordVisibility() {
+  showPassword.value = !showPassword.value
 }
 
 async function handleSubmit() {
@@ -380,6 +392,8 @@ async function handleSubmit() {
                   v-model="username"
                   type="text"
                   required
+                  minlength="3"
+                  maxlength="100"
                   :readonly="isEdit"
                   class="h-9 w-full rounded-lg border border-input px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   :class="isEdit ? 'bg-muted text-muted-foreground' : 'bg-background text-foreground'"
@@ -390,18 +404,30 @@ async function handleSubmit() {
 
             <div v-if="!isEdit && !isSharedAccount" class="space-y-1.5">
               <label for="user-form-password" class="settings-label block">{{ t('auth.fields.password') }}</label>
-              <input
-                id="user-form-password"
-                v-model="password"
-                type="password"
-                autocomplete="new-password"
-                required
-                minlength="8"
-                maxlength="1024"
-                aria-describedby="user-form-password-hint"
-                class="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
+              <div class="relative">
+                <input
+                  id="user-form-password"
+                  v-model="password"
+                  :type="showPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  required
+                  minlength="8"
+                  maxlength="1024"
+                  aria-describedby="user-form-password-hint user-form-password-initial-hint"
+                  class="h-9 w-full rounded-lg border border-input bg-background px-3 pe-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+                <button
+                  type="button"
+                  class="absolute end-1 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  :aria-label="showPassword ? t('adminFeature.userForm.hidePassword') : t('adminFeature.userForm.showPassword')"
+                  @click="togglePasswordVisibility"
+                >
+                  <EyeOff v-if="showPassword" :size="15" aria-hidden="true" />
+                  <Eye v-else :size="15" aria-hidden="true" />
+                </button>
+              </div>
               <p id="user-form-password-hint" class="settings-hint">{{ t('auth.fields.passwordHint') }}</p>
+              <p id="user-form-password-initial-hint" class="settings-hint">{{ t('adminFeature.userForm.initialPasswordHint') }}</p>
             </div>
 
             <div class="space-y-1.5">

@@ -106,6 +106,7 @@ const validDisplayPreferences: DisplayPreferences = {
   gridCardSecondaryLabel: 'hidden',
   cardInfoMode: 'hover-overlay',
   thumbnailClickAction: 'reader',
+  lightReaderEffects: false,
 };
 
 const validLocalePreferences: LocalePreferences = {
@@ -398,6 +399,29 @@ describe('UserPreferencesService', () => {
   it('upsertDisplayPreferences persists validated settings', async () => {
     await expect(service.upsertDisplayPreferences(11, validDisplayPreferences as unknown as Record<string, unknown>)).resolves.toBeUndefined();
     expect(repo.upsert).toHaveBeenCalledWith(11, 'display', validDisplayPreferences);
+  });
+
+  it('upsertDisplayPreferences accepts the light reader effects setting', async () => {
+    await expect(
+      service.upsertDisplayPreferences(11, { ...validDisplayPreferences, lightReaderEffects: true } as unknown as Record<string, unknown>),
+    ).resolves.toBeUndefined();
+    expect(repo.upsert).toHaveBeenCalledWith(11, 'display', expect.objectContaining({ lightReaderEffects: true }));
+  });
+
+  it('upsertDisplayPreferences defaults light reader effects to false when omitted', async () => {
+    const { lightReaderEffects, ...withoutLightReaderEffects } = validDisplayPreferences;
+    void lightReaderEffects;
+
+    await expect(service.upsertDisplayPreferences(11, withoutLightReaderEffects as unknown as Record<string, unknown>)).resolves.toBeUndefined();
+
+    expect(repo.upsert).toHaveBeenCalledWith(11, 'display', expect.objectContaining({ lightReaderEffects: false }));
+  });
+
+  it('upsertDisplayPreferences rejects a non-boolean light reader effects setting', async () => {
+    await expect(
+      service.upsertDisplayPreferences(11, { ...validDisplayPreferences, lightReaderEffects: 'yes' } as unknown as Record<string, unknown>),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repo.upsert).not.toHaveBeenCalled();
   });
 
   it('upsertDisplayPreferences accepts all valid thumbnailClickAction values', async () => {
