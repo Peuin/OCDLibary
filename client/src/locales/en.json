@@ -8212,7 +8212,8 @@
       "title": "Customize Dashboard",
       "tabs": {
         "widgets": "Widgets",
-        "shelves": "Shelves"
+        "shelves": "Shelves",
+        "quotes": "Quotes"
       },
       "widgetNames": {
         "readingStreak": "Reading Streak",
@@ -8424,6 +8425,49 @@
       "collectionUnavailable": "Linked collection is no longer public",
       "collectionHint": "A linked shelf shows the collection's books and follows every change to the collection. Books you add on the shelf stay on the shelf only, and removing a collection book here only hides it from the shelf.",
       "confirmUnlinkCollection": "Unlink this collection? The shelf will keep its current {count, plural, one {# book} other {# books}} as shelf-specific books."
+    },
+    "quotes": {
+      "hint": "Quotes are the same for everyone. Each dashboard visit shows a random enabled quote, never the one shown the time before. Changes save immediately.",
+      "textLabel": "Quote",
+      "sourceLabel": "Source",
+      "sourcePlaceholder": "e.g. Ga 1,1",
+      "add": "Add",
+      "listTitle": "{count, plural, one {# quote} other {# quotes}}",
+      "searchPlaceholder": "Search quotes or sources",
+      "empty": "No quotes yet. Add one above or upload a file.",
+      "toggle": "Show on dashboard",
+      "edit": "Edit quote",
+      "delete": "Delete quote",
+      "confirmDelete": "Delete the quote from {source} for everyone?",
+      "prev": "Previous",
+      "next": "Next",
+      "pageOf": "Page {page} of {pages}",
+      "toasts": {
+        "added": "Quote added"
+      },
+      "errors": {
+        "generic": "Something went wrong with the quotes.",
+        "required": "Enter both the quote and its source."
+      },
+      "import": {
+        "title": "Upload from a file",
+        "formatTxt": "TXT: one quote per line, ending with its source in parentheses, e.g. Lúc khởi đầu đã có Ngôi Lời (Ga 1,1).",
+        "formatCsv": "CSV: columns text, source and an optional enabled (yes/no). Put a source with a comma in double quotes, e.g. \"Ga 1,1\".",
+        "choose": "Choose file",
+        "summary": "Imported {imported}, skipped {skipped} duplicates, {errors} rows with errors.",
+        "success": "{count, plural, one {Imported # quote} other {Imported # quotes}}",
+        "partial": "{count, plural, one {# row could not be imported} other {# rows could not be imported}}",
+        "lineError": "Line {line}: {reason}",
+        "codes": {
+          "empty_text": "the quote is empty",
+          "missing_source": "the source is missing",
+          "text_too_long": "the quote is longer than 1000 characters",
+          "source_too_long": "the source is longer than 120 characters",
+          "unclosed_quote": "a double quote is never closed",
+          "too_many_columns": "there are more than 3 columns",
+          "invalid_enabled": "the enabled column must be yes or no"
+        }
+      }
     }
   },
   "email": {

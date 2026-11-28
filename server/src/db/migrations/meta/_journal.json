@@ -750,6 +750,13 @@
       "when": 1795801710359,
       "tag": "0106_pdf_bookmarks",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1795840780452,
+      "tag": "0107_dashboard_quotes",
+      "breakpoints": true
     }
   ]
 }

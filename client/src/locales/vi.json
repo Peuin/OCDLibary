@@ -8212,7 +8212,8 @@
       "title": "Tùy chỉnh trang tổng quan",
       "tabs": {
         "widgets": "Tiện ích",
-        "shelves": "Kệ sách"
+        "shelves": "Kệ sách",
+        "quotes": "Câu trích"
       },
       "widgetNames": {
         "readingStreak": "Chuỗi ngày đọc",
@@ -8424,6 +8425,49 @@
       "collectionUnavailable": "Bộ sưu tập đã liên kết không còn công khai",
       "collectionHint": "Kệ liên kết hiển thị sách của bộ sưu tập và tự cập nhật khi bộ sưu tập thêm, xóa, sửa. Sách thêm ở kệ chỉ nằm trên kệ, không thêm vào bộ sưu tập; bỏ sách của bộ sưu tập khỏi kệ chỉ ẩn nó trên kệ.",
       "confirmUnlinkCollection": "Gỡ liên kết bộ sưu tập? Kệ sẽ giữ nguyên {count, plural, one {# sách} other {# sách}} hiện có dưới dạng sách riêng."
+    },
+    "quotes": {
+      "hint": "Câu trích dùng chung cho mọi người. Mỗi lần vào trang tổng quan sẽ hiện ngẫu nhiên một câu đang bật, không trùng câu lần trước. Thay đổi được lưu ngay.",
+      "textLabel": "Câu trích",
+      "sourceLabel": "Nguồn trích",
+      "sourcePlaceholder": "Ví dụ: Ga 1,1",
+      "add": "Thêm",
+      "listTitle": "{count, plural, other {# câu trích}}",
+      "searchPlaceholder": "Tìm câu trích hoặc nguồn",
+      "empty": "Chưa có câu trích nào. Thêm ở trên hoặc tải lên từ file.",
+      "toggle": "Hiện trên trang tổng quan",
+      "edit": "Sửa câu trích",
+      "delete": "Xóa câu trích",
+      "confirmDelete": "Xóa câu trích ({source}) cho mọi người?",
+      "prev": "Trước",
+      "next": "Sau",
+      "pageOf": "Trang {page}/{pages}",
+      "toasts": {
+        "added": "Đã thêm câu trích"
+      },
+      "errors": {
+        "generic": "Có lỗi khi xử lý câu trích.",
+        "required": "Hãy nhập cả câu trích và nguồn trích."
+      },
+      "import": {
+        "title": "Tải lên từ file",
+        "formatTxt": "TXT: mỗi dòng một câu, cuối dòng ghi nguồn trong ngoặc, ví dụ: Lúc khởi đầu đã có Ngôi Lời (Ga 1,1).",
+        "formatCsv": "CSV: các cột câu trích, nguồn và cột bật (có/không) tùy chọn. Nguồn có dấu phẩy thì đặt trong ngoặc kép, ví dụ \"Ga 1,1\".",
+        "choose": "Chọn file",
+        "summary": "Đã thêm {imported} câu, bỏ qua {skipped} câu trùng, {errors} dòng lỗi.",
+        "success": "{count, plural, other {Đã thêm # câu trích}}",
+        "partial": "{count, plural, other {# dòng không thêm được}}",
+        "lineError": "Dòng {line}: {reason}",
+        "codes": {
+          "empty_text": "thiếu nội dung câu trích",
+          "missing_source": "thiếu nguồn trích",
+          "text_too_long": "câu trích dài quá 1000 ký tự",
+          "source_too_long": "nguồn trích dài quá 120 ký tự",
+          "unclosed_quote": "có dấu ngoặc kép chưa đóng",
+          "too_many_columns": "có nhiều hơn 3 cột",
+          "invalid_enabled": "cột bật chỉ nhận có hoặc không"
+        }
+      }
     }
   },
   "email": {

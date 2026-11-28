@@ -934,10 +934,24 @@ export class View extends HTMLElement {
 
   async *#searchBook(matcher, query) {
     const { sections } = this.book
+    // overlap a few section fetches instead of a network round-trip per chapter
+    const prefetch = new Map()
+    let next = 0
+    const enqueueAhead = () => {
+      while (next < sections.length && prefetch.size < 4) {
+        const section = sections[next++]
+        if (section?.createDocument) prefetch.set(next - 1, section.createDocument().catch(() => null))
+      }
+    }
+    enqueueAhead()
     for (const [index, { createDocument }] of sections.entries()) {
       if (!createDocument) continue
-      const doc = await createDocument()
-      const subitems = Array.from(matcher(doc, query), ({ range, excerpt }) => ({ cfi: this.getCFI(index, range), excerpt }))
+      const doc = prefetch.has(index) ? await prefetch.get(index) : await createDocument()
+      prefetch.delete(index)
+      enqueueAhead()
+      const subitems = doc
+        ? Array.from(matcher(doc, query), ({ range, excerpt }) => ({ cfi: this.getCFI(index, range), excerpt }))
+        : []
       const progress = (index + 1) / sections.length
       yield { progress }
       if (subitems.length) yield { index, subitems }

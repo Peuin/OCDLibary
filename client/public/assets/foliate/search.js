@@ -34,7 +34,7 @@ const simpleSearch = function* (strs, query, options = {}) {
       const startIndex = strIndex
       const startOffset = index - (sum - strs[strIndex].length)
       const end = index + needleLength
-      while (sum <= end) sum += strs[++strIndex].length
+      while (sum <= end && strIndex + 1 < strs.length) sum += strs[++strIndex].length
       const endIndex = strIndex
       const endOffset = end - (sum - strs[strIndex].length)
       const range = { startIndex, startOffset, endIndex, endOffset }
@@ -96,10 +96,102 @@ const segmenterSearch = function* (strs, query, options = {}) {
   }
 }
 
-export const search = (strs, query, options) => {
+// letters with no NFKD decomposition that still fold to a base letter, so
+// queries typed without diacritics (e.g. Vietnamese "mot nguoi") can match
+const FOLD_EXTRA = {
+  đ: 'd',
+  ð: 'd',
+  ư: 'u',
+  ơ: 'o',
+  ø: 'o',
+  ł: 'l',
+  æ: 'ae',
+  œ: 'oe',
+  ß: 'ss',
+  þ: 'th',
+  ŋ: 'n',
+  ı: 'i',
+  ħ: 'h',
+  ŧ: 't',
+}
+for (const [key, value] of Object.entries(FOLD_EXTRA)) {
+  const upper = key.toUpperCase()
+  if (upper.length === 1) FOLD_EXTRA[upper] ??= value.toUpperCase()
+}
+
+const foldChar = (char, locales, matchCase) => {
+  const c = matchCase ? char : char.toLocaleLowerCase(locales)
+  if (c.length === 1 && c.charCodeAt(0) < 128) return c
+  let out = ''
+  for (const d of c.normalize('NFKD')) {
+    if (/\p{M}/u.test(d)) continue
+    out += FOLD_EXTRA[d] ?? d
+  }
+  return out
+}
+
+const foldedSearch = function* (strs, query, options = {}) {
+  const { locales = 'en', sensitivity } = options
+  const matchCase = sensitivity === 'case' || sensitivity === 'variant'
+  // fold each source char while keeping a map from folded positions back to
+  // source offsets, so matches can be turned into ranges on the original text
+  let folded = ''
+  const startMap = []
+  const endMap = []
+  let offset = 0
+  for (const str of strs) {
+    for (let i = 0; i < str.length; ) {
+      const char = String.fromCodePoint(str.codePointAt(i))
+      const end = i + char.length
+      const f = foldChar(char, locales, matchCase)
+      if (f) {
+        folded += f
+        for (let j = 0; j < f.length; j++) {
+          startMap.push(offset + i)
+          endMap.push(offset + end)
+        }
+      } else if (endMap.length) {
+        // combining marks fold to nothing; extend the previous char's end so a
+        // match spans the whole composed sequence
+        endMap[endMap.length - 1] = offset + end
+      }
+      i = end
+    }
+    offset += str.length
+  }
+
+  let needle = ''
+  for (const char of query) needle += foldChar(char, locales, matchCase)
+  const needleLength = needle.length
+  if (!needleLength) return
+
+  let index = -1
+  let startStrIndex = -1
+  let startSum = 0
+  let endStrIndex = -1
+  let endSum = 0
+  do {
+    index = folded.indexOf(needle, index + 1)
+    if (index > -1) {
+      const start = startMap[index]
+      const stop = endMap[index + needleLength - 1]
+      while (startSum <= start) startSum += strs[++startStrIndex].length
+      const startIndex = startStrIndex
+      const startOffset = start - (startSum - strs[startStrIndex].length)
+      while (endSum <= stop && endStrIndex + 1 < strs.length) endSum += strs[++endStrIndex].length
+      const endIndex = endStrIndex
+      const endOffset = stop - (endSum - strs[endStrIndex].length)
+      const range = { startIndex, startOffset, endIndex, endOffset }
+      yield { range, excerpt: makeExcerpt(strs, range) }
+    }
+  } while (index > -1)
+}
+
+export const search = (strs, query, options = {}) => {
   const { granularity = 'grapheme', sensitivity = 'base' } = options
   if (!Intl?.Segmenter || (granularity === 'grapheme' && (sensitivity === 'variant' || sensitivity === 'accent')))
     return simpleSearch(strs, query, options)
+  if (granularity === 'grapheme') return foldedSearch(strs, query, options)
   return segmenterSearch(strs, query, options)
 }
 

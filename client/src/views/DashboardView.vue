@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { DASHBOARD_SHELF_BOOKS_MAX } from '@bookorbit/types'
 import { AlertTriangle, Loader2, RefreshCw, Settings2, Sparkles } from '@lucide/vue'
 
-import { useAuth } from '@/features/auth/composables/useAuth'
-import { getDashboardGreetingLabel } from '@/features/dashboard/lib/greeting'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { useLibraries } from '@/features/library/composables/useLibraries'
 import DashboardScroller from '@/features/dashboard/components/DashboardScroller.vue'
@@ -13,21 +11,20 @@ import DashboardSettingsSheet from '@/features/dashboard/components/DashboardSet
 import DashboardWelcome from '@/features/dashboard/components/DashboardWelcome.vue'
 import DashboardWidgetRow from '@/features/dashboard/components/DashboardWidgetRow.vue'
 import { SHELF_LAYOUT, useDashboardConfig } from '@/features/dashboard/composables/useDashboardConfig'
+import { useDashboardQuote } from '@/features/dashboard/composables/useDashboardQuote'
 import { useDashboardSharedConfig } from '@/features/dashboard/composables/useDashboardSharedConfig'
 import { useOnboardingTour } from '@/features/onboarding/composables/useOnboardingTour'
 
 const { t } = useI18n()
 const { hasPermission } = usePermissions()
-const { user } = useAuth()
 const { libraries, loading: librariesLoading, loaded: librariesLoaded, error: librariesError, fetchLibraries } = useLibraries()
 const { shelfLayout, applySharedConfig } = useDashboardConfig()
 const { featuredShelves, orderedShelves: shelves, defaultLayout, loaded: sharedLoaded, load: loadSharedConfig } = useDashboardSharedConfig()
 const { maybeStartTour } = useOnboardingTour()
+const { quote, loadQuote } = useDashboardQuote()
 
 const settingsOpen = ref(false)
 const dashboardRevision = ref(0)
-const now = ref(new Date())
-let greetingTimer: number | null = null
 
 // Every dashboard shelf can hold up to this many books, so a shelf always loads all of them.
 const SHELF_BOOK_LIMIT = DASHBOARD_SHELF_BOOKS_MAX
@@ -46,13 +43,6 @@ const libraryState = computed(() => {
   if (librariesLoaded.value) return libraries.value.length === 0 ? 'empty' : 'ready'
   if (librariesError.value) return 'error'
   return 'loading'
-})
-
-const greetingText = computed(() => t(`views.dashboard.greeting.${getDashboardGreetingLabel(now.value, user.value?.settings?.timezone)}`))
-const greetingName = computed(() => {
-  const fullName = user.value?.name?.trim()
-  if (fullName) return fullName.split(/\s+/)[0] ?? fullName
-  return user.value?.username?.trim() || t('views.dashboard.greeting.fallbackName')
 })
 
 function handleRetryLibraries() {
@@ -75,19 +65,10 @@ async function refreshSharedConfig() {
 onMounted(() => {
   void fetchLibraries()
   void refreshSharedConfig()
-  greetingTimer = window.setInterval(() => {
-    now.value = new Date()
-  }, 60_000)
+  void loadQuote()
   nextTick(() => {
     setTimeout(maybeStartTour, 500)
   })
-})
-
-onUnmounted(() => {
-  if (greetingTimer !== null) {
-    window.clearInterval(greetingTimer)
-    greetingTimer = null
-  }
 })
 </script>
 
@@ -120,14 +101,17 @@ onUnmounted(() => {
         </div>
         <DashboardWelcome v-else-if="libraryState === 'empty'" :can-create="hasPermission('manage_libraries')" />
         <template v-else>
-          <div class="animate-fade-up flex items-center justify-between gap-3 px-1" style="animation-delay: 40ms">
-            <div class="flex min-w-0 items-center gap-2">
-              <Sparkles :size="16" class="shrink-0 text-primary" />
-              <p class="truncate text-[1.05rem] font-medium leading-tight tracking-[-0.01em] text-foreground sm:text-[1.18rem]">
-                <span class="text-foreground">{{ greetingText }}</span>
-                <span class="ml-1 font-semibold text-primary">{{ greetingName }}</span>
-              </p>
-            </div>
+          <div class="animate-fade-up flex items-start justify-between gap-3 px-1" style="animation-delay: 40ms">
+            <figure v-if="quote" class="flex min-w-0 items-start gap-2" data-testid="dashboard-quote">
+              <Sparkles :size="16" class="mt-1 shrink-0 text-primary" aria-hidden="true" />
+              <div class="min-w-0">
+                <blockquote class="text-[1.05rem] font-medium leading-snug tracking-[-0.01em] text-foreground sm:text-[1.18rem]">
+                  {{ quote.text }}
+                </blockquote>
+                <figcaption class="mt-0.5 text-sm font-semibold text-primary">({{ quote.source }})</figcaption>
+              </div>
+            </figure>
+            <div v-else />
             <!-- Icon-only below sm so the greeting keeps its width; the label stays available to assistive tech. -->
             <button
               type="button"

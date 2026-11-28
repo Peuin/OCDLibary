@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { useLibraries } from '@/features/library/composables/useLibraries'
 import { usePermissions } from '@/features/auth/composables/usePermissions'
 import { saveDashboardDefaultLayout } from '../api/dashboard-featured-shelf.api'
+import DashboardQuotesManager from './DashboardQuotesManager.vue'
 import DashboardShelvesManager from './DashboardShelvesManager.vue'
 import { SHELF_LAYOUT, useDashboardConfig, type DashboardShelfLayout } from '../composables/useDashboardConfig'
 import { useDashboardLabels } from '../composables/useDashboardLabels'
@@ -28,7 +29,8 @@ const { widgets, libraryIds, saveWidgets, saveLibraryScope, DEFAULT_WIDGETS } = 
 const { libraries, fetchLibraries } = useLibraries()
 const { widgetName } = useDashboardLabels()
 
-const activeTab = ref<'widgets' | 'shelves'>('shelves')
+const activeTab = ref<'widgets' | 'shelves' | 'quotes'>('shelves')
+const isQuotesTab = computed(() => activeTab.value === 'quotes')
 const savingDefault = ref(false)
 const shelfLayoutDraft = ref<DashboardShelfLayout>(SHELF_LAYOUT.WIDE)
 const widgetDraft = ref<WidgetConfig[]>([])
@@ -60,6 +62,7 @@ watch(
       widgetDraft.value = widgets.value.map((w) => ({ ...w }))
       libraryIdsDraft.value = libraryIds.value ? [...libraryIds.value] : null
       libraryScopeOpen.value = false
+      if (activeTab.value === 'quotes' && !canManageShared.value) activeTab.value = 'shelves'
       fetchLibraries()
     }
   },
@@ -82,6 +85,14 @@ function selectShelvesTab() {
 
 function selectWidgetsTab() {
   activeTab.value = 'widgets'
+}
+
+function selectQuotesTab() {
+  activeTab.value = 'quotes'
+}
+
+function handleClose() {
+  emit('update:open', false)
 }
 
 // The shelves are already everyone's; what an administrator sets as the default is the layout.
@@ -189,12 +200,23 @@ function resetToDefault() {
           >
             {{ t('dashboard.settings.tabs.widgets') }}
           </button>
+          <button
+            v-if="canManageShared"
+            :class="[
+              'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              activeTab === 'quotes' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+            ]"
+            data-testid="dashboard-quotes-tab"
+            @click="selectQuotesTab"
+          >
+            {{ t('dashboard.settings.tabs.quotes') }}
+          </button>
         </div>
       </div>
 
       <!-- Body -->
       <div class="flex-1 overflow-y-auto px-5 py-4">
-        <div class="mb-4 rounded-lg border border-border bg-card">
+        <div v-if="!isQuotesTab" class="mb-4 rounded-lg border border-border bg-card">
           <button
             type="button"
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-start transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -310,6 +332,9 @@ function resetToDefault() {
           </div>
         </div>
 
+        <!-- QUOTES TAB: changes save immediately, so it has no draft to save or reset. -->
+        <DashboardQuotesManager v-if="canManageShared && isQuotesTab" />
+
         <!-- WIDGETS TAB -->
         <div v-show="activeTab === 'widgets'">
           <p class="mb-4 text-xs text-muted-foreground">{{ t('dashboard.settings.reorderHintWidget') }}</p>
@@ -369,7 +394,15 @@ function resetToDefault() {
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between border-t border-border px-5 py-4">
+      <div v-if="isQuotesTab" class="flex items-center justify-end border-t border-border px-5 py-4">
+        <button
+          class="h-8 rounded-md border border-input px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          @click="handleClose"
+        >
+          {{ t('common.close') }}
+        </button>
+      </div>
+      <div v-else class="flex items-center justify-between border-t border-border px-5 py-4">
         <button class="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground" @click="resetToDefault">
           <RotateCcw :size="13" />
           {{ t('dashboard.settings.resetToDefaults') }}

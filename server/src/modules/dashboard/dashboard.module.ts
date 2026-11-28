@@ -11,6 +11,9 @@ import { DashboardFeaturedShelfController } from './dashboard-featured-shelf.con
 import { DashboardFeaturedShelfImageStorage } from './dashboard-featured-shelf-image.storage';
 import { DashboardFeaturedShelfRepository } from './dashboard-featured-shelf.repository';
 import { DashboardFeaturedShelfService } from './dashboard-featured-shelf.service';
+import { DashboardQuoteController } from './dashboard-quote.controller';
+import { DashboardQuoteRepository } from './dashboard-quote.repository';
+import { DashboardQuoteService } from './dashboard-quote.service';
 import { DashboardRepository } from './dashboard.repository';
 import { DashboardShelfBookRepository } from './dashboard-shelf-book.repository';
 import { DashboardShelfBookService } from './dashboard-shelf-book.service';
@@ -20,7 +23,7 @@ import { DashboardWidgetService } from './dashboard-widget.service';
 
 @Module({
   imports: [BookModule, LibraryModule, SmartScopeModule, AppSettingsModule, CollectionModule, DashboardShelfBookPersistenceModule],
-  controllers: [DashboardController, DashboardFeaturedShelfController],
+  controllers: [DashboardController, DashboardFeaturedShelfController, DashboardQuoteController],
   providers: [
     DashboardService,
     DashboardRepository,
@@ -31,6 +34,8 @@ import { DashboardWidgetService } from './dashboard-widget.service';
     DashboardFeaturedShelfImageStorage,
     DashboardShelfBookService,
     DashboardShelfBookRepository,
+    DashboardQuoteService,
+    DashboardQuoteRepository,
   ],
   exports: [DashboardService, DashboardWidgetService],
 })

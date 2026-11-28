@@ -399,3 +399,73 @@ export interface DashboardWidgetBatchResult<T extends WidgetType = WidgetType> {
 export interface DashboardWidgetBatchResponse {
   items: DashboardWidgetBatchResult[];
 }
+
+export const DASHBOARD_QUOTE_TEXT_MAX = 1000;
+export const DASHBOARD_QUOTE_SOURCE_MAX = 120;
+export const DASHBOARD_QUOTE_PAGE_SIZE_MAX = 100;
+export const DASHBOARD_QUOTE_IMPORT_MAX_BYTES = 1024 * 1024;
+export const DASHBOARD_QUOTE_IMPORT_MAX_ROWS = 5000;
+
+/** A quote an administrator curates for the dashboard header, cited by its source (e.g. "Ga 1,1"). */
+export interface DashboardQuote {
+  id: number;
+  text: string;
+  source: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DashboardQuoteDisplay {
+  id: number;
+  text: string;
+  source: string;
+}
+
+export interface DashboardRandomQuoteResponse {
+  quote: DashboardQuoteDisplay | null;
+}
+
+export interface DashboardQuotePage {
+  items: DashboardQuote[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CreateDashboardQuoteRequest {
+  text: string;
+  source: string;
+  enabled?: boolean;
+}
+
+export interface UpdateDashboardQuoteRequest {
+  text?: string;
+  source?: string;
+  enabled?: boolean;
+}
+
+export const DASHBOARD_QUOTE_IMPORT_ERROR_CODES = [
+  "empty_text",
+  "missing_source",
+  "text_too_long",
+  "source_too_long",
+  "unclosed_quote",
+  "too_many_columns",
+  "invalid_enabled",
+] as const;
+
+export type DashboardQuoteImportErrorCode =
+  (typeof DASHBOARD_QUOTE_IMPORT_ERROR_CODES)[number];
+
+export interface DashboardQuoteImportLineError {
+  /** 1-based line in the uploaded file where the bad row starts. */
+  line: number;
+  code: DashboardQuoteImportErrorCode;
+}
+
+export interface DashboardQuoteImportResult {
+  imported: number;
+  skippedDuplicates: number;
+  errors: DashboardQuoteImportLineError[];
+}

@@ -62,6 +62,10 @@ vi.mock('./DashboardShelvesManager.vue', () => ({
   default: { name: 'DashboardShelvesManager', template: '<div data-testid="shelves-manager" />' },
 }))
 
+vi.mock('./DashboardQuotesManager.vue', () => ({
+  default: { name: 'DashboardQuotesManager', template: '<div data-testid="quotes-manager" />' },
+}))
+
 import DashboardSettingsSheet from './DashboardSettingsSheet.vue'
 
 const ALL_WIDGETS: WidgetConfig[] = WIDGET_TYPES.map((type, index) => ({
@@ -278,5 +282,22 @@ describe('DashboardSettingsSheet', () => {
       .map((key) => en.dashboard.settings.widgetNames[key])
 
     expect(labels.filter((label) => englishNamesPortugueseReplaces.includes(label))).toEqual([])
+  })
+
+  it('hides the quotes tab from users who cannot manage shared settings', async () => {
+    const wrapper = await openSheet()
+
+    expect(wrapper.find('[data-testid="dashboard-quotes-tab"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="quotes-manager"]').exists()).toBe(false)
+  })
+
+  it('shows the quotes manager to administrators', async () => {
+    permissions.admin = true
+    const wrapper = await openSheet()
+
+    await wrapper.find('[data-testid="dashboard-quotes-tab"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="quotes-manager"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-controls="dashboard-library-scope"]').exists()).toBe(false)
   })
 })
